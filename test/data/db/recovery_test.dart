@@ -63,4 +63,20 @@ void main() {
 
     await tmp.delete(recursive: true);
   });
+
+  test('openAppDatabase returns Err (never throws) when the path is unopenable',
+      () async {
+    final tmp = await Directory.systemTemp.createTemp('rec');
+    // dbPath itself is an existing directory, not a file -> sqlite cannot
+    // open it as a database, so the underlying open call fails.
+    final dbPath = '${tmp.path}/not_a_file';
+    await Directory(dbPath).create();
+    final result = await openAppDatabase(dbPath: dbPath);
+    expect(result.isOk, isFalse);
+    result.when(
+      ok: (_) => fail('expected failure'),
+      err: (f) => expect(f, isA<MigrationFailure>()),
+    );
+    await tmp.delete(recursive: true);
+  });
 }

@@ -10,9 +10,11 @@ import 'recovery.dart';
 /// On any failure while opening/migrating, restores the pre-upgrade snapshot
 /// and returns Err(MigrationFailure); the caller then reopens read-safe.
 Future<Result<AppDatabase>> openAppDatabase({required String dbPath}) async {
-  final snapshot = await snapshotDatabase(dbPath);
-  final db = AppDatabase(NativeDatabase(File(dbPath)));
+  String? snapshot;
+  AppDatabase? db;
   try {
+    snapshot = await snapshotDatabase(dbPath);
+    db = AppDatabase(NativeDatabase(File(dbPath)));
     // Force the migration to run now by touching the schema. A plain
     // `SELECT 1` does not read the sqlite file header/schema, so a
     // corrupted file can pass it silently; querying a real table forces
@@ -22,9 +24,19 @@ Future<Result<AppDatabase>> openAppDatabase({required String dbPath}) async {
     await discardSnapshot(dbPath);
     return Ok(db);
   } catch (e) {
-    await db.close();
+    if (db != null) {
+      try {
+        await db.close();
+      } catch (_) {
+        // best-effort: ignore secondary close failure
+      }
+    }
     if (snapshot != null) {
-      await restoreSnapshot(snapshot, dbPath);
+      try {
+        await restoreSnapshot(snapshot, dbPath);
+      } catch (_) {
+        // best-effort: recovery I/O failure must not mask the original error
+      }
     }
     return Err(MigrationFailure(e.toString()));
   }
