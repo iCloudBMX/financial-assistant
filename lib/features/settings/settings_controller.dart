@@ -9,8 +9,10 @@ class SettingsController extends AsyncNotifier<AppSettings> {
 
   Future<void> save(AppSettings updated) async {
     state = const AsyncLoading();
-    await ref.read(settingsRepositoryProvider).write(updated);
-    state = AsyncData(updated);
+    state = await AsyncValue.guard(() async {
+      await ref.read(settingsRepositoryProvider).write(updated);
+      return updated;
+    });
   }
 }
 

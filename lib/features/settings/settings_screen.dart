@@ -71,8 +71,11 @@ class SettingsScreen extends ConsumerWidget {
                   ],
                   onChanged: (code) {
                     if (code == null) return;
+                    final currency = CurrencyRegistry.byCode(code);
                     save(s.copyWith(
-                        primaryCurrency: CurrencyRegistry.byCode(code)));
+                      primaryCurrency: currency,
+                      minReserve: Money.zero(currency),
+                    ));
                   },
                 ),
               ),
