@@ -40,4 +40,29 @@ void main() {
     // 2026-07-15 is a Wednesday.
     expect(startOfWeek(DateTime(2026, 7, 15), 1), DateTime(2026, 7, 13));
   });
+
+  test('next() preserves the configured anchor across a clamped month', () {
+    var p = FinancialPeriod.containing(DateTime(2026, 1, 31), 31);
+    expect(p.start, DateTime(2026, 1, 31));
+    expect(p.endExclusive, DateTime(2026, 2, 28)); // Feb clamps
+    p = p.next();
+    expect(p.start, DateTime(2026, 2, 28));
+    expect(p.endExclusive, DateTime(2026, 3, 31)); // recovers to 31
+    p = p.next();
+    expect(p.start, DateTime(2026, 3, 31));
+    expect(p.endExclusive, DateTime(2026, 4, 30)); // Apr clamps to 30
+    p = p.next();
+    expect(p.start, DateTime(2026, 4, 30));
+    expect(p.endExclusive, DateTime(2026, 5, 31)); // recovers to 31
+  });
+
+  test('previous() preserves the configured anchor across a clamped month', () {
+    // March-anchored period for startDay 31 spans Feb 28 -> Mar 31.
+    var p = FinancialPeriod.containing(DateTime(2026, 3, 15), 31);
+    expect(p.start, DateTime(2026, 2, 28));
+    expect(p.endExclusive, DateTime(2026, 3, 31));
+    p = p.previous();
+    expect(p.start, DateTime(2026, 1, 31)); // recovers to 31, not 28
+    expect(p.endExclusive, DateTime(2026, 2, 28));
+  });
 }
