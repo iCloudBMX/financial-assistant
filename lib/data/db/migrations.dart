@@ -12,12 +12,22 @@ import 'app_database.dart';
 MigrationStrategy buildMigration(AppDatabase db) => MigrationStrategy(
       onCreate: (m) async {
         await m.createAll();
+        // Both tables are single-row: the schema's `id` column defaults to
+        // 0 and repositories address the row via `id.equals(0)`. SQLite
+        // treats a lone INTEGER column PRIMARY KEY as a rowid alias, so
+        // when the id column is omitted from an INSERT, SQLite
+        // auto-assigns the next rowid (1) instead of honouring the
+        // column's DEFAULT 0 clause. Passing `id: Value(0)` explicitly
+        // ensures the seeded row actually lands at id 0.
         await db.into(db.appMetaTable).insert(
-              AppMetaTableCompanion.insert(installedAt: DateTime.now()),
+              AppMetaTableCompanion.insert(
+                id: const Value(0),
+                installedAt: DateTime.now(),
+              ),
             );
         await db
             .into(db.appSettingsTable)
-            .insert(const AppSettingsTableCompanion());
+            .insert(const AppSettingsTableCompanion(id: Value(0)));
       },
       onUpgrade: (Migrator m, int from, int to) async {},
       beforeOpen: (details) async {
