@@ -24,33 +24,36 @@ class DriftSettingsRepository implements SettingsRepository {
       weekStartIso: row.weekStartIso,
       dailyLimitMethod: DailyLimitMethod.values.byName(row.dailyLimitMethod),
       minReserve: Money(
-          row.minReserveMinor, CurrencyRegistry.byCode(row.minReserveCurrency)),
+        row.minReserveMinor,
+        CurrencyRegistry.byCode(row.minReserveCurrency),
+      ),
       themeMode: ThemeModeSetting.values.byName(row.themeMode),
       appLockEnabled: row.appLockEnabled,
       biometricEnabled: row.biometricEnabled,
-      savingsRolloverMode:
-          SavingsRolloverMode.values.byName(row.savingsRolloverMode),
+      savingsRolloverMode: SavingsRolloverMode.values.byName(
+        row.savingsRolloverMode,
+      ),
     );
   }
 
   @override
   Future<void> write(AppSettings s) async {
-    await db.update(db.appSettingsTable).replace(
-          AppSettingsTableCompanion(
-            id: const Value(0),
-            name: Value(s.name),
-            primaryCurrency: Value(s.primaryCurrency.code),
-            dateFormat: Value(s.dateFormat),
-            periodStartDay: Value(s.periodStartDay),
-            weekStartIso: Value(s.weekStartIso),
-            dailyLimitMethod: Value(s.dailyLimitMethod.name),
-            minReserveMinor: Value(s.minReserve.minorUnits),
-            minReserveCurrency: Value(s.minReserve.currency.code),
-            themeMode: Value(s.themeMode.name),
-            appLockEnabled: Value(s.appLockEnabled),
-            biometricEnabled: Value(s.biometricEnabled),
-            savingsRolloverMode: Value(s.savingsRolloverMode.name),
-          ),
-        );
+    await (db.update(db.appSettingsTable)..where((t) => t.id.equals(0))).write(
+      AppSettingsTableCompanion(
+        id: const Value(0),
+        name: Value(s.name),
+        primaryCurrency: Value(s.primaryCurrency.code),
+        dateFormat: Value(s.dateFormat),
+        periodStartDay: Value(s.periodStartDay),
+        weekStartIso: Value(s.weekStartIso),
+        dailyLimitMethod: Value(s.dailyLimitMethod.name),
+        minReserveMinor: Value(s.minReserve.minorUnits),
+        minReserveCurrency: Value(s.minReserve.currency.code),
+        themeMode: Value(s.themeMode.name),
+        appLockEnabled: Value(s.appLockEnabled),
+        biometricEnabled: Value(s.biometricEnabled),
+        savingsRolloverMode: Value(s.savingsRolloverMode.name),
+      ),
+    );
   }
 }

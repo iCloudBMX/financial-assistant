@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:financial_assistant/core/money/currency.dart';
@@ -38,5 +39,46 @@ void main() {
     expect(s.minReserve, const Money(2000000, CurrencyRegistry.uzs));
     expect(s.themeMode, ThemeModeSetting.dark);
     expect(s.appLockEnabled, isTrue);
+  });
+
+  test('write then read round-trips all 11 fields', () async {
+    final updated = (await repo.read()).copyWith(
+      name: 'Sarvar',
+      primaryCurrency: CurrencyRegistry.usd,
+      dateFormat: 'yyyy-MM-dd',
+      periodStartDay: 5,
+      weekStartIso: 7,
+      dailyLimitMethod: DailyLimitMethod.fixedDaily,
+      minReserve: const Money(2000000, CurrencyRegistry.uzs),
+      themeMode: ThemeModeSetting.dark,
+      appLockEnabled: true,
+      biometricEnabled: true,
+      savingsRolloverMode: SavingsRolloverMode.rolloverDays,
+    );
+    await repo.write(updated);
+    final s = await repo.read();
+    expect(s.name, 'Sarvar');
+    expect(s.primaryCurrency, CurrencyRegistry.usd);
+    expect(s.dateFormat, 'yyyy-MM-dd');
+    expect(s.periodStartDay, 5);
+    expect(s.weekStartIso, 7);
+    expect(s.dailyLimitMethod, DailyLimitMethod.fixedDaily);
+    expect(s.minReserve, const Money(2000000, CurrencyRegistry.uzs));
+    expect(s.themeMode, ThemeModeSetting.dark);
+    expect(s.appLockEnabled, isTrue);
+    expect(s.biometricEnabled, isTrue);
+    expect(s.savingsRolloverMode, SavingsRolloverMode.rolloverDays);
+  });
+
+  test('write() preserves the untracked notificationFlagsJson column', () async {
+    // Seed a non-default value directly in the DB, then perform a normal write().
+    await (db.update(db.appSettingsTable)..where((t) => t.id.equals(0))).write(
+      const AppSettingsTableCompanion(
+        notificationFlagsJson: Value('{"budget":true}'),
+      ),
+    );
+    await repo.write((await repo.read()).copyWith(name: 'Sarvar'));
+    final row = await db.select(db.appSettingsTable).getSingle();
+    expect(row.notificationFlagsJson, '{"budget":true}'); // not reset to '{}'
   });
 }
