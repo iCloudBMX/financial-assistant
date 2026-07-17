@@ -30,16 +30,16 @@ class SettingsScreen extends ConsumerWidget {
     'Yakshanba',
   ];
 
-  static const _themeLabels = {
-    ThemeModeSetting.system: 'Tizim',
-    ThemeModeSetting.light: 'Yorug\'',
-    ThemeModeSetting.dark: 'Qorong\'i',
-  };
+  static String _themeLabel(ThemeModeSetting mode) => switch (mode) {
+        ThemeModeSetting.system => 'Tizim',
+        ThemeModeSetting.light => 'Yorug\'',
+        ThemeModeSetting.dark => 'Qorong\'i',
+      };
 
-  static const _dailyLimitLabels = {
-    DailyLimitMethod.evenSplit: 'Tekis taqsimlash',
-    DailyLimitMethod.fixedDaily: 'Belgilangan kunlik summa',
-  };
+  static String _dailyLimitLabel(DailyLimitMethod method) => switch (method) {
+        DailyLimitMethod.evenSplit => 'Tekis taqsimlash',
+        DailyLimitMethod.fixedDaily => 'Belgilangan kunlik summa',
+      };
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -129,7 +129,7 @@ class SettingsScreen extends ConsumerWidget {
                   items: [
                     for (final m in DailyLimitMethod.values)
                       DropdownMenuItem(
-                          value: m, child: Text(_dailyLimitLabels[m]!)),
+                          value: m, child: Text(_dailyLimitLabel(m))),
                   ],
                   onChanged: (m) {
                     if (m == null) return;
@@ -150,7 +150,7 @@ class SettingsScreen extends ConsumerWidget {
                   items: [
                     for (final mode in ThemeModeSetting.values)
                       DropdownMenuItem(
-                          value: mode, child: Text(_themeLabels[mode]!)),
+                          value: mode, child: Text(_themeLabel(mode))),
                   ],
                   onChanged: (mode) {
                     if (mode == null) return;

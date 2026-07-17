@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:crypto/crypto.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -44,7 +45,8 @@ class AppLockController {
   static const _saltKey = 'app_lock_salt';
 
   Future<void> setPin(String pin) async {
-    final salt = DateTime.now().microsecondsSinceEpoch.toString();
+    final rng = Random.secure();
+    final salt = base64Url.encode(List<int>.generate(16, (_) => rng.nextInt(256)));
     await store.write(_saltKey, salt);
     await store.write(_pinKey, PinHasher.hash(pin, salt));
   }

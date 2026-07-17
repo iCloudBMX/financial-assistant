@@ -9,11 +9,11 @@ class ThemeStep extends OnboardingStep {
   @override
   String get title => 'Mavzu';
 
-  static const _labels = {
-    ThemeModeSetting.system: 'Tizim',
-    ThemeModeSetting.light: 'Yorug\'',
-    ThemeModeSetting.dark: 'Qorong\'i',
-  };
+  static String _labelFor(ThemeModeSetting mode) => switch (mode) {
+        ThemeModeSetting.system => 'Tizim',
+        ThemeModeSetting.light => 'Yorug\'',
+        ThemeModeSetting.dark => 'Qorong\'i',
+      };
 
   @override
   Widget build(BuildContext context, OnboardingController controller) =>
@@ -27,7 +27,7 @@ class ThemeStep extends OnboardingStep {
             SegmentedButton<ThemeModeSetting>(
               segments: [
                 for (final mode in ThemeModeSetting.values)
-                  ButtonSegment(value: mode, label: Text(_labels[mode]!)),
+                  ButtonSegment(value: mode, label: Text(_labelFor(mode))),
               ],
               selected: {controller.state.settings.themeMode},
               onSelectionChanged: (selection) {

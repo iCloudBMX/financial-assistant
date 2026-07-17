@@ -11,6 +11,7 @@ class SettingsController extends AsyncNotifier<AppSettings> {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       await ref.read(settingsRepositoryProvider).write(updated);
+      ref.invalidate(settingsProvider);
       return updated;
     });
   }

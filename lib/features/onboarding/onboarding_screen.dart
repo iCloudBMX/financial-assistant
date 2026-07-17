@@ -53,7 +53,10 @@ class OnboardingScreen extends ConsumerWidget {
             Expanded(
               child: Center(
                 child: SingleChildScrollView(
-                  child: step.build(context, controller),
+                  child: KeyedSubtree(
+                    key: ValueKey(step.id),
+                    child: step.build(context, controller),
+                  ),
                 ),
               ),
             ),
