@@ -52,11 +52,15 @@ class Money {
     final parts = unsigned.split('.');
     if (parts.length > 2) return null; // malformed
     final majorText = parts[0].isEmpty ? '0' : parts[0];
-    final major = int.tryParse(majorText);
-    if (major == null) return null; // non-numeric -> null
+
+    // Validate major part: must be pure digits only
+    if (!RegExp(r'^\d+$').hasMatch(majorText)) return null;
+    final major = int.parse(majorText);
+
     var minor = 0;
     if (parts.length == 2 && parts[1].isNotEmpty) {
-      if (int.tryParse(parts[1]) == null) return null; // non-digit fraction
+      // Validate fractional part: must be pure digits only
+      if (!RegExp(r'^\d+$').hasMatch(parts[1])) return null;
       final frac = parts[1].padRight(currency.decimalDigits, '0');
       final take = currency.decimalDigits;
       minor = take == 0 ? 0 : int.parse(frac.substring(0, take));

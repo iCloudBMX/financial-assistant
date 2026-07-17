@@ -44,4 +44,15 @@ void main() {
   test('compareTo orders by amount', () {
     expect(Money(100, uzs).compareTo(Money(200, uzs)), isNegative);
   });
+
+  test('tryParse rejects double sign and misplaced sign', () {
+    expect(Money.tryParse('--12', uzs), isNull);
+    expect(Money.tryParse('12.-34', usd), isNull);
+    expect(Money.tryParse('1-2', uzs), isNull);
+    expect(Money.tryParse('+12', uzs), isNull);
+  });
+
+  test('tryParse still accepts a single leading minus', () {
+    expect(Money.tryParse('-12.34', usd), Money(-1234, usd));
+  });
 }
