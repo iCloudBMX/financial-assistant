@@ -215,7 +215,13 @@ class SettingsScreen extends ConsumerWidget {
     AppSettings s,
     void Function(AppSettings) save,
   ) async {
-    final controller = TextEditingController(text: s.minReserve.format());
+    // Symbol-less numeric form so an unchanged field re-parses to the same
+    // reserve; format() would embed the currency symbol, which tryParse
+    // rejects → "Saqlash" unedited would silently drop the edit, leaving
+    // minReserve unchanged with no error shown (it feeds the safe-limit
+    // free balance).
+    final controller =
+        TextEditingController(text: s.minReserve.formatNumber());
     final result = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
