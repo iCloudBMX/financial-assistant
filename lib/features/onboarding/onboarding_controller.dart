@@ -1,0 +1,74 @@
+// Riverpod 3.x note: `StateNotifier` / `StateNotifierProvider` moved out of
+// the main `flutter_riverpod.dart` export and now live in the legacy
+// library. We keep using `StateNotifier` here (per the task brief) so the
+// controller's public API — next()/back()/update()/isLast/commit() and a
+// readable `state` — stays exactly as specified.
+import 'package:flutter_riverpod/legacy.dart';
+import '../../core/money/currency.dart';
+import '../../core/money/money.dart';
+import '../../data/meta/meta_repository.dart';
+import '../../data/settings/settings_model.dart';
+import '../../data/settings/settings_repository.dart';
+
+class OnboardingDraft {
+  final AppSettings settings;
+  final int index;
+  const OnboardingDraft(this.settings, this.index);
+  OnboardingDraft copyWith({AppSettings? settings, int? index}) =>
+      OnboardingDraft(settings ?? this.settings, index ?? this.index);
+}
+
+AppSettings defaultSettings() => AppSettings(
+      name: '',
+      primaryCurrency: CurrencyRegistry.uzs,
+      dateFormat: 'dd.MM.yyyy',
+      periodStartDay: 1,
+      weekStartIso: 1,
+      dailyLimitMethod: DailyLimitMethod.evenSplit,
+      minReserve: Money.zero(CurrencyRegistry.uzs),
+      themeMode: ThemeModeSetting.system,
+      appLockEnabled: false,
+      biometricEnabled: false,
+      savingsRolloverMode: SavingsRolloverMode.askEachTime,
+    );
+
+class OnboardingController extends StateNotifier<OnboardingDraft> {
+  final SettingsRepository settingsRepo;
+  final MetaRepository metaRepo;
+  final int stepCount;
+
+  OnboardingController({
+    required this.settingsRepo,
+    required this.metaRepo,
+    required this.stepCount,
+  }) : super(OnboardingDraft(defaultSettings(), 0));
+
+  // `StateNotifier.state` is `@protected @visibleForTesting` in the base
+  // class. `@visibleForTesting` lets test/ files (like the controller test
+  // above) read `c.state` directly, but the step widgets under lib/ need
+  // the same access from outside a subclass — so we re-declare the getter
+  // here, without the annotation, publishing it as part of
+  // `OnboardingController`'s own public API.
+  @override
+  OnboardingDraft get state => super.state;
+
+  void next() {
+    if (state.index < stepCount - 1) {
+      state = state.copyWith(index: state.index + 1);
+    }
+  }
+
+  void back() {
+    if (state.index > 0) state = state.copyWith(index: state.index - 1);
+  }
+
+  void update(AppSettings Function(AppSettings) f) =>
+      state = state.copyWith(settings: f(state.settings));
+
+  bool get isLast => state.index == stepCount - 1;
+
+  Future<void> commit() async {
+    await settingsRepo.write(state.settings);
+    await metaRepo.markOnboardingComplete();
+  }
+}
