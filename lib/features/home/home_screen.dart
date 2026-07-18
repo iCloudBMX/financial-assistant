@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../providers/app_providers.dart';
 import '../accounts/transfer_sheet.dart';
 import '../expense_entry/expense_entry_sheet.dart';
 import '../income_entry/income_entry_sheet.dart';
+import '../recurring/recurring_prompt.dart';
+import '../shell/routes.dart';
 import 'dashboard_data.dart';
 
 class HomeScreen extends ConsumerWidget {
@@ -13,13 +16,22 @@ class HomeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(dashboardProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('Bosh sahifa')),
+      appBar: AppBar(
+        title: const Text('Bosh sahifa'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.account_balance_wallet_outlined),
+            onPressed: () => context.push(RouteNames.accounts),
+          ),
+        ],
+      ),
       body: async.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (_, _) => const Center(child: Text('Xatolik yuz berdi')),
         data: (d) => ListView(
           padding: const EdgeInsets.all(16),
           children: [
+            const RecurringPromptBanner(),
             _totalCard(context, d),
             _row('Shu oygi kirim', d.monthIncome.format()),
             _row('Shu oygi chiqim', d.monthExpense.format()),

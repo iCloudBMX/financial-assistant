@@ -1,18 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../expense_entry/expense_entry_sheet.dart';
+import '../home/home_screen.dart';
+import '../transactions/transactions_screen.dart';
 import 'placeholder_tab.dart';
 
-class AppShell extends StatefulWidget {
+class AppShell extends ConsumerStatefulWidget {
   const AppShell({super.key});
   @override
-  State<AppShell> createState() => _AppShellState();
+  ConsumerState<AppShell> createState() => _AppShellState();
 }
 
-class _AppShellState extends State<AppShell> {
+class _AppShellState extends ConsumerState<AppShell> {
   int _index = 0;
 
   static const _tabs = [
-    PlaceholderTab(title: 'Bosh sahifa'),
-    PlaceholderTab(title: 'Tranzaksiyalar'),
+    HomeScreen(),
+    TransactionsScreen(),
     PlaceholderTab(title: 'Taqsimlash'),
     PlaceholderTab(title: "Goal'lar"),
     PlaceholderTab(title: 'Hisobotlar'),
@@ -21,6 +25,10 @@ class _AppShellState extends State<AppShell> {
   @override
   Widget build(BuildContext context) => Scaffold(
         body: SafeArea(child: _tabs[_index]),
+        floatingActionButton: FloatingActionButton(
+          onPressed: () => showExpenseEntrySheet(context, ref),
+          child: const Icon(Icons.add),
+        ),
         bottomNavigationBar: NavigationBar(
           selectedIndex: _index,
           onDestinationSelected: (i) => setState(() => _index = i),
