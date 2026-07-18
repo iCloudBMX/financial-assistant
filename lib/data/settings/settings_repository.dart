@@ -33,6 +33,14 @@ class DriftSettingsRepository implements SettingsRepository {
       savingsRolloverMode: SavingsRolloverMode.values.byName(
         row.savingsRolloverMode,
       ),
+      variableBudget: Money(
+        row.variableBudgetMinor,
+        CurrencyRegistry.byCode(row.primaryCurrency),
+      ),
+      safetyBuffer: Money(
+        row.safetyBufferMinor,
+        CurrencyRegistry.byCode(row.primaryCurrency),
+      ),
     );
   }
 
@@ -53,6 +61,8 @@ class DriftSettingsRepository implements SettingsRepository {
         appLockEnabled: Value(s.appLockEnabled),
         biometricEnabled: Value(s.biometricEnabled),
         savingsRolloverMode: Value(s.savingsRolloverMode.name),
+        variableBudgetMinor: Value(s.variableBudget.minorUnits),
+        safetyBufferMinor: Value(s.safetyBuffer.minorUnits),
       ),
     );
   }

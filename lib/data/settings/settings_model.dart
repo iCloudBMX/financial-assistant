@@ -17,6 +17,8 @@ class AppSettings {
   final bool appLockEnabled;
   final bool biometricEnabled;
   final SavingsRolloverMode savingsRolloverMode;
+  final Money variableBudget;
+  final Money safetyBuffer;
 
   const AppSettings({
     required this.name,
@@ -30,6 +32,8 @@ class AppSettings {
     required this.appLockEnabled,
     required this.biometricEnabled,
     required this.savingsRolloverMode,
+    this.variableBudget = const Money(0, CurrencyRegistry.uzs),
+    this.safetyBuffer = const Money(0, CurrencyRegistry.uzs),
   });
 
   AppSettings copyWith({
@@ -44,6 +48,8 @@ class AppSettings {
     bool? appLockEnabled,
     bool? biometricEnabled,
     SavingsRolloverMode? savingsRolloverMode,
+    Money? variableBudget,
+    Money? safetyBuffer,
   }) =>
       AppSettings(
         name: name ?? this.name,
@@ -57,5 +63,7 @@ class AppSettings {
         appLockEnabled: appLockEnabled ?? this.appLockEnabled,
         biometricEnabled: biometricEnabled ?? this.biometricEnabled,
         savingsRolloverMode: savingsRolloverMode ?? this.savingsRolloverMode,
+        variableBudget: variableBudget ?? this.variableBudget,
+        safetyBuffer: safetyBuffer ?? this.safetyBuffer,
       );
 }

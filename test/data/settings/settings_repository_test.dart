@@ -70,6 +70,20 @@ void main() {
     expect(s.savingsRolloverMode, SavingsRolloverMode.rolloverDays);
   });
 
+  test('variable budget and safety buffer round-trip', () async {
+    final db = AppDatabase(NativeDatabase.memory());
+    final repo = DriftSettingsRepository(db);
+    final base = await repo.read();
+    await repo.write(base.copyWith(
+      variableBudget: const Money(1400000, CurrencyRegistry.uzs),
+      safetyBuffer: const Money(50000, CurrencyRegistry.uzs),
+    ));
+    final back = await repo.read();
+    expect(back.variableBudget, const Money(1400000, CurrencyRegistry.uzs));
+    expect(back.safetyBuffer, const Money(50000, CurrencyRegistry.uzs));
+    await db.close();
+  });
+
   test('write() preserves the untracked notificationFlagsJson column', () async {
     // Seed a non-default value directly in the DB, then perform a normal write().
     await (db.update(db.appSettingsTable)..where((t) => t.id.equals(0))).write(
