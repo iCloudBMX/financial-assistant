@@ -31,7 +31,32 @@ class TransactionsScreen extends ConsumerWidget {
                       key: Key('txn_${e.id}'),
                       direction: DismissDirection.endToStart,
                       background: Container(
-                          color: Theme.of(context).colorScheme.errorContainer),
+                        color: Theme.of(context).colorScheme.errorContainer,
+                        alignment: Alignment.centerRight,
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Icon(
+                          Icons.delete,
+                          color: Theme.of(context).colorScheme.onErrorContainer,
+                        ),
+                      ),
+                      confirmDismiss: (_) => showDialog<bool>(
+                        context: context,
+                        builder: (ctx) => AlertDialog(
+                          title: const Text('Tranzaksiyani o\'chirish'),
+                          content: const Text(
+                              'Bu tranzaksiyani o\'chirmoqchimisiz? Bu amalni ortga qaytarib bo\'lmaydi.'),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.of(ctx).pop(false),
+                              child: const Text('Bekor qilish'),
+                            ),
+                            TextButton(
+                              onPressed: () => Navigator.of(ctx).pop(true),
+                              child: const Text('O\'chirish'),
+                            ),
+                          ],
+                        ),
+                      ).then((confirmed) => confirmed ?? false),
                       onDismissed: (_) => ref
                           .read(transactionsControllerProvider.notifier)
                           .delete(e.id),

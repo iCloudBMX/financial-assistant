@@ -31,4 +31,27 @@ void main() {
         find.text(const Money(500000, CurrencyRegistry.uzs).format()),
         findsOneWidget);
   });
+
+  testWidgets('tapping an account tile opens the balance-adjust sheet',
+      (tester) async {
+    final db = AppDatabase(NativeDatabase.memory());
+    addTearDown(db.close);
+    final container = ProviderContainer(
+        overrides: [databaseProvider.overrideWithValue(db)]);
+    addTearDown(container.dispose);
+    await container.read(accountsControllerProvider.notifier).createAccount(
+        name: 'Naqd', type: AccountType.cash,
+        openingBalance: const Money(500000, CurrencyRegistry.uzs), icon: 'wallet');
+
+    await tester.pumpWidget(UncontrolledProviderScope(
+      container: container,
+      child: const MaterialApp(home: AccountsScreen()),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Naqd'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Haqiqiy balansni kiriting'), findsOneWidget);
+  });
 }

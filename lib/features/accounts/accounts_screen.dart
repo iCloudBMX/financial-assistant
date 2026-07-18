@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'accounts_controller.dart';
 import 'account_edit_sheet.dart';
+import 'balance_adjust_sheet.dart';
 
 class AccountsScreen extends ConsumerWidget {
   const AccountsScreen({super.key});
@@ -28,6 +29,8 @@ class AccountsScreen extends ConsumerWidget {
                       leading: const Icon(Icons.account_balance_wallet_outlined),
                       title: Text(it.account.name),
                       trailing: Text(it.balance.format()),
+                      onTap: () =>
+                          showBalanceAdjustSheet(context, ref, it.account.id),
                       onLongPress: () =>
                           ref.read(accountsControllerProvider.notifier)
                               .archive(it.account.id),

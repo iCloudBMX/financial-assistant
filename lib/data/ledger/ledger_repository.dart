@@ -75,6 +75,7 @@ class DriftLedgerRepository implements LedgerRepository {
   }
 
   @override
+  // TODO(multi-currency): guard amount.currency == account's currency before writing (see editEntry).
   Future<int> addExpense({
     required int accountId,
     required Money amount,
@@ -99,6 +100,7 @@ class DriftLedgerRepository implements LedgerRepository {
   }
 
   @override
+  // TODO(multi-currency): guard amount.currency == account's currency before writing (see editEntry).
   Future<int> addIncome({
     required int accountId,
     required Money amount,
@@ -170,6 +172,7 @@ class DriftLedgerRepository implements LedgerRepository {
   }
 
   @override
+  // TODO(multi-currency): guard amount.currency == account's currency before writing (see editEntry).
   Future<void> adjustBalance({
     required int accountId,
     required Money realBalance,
