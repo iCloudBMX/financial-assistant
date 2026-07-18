@@ -1,4 +1,5 @@
 import 'package:go_router/go_router.dart';
+import '../accounts/accounts_screen.dart';
 import '../onboarding/onboarding_screen.dart';
 import '../settings/settings_screen.dart';
 import 'app_shell.dart';
@@ -8,6 +9,7 @@ class RouteNames {
   static const home = '/';
   static const onboarding = '/onboarding';
   static const settings = '/settings';
+  static const accounts = '/accounts';
 }
 
 GoRouter buildRouter({required bool onboardingComplete}) => GoRouter(
@@ -22,5 +24,8 @@ GoRouter buildRouter({required bool onboardingComplete}) => GoRouter(
         GoRoute(
             path: RouteNames.settings,
             builder: (_, _) => const SettingsScreen()),
+        GoRoute(
+            path: RouteNames.accounts,
+            builder: (_, _) => const AccountsScreen()),
       ],
     );

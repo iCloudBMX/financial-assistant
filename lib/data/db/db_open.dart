@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import '../../core/result/failure.dart';
 import '../../core/result/result.dart';
@@ -9,12 +10,15 @@ import 'recovery.dart';
 /// Opens the database with snapshot-before-upgrade protection (PRD §20.3).
 /// On any failure while opening/migrating, restores the pre-upgrade snapshot
 /// and returns Err(MigrationFailure); the caller then reopens read-safe.
-Future<Result<AppDatabase>> openAppDatabase({required String dbPath}) async {
+Future<Result<AppDatabase>> openAppDatabase({
+  required String dbPath,
+  AppDatabase Function(QueryExecutor executor) open = AppDatabase.new,
+}) async {
   String? snapshot;
   AppDatabase? db;
   try {
     snapshot = await snapshotDatabase(dbPath);
-    db = AppDatabase(NativeDatabase(File(dbPath)));
+    db = open(NativeDatabase(File(dbPath)));
     // Force the migration to run now by touching the schema. A plain
     // `SELECT 1` does not read the sqlite file header/schema, so a
     // corrupted file can pass it silently; querying a real table forces
