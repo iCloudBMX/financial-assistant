@@ -27,6 +27,8 @@ void main() {
     ));
     await tester.pumpAndSettle();
     expect(find.text('Naqd'), findsOneWidget);
-    expect(find.textContaining('500'), findsWidgets);
+    expect(
+        find.text(const Money(500000, CurrencyRegistry.uzs).format()),
+        findsOneWidget);
   });
 }

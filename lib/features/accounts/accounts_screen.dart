@@ -17,7 +17,7 @@ class AccountsScreen extends ConsumerWidget {
       ),
       body: async.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Xatolik: $e')),
+        error: (_, _) => const Center(child: Text('Xatolik yuz berdi')),
         data: (items) => items.isEmpty
             ? const Center(child: Text('Hali hisob yo\'q'))
             : ListView(
