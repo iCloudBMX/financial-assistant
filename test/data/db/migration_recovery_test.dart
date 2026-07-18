@@ -33,14 +33,14 @@ void main() {
     expect(first.isOk, isTrue);
     final db1 = first.valueOrNull!;
     await DriftSettingsRepository(db1).write(
-      AppSettings(
+      const AppSettings(
         name: 'Ali',
         primaryCurrency: CurrencyRegistry.uzs,
         dateFormat: 'dd.MM.yyyy',
         periodStartDay: 1,
         weekStartIso: 1,
         dailyLimitMethod: DailyLimitMethod.evenSplit,
-        minReserve: const Money(0, CurrencyRegistry.uzs),
+        minReserve: Money(0, CurrencyRegistry.uzs),
         themeMode: ThemeModeSetting.system,
         appLockEnabled: false,
         biometricEnabled: false,
