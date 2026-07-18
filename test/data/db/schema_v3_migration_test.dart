@@ -28,7 +28,31 @@ class _V2AppDatabase extends AppDatabase {
             'is_default INTEGER NOT NULL DEFAULT 0, archived INTEGER NOT NULL DEFAULT 0, '
             'sort_order INTEGER NOT NULL DEFAULT 0);',
           );
-          await m.createTable(appSettingsTable);
+          // Likewise build app_settings_table in its pre-SP2 (v2) shape via raw
+          // DDL: all the SP1 columns with their exact generated defaults but
+          // WITHOUT variable_budget_minor / safety_buffer_minor. Using
+          // m.createTable(appSettingsTable) would build the CURRENT class,
+          // which already carries the two SP2 columns — so onUpgrade's
+          // addColumn calls would be skipped and the v2->v3 settings migration
+          // path would get no real coverage. Column list + defaults mirror
+          // $AppSettingsTableTable in app_database.g.dart exactly.
+          await m.database.customStatement(
+            'CREATE TABLE app_settings_table ('
+            'id INTEGER NOT NULL PRIMARY KEY DEFAULT 0, '
+            'name TEXT NOT NULL DEFAULT \'\', '
+            'primary_currency TEXT NOT NULL DEFAULT \'UZS\', '
+            'date_format TEXT NOT NULL DEFAULT \'dd.MM.yyyy\', '
+            'period_start_day INTEGER NOT NULL DEFAULT 1, '
+            'week_start_iso INTEGER NOT NULL DEFAULT 1, '
+            'daily_limit_method TEXT NOT NULL DEFAULT \'evenSplit\', '
+            'min_reserve_minor INTEGER NOT NULL DEFAULT 0, '
+            'min_reserve_currency TEXT NOT NULL DEFAULT \'UZS\', '
+            'theme_mode TEXT NOT NULL DEFAULT \'system\', '
+            'app_lock_enabled INTEGER NOT NULL DEFAULT 0 CHECK ("app_lock_enabled" IN (0, 1)), '
+            'biometric_enabled INTEGER NOT NULL DEFAULT 0 CHECK ("biometric_enabled" IN (0, 1)), '
+            'savings_rollover_mode TEXT NOT NULL DEFAULT \'askEachTime\', '
+            'notification_flags_json TEXT NOT NULL DEFAULT \'{}\');',
+          );
           await m.createTable(appMetaTable);
           await m.createTable(accountsTable);
           await m.createTable(transactionsTable);
