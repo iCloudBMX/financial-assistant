@@ -5,6 +5,7 @@ import '../../core/money/currency.dart';
 import '../../core/money/money.dart';
 import '../../data/categories/category_model.dart';
 import '../../providers/app_providers.dart';
+import '../allocation/allocation_template_screen.dart';
 import 'budgets_controller.dart';
 
 String budgetStatusLabel(CategoryLimitStatus s) => switch (s) {
@@ -39,7 +40,19 @@ class BudgetsScreen extends ConsumerWidget {
     final cs = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Budjet')),
+      appBar: AppBar(
+        title: const Text('Budjet'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.tune),
+            tooltip: 'Taqsimlash rejasi',
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                  builder: (_) => const AllocationTemplateScreen()),
+            ),
+          ),
+        ],
+      ),
       body: views.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (_, _) => const Center(child: Text('Xatolik yuz berdi')),
