@@ -211,6 +211,10 @@ class DriftLedgerRepository implements LedgerRepository {
       return const Err(
           ValidationFailure('edit a transfer by deleting and re-creating it'));
     }
+    if (amount != null && amount.currency != entry.amount.currency) {
+      return const Err(ValidationFailure(
+          'cannot change an entry to a different currency; delete and re-create it instead'));
+    }
     int? newMinor;
     if (amount != null) {
       newMinor = entry.type == LedgerEntryType.expense
@@ -234,7 +238,7 @@ class DriftLedgerRepository implements LedgerRepository {
           ..where((t) => t.id.equals(id)))
         .getSingleOrNull();
     if (row == null) return;
-    final transferId = row.transferId as String?;
+    final transferId = row.transferId;
     if (transferId != null) {
       await (db.delete(db.transactionsTable)
             ..where((t) => t.transferId.equals(transferId)))

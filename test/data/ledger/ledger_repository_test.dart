@@ -103,4 +103,13 @@ void main() {
     final r = await ledger.editEntry(id: leg.id, amount: const Money(1, uzs));
     expect(r.isOk, isFalse);
   });
+
+  test('editing an entry with a different currency is rejected and leaves it unchanged', () async {
+    final a = await newAccount(opening: 1000000);
+    final id = await ledger.addExpense(accountId: a, amount: const Money(250000, uzs), categoryId: 1, occurredAt: when);
+    final r = await ledger.editEntry(id: id, amount: const Money(5000, CurrencyRegistry.usd));
+    expect(r.isOk, isFalse);
+    final e = (await ledger.entriesForAccount(a)).single;
+    expect(e.amount, const Money(-250000, uzs));
+  });
 }
