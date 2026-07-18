@@ -4,12 +4,19 @@ import 'tables.dart';
 
 part 'app_database.g.dart';
 
-@DriftDatabase(tables: [AppSettingsTable, AppMetaTable])
+@DriftDatabase(tables: [
+  AppSettingsTable,
+  AppMetaTable,
+  AccountsTable,
+  CategoriesTable,
+  TransactionsTable,
+  RecurringIncomePlansTable,
+])
 class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   @override
   MigrationStrategy get migration => buildMigration(this);

@@ -39,3 +39,56 @@ class AppMetaTable extends Table {
   @override
   Set<Column> get primaryKey => {id};
 }
+
+class AccountsTable extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get name => text()();
+  TextColumn get type => text()(); // AccountType.name
+  IntColumn get openingBalanceMinor =>
+      integer().withDefault(const Constant(0))();
+  TextColumn get currencyCode => text().withDefault(const Constant('UZS'))();
+  TextColumn get icon => text().withDefault(const Constant('wallet'))();
+  BoolColumn get archived => boolean().withDefault(const Constant(false))();
+  IntColumn get sortOrder => integer().withDefault(const Constant(0))();
+  DateTimeColumn get createdAt =>
+      dateTime().clientDefault(() => DateTime.now())();
+}
+
+class CategoriesTable extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get name => text()();
+  TextColumn get icon => text().withDefault(const Constant('category'))();
+  BoolColumn get isDefault => boolean().withDefault(const Constant(false))();
+  BoolColumn get archived => boolean().withDefault(const Constant(false))();
+  IntColumn get sortOrder => integer().withDefault(const Constant(0))();
+}
+
+class TransactionsTable extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get accountId => integer().references(AccountsTable, #id)();
+  TextColumn get type => text()(); // LedgerEntryType.name
+  IntColumn get amountMinor => integer()(); // signed
+  TextColumn get currencyCode => text()();
+  IntColumn get categoryId =>
+      integer().nullable().references(CategoriesTable, #id)();
+  TextColumn get incomeType => text().nullable()(); // IncomeType.name
+  TextColumn get transferId => text().nullable()();
+  IntColumn get allocatedMinor => integer().withDefault(const Constant(0))();
+  BoolColumn get planned => boolean().nullable()();
+  TextColumn get note => text().nullable()();
+  DateTimeColumn get occurredAt => dateTime()();
+  DateTimeColumn get createdAt => dateTime()();
+}
+
+class RecurringIncomePlansTable extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get accountId => integer().references(AccountsTable, #id)();
+  IntColumn get amountMinor => integer()();
+  TextColumn get currencyCode => text()();
+  TextColumn get incomeType => text()();
+  TextColumn get note => text().nullable()();
+  TextColumn get intervalKind => text()(); // IntervalKind.name
+  IntColumn get anchorDay => integer()();
+  DateTimeColumn get nextDueAt => dateTime()();
+  BoolColumn get active => boolean().withDefault(const Constant(true))();
+}
