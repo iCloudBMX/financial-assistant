@@ -8,7 +8,7 @@ class IncomeEntryController extends AsyncNotifier<void> {
   @override
   Future<void> build() async {}
 
-  Future<void> save({
+  Future<int> save({
     required int accountId,
     required Money amount,
     required IncomeType incomeType,
@@ -19,7 +19,7 @@ class IncomeEntryController extends AsyncNotifier<void> {
     int? anchorDay,
   }) async {
     final when = occurredAt ?? DateTime.now();
-    await ref.read(ledgerRepositoryProvider).addIncome(
+    final incomeId = await ref.read(ledgerRepositoryProvider).addIncome(
         accountId: accountId, amount: amount, incomeType: incomeType,
         occurredAt: when, note: note);
     if (recurring) {
@@ -36,6 +36,7 @@ class IncomeEntryController extends AsyncNotifier<void> {
           );
     }
     ref.read(ledgerRevisionProvider.notifier).state++;
+    return incomeId;
   }
 }
 
