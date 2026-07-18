@@ -47,7 +47,7 @@ Future<void> showExpenseEntrySheet(BuildContext context, WidgetRef ref) async {
             FilledButton(
               onPressed: () async {
                 final amount = Money.tryParse(amountCtrl.text, currency);
-                if (amount == null || categoryId == null) return;
+                if (amount == null || amount.minorUnits <= 0 || categoryId == null) return;
                 await ref.read(expenseEntryControllerProvider.notifier)
                     .save(amount: amount, categoryId: categoryId!);
                 if (!ctx.mounted) return;

@@ -46,4 +46,23 @@ void main() {
     final after = await c.read(dashboardProvider.future);
     expect(after.totals[uzs], const Money(1000000, uzs));
   });
+
+  test('save rejects a non-positive amount and leaves the balance unchanged',
+      () async {
+    final db = AppDatabase(NativeDatabase.memory());
+    addTearDown(db.close);
+    final c = ProviderContainer(overrides: [databaseProvider.overrideWithValue(db)]);
+    addTearDown(c.dispose);
+
+    await c.read(accountRepositoryProvider).create(
+        name: 'Naqd', type: AccountType.cash,
+        openingBalance: const Money(1000000, uzs), icon: 'w');
+    await c.read(expenseEntryControllerProvider.future);
+
+    await c.read(expenseEntryControllerProvider.notifier)
+        .save(amount: const Money(-5000, uzs), categoryId: 1);
+    final data = await c.read(dashboardProvider.future);
+    expect(data.totals[uzs], const Money(1000000, uzs));
+    expect(await c.read(ledgerRepositoryProvider).allEntries(), isEmpty);
+  });
 }

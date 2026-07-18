@@ -67,6 +67,7 @@ class ExpenseEntryController extends AsyncNotifier<ExpenseEntryState> {
     String? note,
     bool? planned,
   }) async {
+    if (amount.minorUnits <= 0) return;
     final accId = accountId ?? state.value?.defaultAccountId;
     if (accId == null) return;
     final id = await ref.read(ledgerRepositoryProvider).addExpense(
