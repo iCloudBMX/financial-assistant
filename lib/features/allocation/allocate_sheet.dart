@@ -31,7 +31,10 @@ class _AllocateSheetState extends ConsumerState<AllocateSheet> {
     final result =
         await ref.read(allocationControllerProvider).preview(widget.income);
     for (final e in result.perBucket.entries) {
-      _ctrls[e.key] = TextEditingController(text: e.value.format());
+      // Seed with the symbol-less numeric form so an untouched field
+      // re-parses back to the same Money (format() would embed the currency
+      // symbol, which tryParse rejects → the field would read as null/zero).
+      _ctrls[e.key] = TextEditingController(text: e.value.formatNumber());
     }
     if (mounted) setState(() => _loading = false);
   }

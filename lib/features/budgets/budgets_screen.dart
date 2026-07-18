@@ -146,10 +146,14 @@ class _LimitEditSheet extends StatefulWidget {
 
 class _LimitEditSheetState extends State<_LimitEditSheet> {
   late final TextEditingController _ctrl = TextEditingController(
+    // Symbol-less numeric form so an unchanged field re-parses to the same
+    // limit; format() would embed the currency symbol, which tryParse
+    // rejects → "Saqlash" unedited would fall back to the clear sentinel and
+    // silently wipe an existing limit (data loss).
     text: widget.category.monthlyLimitMinor == null
         ? ''
         : Money(widget.category.monthlyLimitMinor!, widget.currency)
-            .format(),
+            .formatNumber(),
   );
 
   @override
@@ -214,7 +218,7 @@ class _MoneyField extends StatefulWidget {
 
 class _MoneyFieldState extends State<_MoneyField> {
   late final TextEditingController _ctrl = TextEditingController(
-      text: widget.value.minorUnits == 0 ? '' : widget.value.format());
+      text: widget.value.minorUnits == 0 ? '' : widget.value.formatNumber());
 
   @override
   Widget build(BuildContext context) {
