@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 import 'app_database.dart';
+import 'default_allocation.dart';
 import 'default_categories.dart';
 
 /// Stepwise migrations. Each future schema bump adds a `from: N` branch.
@@ -28,6 +29,7 @@ MigrationStrategy buildMigration(AppDatabase db) => MigrationStrategy(
             .into(db.appSettingsTable)
             .insert(const AppSettingsTableCompanion(id: Value(0)));
         await _seedDefaultCategories(db);
+        await seedDefaultAllocationTemplate(db);
       },
       onUpgrade: (Migrator m, int from, int to) async {
         if (from < 2) {
@@ -40,11 +42,58 @@ MigrationStrategy buildMigration(AppDatabase db) => MigrationStrategy(
           await m.createTable(db.recurringIncomePlansTable);
           await _seedDefaultCategories(db);
         }
+        if (from < 3) {
+          // v2 -> v3: category budget columns, variable budget + safety buffer
+          // settings, and the two allocation tables.
+          //
+          // Each `addColumn` is guarded by `_hasColumn`: when this branch
+          // runs in the same `onUpgrade` pass as `from < 2` (e.g. a v1
+          // install jumping straight to v3), `createTable` above already
+          // built `categories_table` using today's full Dart column set (this
+          // codebase can't use drift's versioned schema CLI — see the class
+          // doc comment — so `createTable` has no historical snapshot to
+          // build from), meaning the "new" v3 columns already exist and a
+          // second `ADD COLUMN` would throw "duplicate column name".
+          if (!await _hasColumn(m, 'categories_table', 'kind')) {
+            await m.addColumn(db.categoriesTable, db.categoriesTable.kind);
+          }
+          if (!await _hasColumn(m, 'categories_table', 'monthly_limit_minor')) {
+            await m.addColumn(
+                db.categoriesTable, db.categoriesTable.monthlyLimitMinor);
+          }
+          if (!await _hasColumn(m, 'categories_table', 'weekly_limit_minor')) {
+            await m.addColumn(
+                db.categoriesTable, db.categoriesTable.weeklyLimitMinor);
+          }
+          if (!await _hasColumn(
+              m, 'app_settings_table', 'variable_budget_minor')) {
+            await m.addColumn(
+                db.appSettingsTable, db.appSettingsTable.variableBudgetMinor);
+          }
+          if (!await _hasColumn(
+              m, 'app_settings_table', 'safety_buffer_minor')) {
+            await m.addColumn(
+                db.appSettingsTable, db.appSettingsTable.safetyBufferMinor);
+          }
+          await m.createTable(db.allocationDirectionsTable);
+          await m.createTable(db.incomeAllocationsTable);
+          await seedDefaultAllocationTemplate(db);
+        }
       },
       beforeOpen: (details) async {
         await db.customStatement('PRAGMA foreign_keys = ON');
       },
     );
+
+/// True if `table` already has a column named `column`. Used to guard
+/// `addColumn` calls that might otherwise run twice against the same
+/// physical table within a single multi-version `onUpgrade` pass (see the
+/// comment at the `from < 3` branch above).
+Future<bool> _hasColumn(Migrator m, String table, String column) async {
+  final rows =
+      await m.database.customSelect("PRAGMA table_info($table)").get();
+  return rows.any((r) => r.data['name'] == column);
+}
 
 Future<void> _seedDefaultCategories(AppDatabase db) async {
   for (var i = 0; i < kDefaultCategories.length; i++) {
