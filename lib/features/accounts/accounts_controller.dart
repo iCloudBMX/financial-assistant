@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/ledger/account.dart';
 import '../../core/ledger/balance_engine.dart';
 import '../../core/money/money.dart';
+import '../../core/result/result.dart';
 import '../../providers/app_providers.dart';
 
 class AccountWithBalance {
@@ -45,6 +46,26 @@ class AccountsController extends AsyncNotifier<List<AccountWithBalance>> {
 
   Future<void> archive(int id) async {
     await ref.read(accountRepositoryProvider).setArchived(id, true);
+    await _invalidate();
+  }
+
+  Future<Result<void>> transfer({
+    required int fromId,
+    required int toId,
+    required Money amount,
+  }) async {
+    final r = await ref.read(ledgerRepositoryProvider).transfer(
+        fromId: fromId, toId: toId, amount: amount, occurredAt: DateTime.now());
+    if (r.isOk) await _invalidate();
+    return r;
+  }
+
+  Future<void> adjust({
+    required int accountId,
+    required Money realBalance,
+  }) async {
+    await ref.read(ledgerRepositoryProvider).adjustBalance(
+        accountId: accountId, realBalance: realBalance, occurredAt: DateTime.now());
     await _invalidate();
   }
 }
