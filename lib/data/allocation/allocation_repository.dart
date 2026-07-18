@@ -14,6 +14,12 @@ abstract class AllocationRepository {
       int incomeTransactionId, Map<String, Money> perBucket);
 
   /// Σ of every income allocation per bucketKey, as [currency].
+  ///
+  /// Not consumed anywhere in `lib/` as of SP2 — this is a forward-facing
+  /// read for SP3/SP4 (goal and mortgage bucket reserves feeding
+  /// `SafeLimitInputs.goalReserves`/`unpaidMandatory`). It is not dead code
+  /// and SP2's safe-limit engine does not read bucket allocations as a
+  /// reserve; do not remove it.
   Future<Map<String, Money>> reservedTotals(Currency currency);
 }
 
@@ -84,6 +90,8 @@ class DriftAllocationRepository implements AllocationRepository {
     });
   }
 
+  /// See [AllocationRepository.reservedTotals]: unused by SP2, kept for
+  /// SP3/SP4 bucket-reserve reads.
   @override
   Future<Map<String, Money>> reservedTotals(Currency currency) async {
     final rows = await db.select(db.incomeAllocationsTable).get();

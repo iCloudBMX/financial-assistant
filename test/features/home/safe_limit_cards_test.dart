@@ -24,6 +24,12 @@ void main() {
     await DriftSettingsRepository(db)
         .write(base.copyWith(variableBudget: const Money(1400000, CurrencyRegistry.uzs)));
 
+    final container = ProviderContainer(
+      overrides: [databaseProvider.overrideWithValue(db)],
+    );
+    addTearDown(container.dispose);
+    final limit = await container.read(safeLimitProvider.future);
+
     await tester.pumpWidget(ProviderScope(
       overrides: [databaseProvider.overrideWithValue(db)],
       child: const MaterialApp(home: Scaffold(body: SafeLimitCard())),
@@ -31,6 +37,13 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.textContaining('Bugungi xavfsiz limit'), findsOneWidget);
+    // Assert the actual computed per-day figure is rendered as the headline
+    // (not just the card title), computed the same way the provider does so
+    // this stays correct regardless of what "today" is relative to the
+    // period. Uses an exact match (not textContaining) because with no
+    // expenses recorded, "Bugun qoldi: ..." also contains the same figure —
+    // an exact match pins this assertion to the dedicated headline Text.
+    expect(find.text(limit.perDay.format()), findsOneWidget);
     await db.close();
   });
 }
