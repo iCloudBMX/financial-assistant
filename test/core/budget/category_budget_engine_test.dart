@@ -31,6 +31,6 @@ void main() {
   test('remaining and deviation are signed opposites', () {
     expect(categoryRemaining(m(30000), m(100000)), m(70000));
     expect(categoryDeviation(m(130000), m(100000)), m(30000));
-    expect(categoryDeviation(m(30000), m(100000)), Money(-70000, uzs));
+    expect(categoryDeviation(m(30000), m(100000)), const Money(-70000, uzs));
   });
 }

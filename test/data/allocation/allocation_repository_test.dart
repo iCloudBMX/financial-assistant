@@ -1,4 +1,3 @@
-import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:financial_assistant/core/money/currency.dart';
@@ -46,11 +45,11 @@ void main() {
 
   test('saveTemplate replaces all directions and re-numbers sortOrder', () async {
     await repo.saveTemplate([
-      AllocationDirection(
+      const AllocationDirection(
           bucketKey: 'mandatoryExpenses',
           method: AllocationMethod.fixedAmount,
-          amount: const Money(400000, uzs)),
-      AllocationDirection(
+          amount: Money(400000, uzs)),
+      const AllocationDirection(
           bucketKey: 'variableBudget', method: AllocationMethod.remaining),
     ]);
     final t = await repo.template();

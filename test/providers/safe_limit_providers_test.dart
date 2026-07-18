@@ -7,9 +7,7 @@ import 'package:financial_assistant/core/money/currency.dart';
 import 'package:financial_assistant/core/money/money.dart';
 import 'package:financial_assistant/data/db/app_database.dart';
 import 'package:financial_assistant/data/settings/settings_repository.dart';
-import 'package:financial_assistant/data/settings/settings_model.dart';
 import 'package:financial_assistant/data/budget/budget_repository.dart';
-import 'package:financial_assistant/data/categories/category_model.dart';
 import 'package:financial_assistant/providers/app_providers.dart';
 
 void main() {

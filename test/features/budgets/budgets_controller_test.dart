@@ -4,7 +4,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:financial_assistant/core/money/currency.dart';
 import 'package:financial_assistant/core/money/money.dart';
 import 'package:financial_assistant/data/db/app_database.dart';
-import 'package:financial_assistant/data/categories/category_model.dart';
 import 'package:financial_assistant/providers/app_providers.dart';
 import 'package:financial_assistant/features/budgets/budgets_controller.dart';
 
