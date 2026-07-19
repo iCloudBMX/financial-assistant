@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import '../../core/money/currency.dart';
 import '../../core/money/money.dart';
 import '../../core/mortgage/mortgage_engine.dart';
+import '../../core/theme/velora_tokens.dart';
 import '../../providers/app_providers.dart';
+import '../../ui/components/velora_card.dart';
 
 /// Informational recommendation cards (§13.7 thin subset): payoff at the
 /// current rate, and the effect of a sample monthly extra payment. These are
@@ -31,29 +33,26 @@ class MortgageRecommendations extends StatelessWidget {
       extraMonthlyMinor: sampleExtra,
       asOf: DateTime.now(),
     );
-    return Card(
+    return VeloraCard(
       key: const Key('mortgage-recommendations'),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Tavsiyalar',
-                style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 8),
-            Text('Joriy sur\'atda ipoteka $payoff.'),
-            const SizedBox(height: 4),
-            Text('Oyiga ${Money(sampleExtra, cur).format()} qo\'shsangiz, '
-                '${withExtra.monthsSaved} oy tejaysiz '
-                '(${Money(withExtra.interestSavedMinor, cur).format()} foiz).'),
-            const SizedBox(height: 8),
-            Text(
-              'Tavsiyalar axborot xarakterida va bankning rasmiy '
-              'hisob-kitobini almashtirmaydi.',
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-          ],
-        ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Taxminiy tavsiyalar',
+              style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: VeloraSpacing.sm),
+          Text('Joriy sur\'atda ipoteka taxminan $payoff yopiladi.'),
+          const SizedBox(height: VeloraSpacing.xs),
+          Text('Oyiga ${Money(sampleExtra, cur).format()} qo\'shsangiz, '
+              'taxminan ${withExtra.monthsSaved} oy tejaysiz '
+              '(${Money(withExtra.interestSavedMinor, cur).format()} foiz).'),
+          const SizedBox(height: VeloraSpacing.sm),
+          Text(
+            'Tavsiyalar axborot xarakterida va bankning rasmiy '
+            'hisob-kitobini almashtirmaydi.',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        ],
       ),
     );
   }

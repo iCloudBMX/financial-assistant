@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/money/currency.dart';
 import '../../core/money/money.dart';
+import '../../core/theme/velora_tokens.dart';
 import '../../providers/app_providers.dart';
+import '../../ui/components/velora_card.dart';
 import 'goal_contribute_sheet.dart';
 
 /// The goal detail screen: progress header, contribute/withdraw actions,
@@ -27,15 +29,37 @@ class GoalDetailScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: Text(item?.goal.name ?? 'Maqsad')),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(VeloraSpacing.lg),
         children: [
           if (item != null) ...[
-            Text('${item.progress.saved.format()} / ${item.progress.target.format()}',
-                style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 8),
-            LinearProgressIndicator(
-                value: (item.progress.percentBp / 10000).clamp(0.0, 1.0)),
-            const SizedBox(height: 16),
+            VeloraCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                      '${item.progress.saved.format()} / ${item.progress.target.format()}',
+                      style: Theme.of(context).textTheme.titleMedium),
+                  const SizedBox(height: VeloraSpacing.sm),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(VeloraRadii.control),
+                    child: LinearProgressIndicator(
+                      value: (item.progress.percentBp / 10000).clamp(0.0, 1.0),
+                      minHeight: 8,
+                      color: VeloraColors.apricot,
+                    ),
+                  ),
+                  if (item.progress.projectedDate != null) ...[
+                    const SizedBox(height: VeloraSpacing.sm),
+                    Text(
+                      'Taxminiy yetish sanasi: '
+                      '${item.progress.projectedDate!.toIso8601String().split('T').first}',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(height: VeloraSpacing.lg),
             Row(children: [
               Expanded(
                 child: FilledButton(
@@ -44,7 +68,7 @@ class GoalDetailScreen extends ConsumerWidget {
                   child: const Text("Hissa qo'shish"),
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: VeloraSpacing.sm),
               Expanded(
                 child: OutlinedButton(
                   onPressed: () => showGoalContributeSheet(context, ref,
@@ -53,8 +77,9 @@ class GoalDetailScreen extends ConsumerWidget {
                 ),
               ),
             ]),
-            const SizedBox(height: 16),
+            const SizedBox(height: VeloraSpacing.lg),
             Text('Tarix', style: Theme.of(context).textTheme.titleSmall),
+            const SizedBox(height: VeloraSpacing.sm),
           ],
           historyAsync.when(
             loading: () => const Center(child: CircularProgressIndicator()),
@@ -66,15 +91,35 @@ class GoalDetailScreen extends ConsumerWidget {
                   )
                 : Column(
                     children: list
-                        .map((c) => ListTile(
-                              key: const Key('contribution-row'),
-                              leading: Icon(c.amountMinor < 0
-                                  ? Icons.remove_circle_outline
-                                  : Icons.add_circle_outline),
-                              title: Text(
-                                  Money(c.amountMinor, currency).format()),
-                              subtitle: Text(
-                                  '${c.source.name} · ${_formatDate(c.occurredAt)}'),
+                        .map((c) => Padding(
+                              padding: const EdgeInsets.only(
+                                  bottom: VeloraSpacing.sm),
+                              child: VeloraCard(
+                                key: const Key('contribution-row'),
+                                child: Row(
+                                  children: [
+                                    Icon(c.amountMinor < 0
+                                        ? Icons.remove_circle_outline
+                                        : Icons.add_circle_outline),
+                                    const SizedBox(width: VeloraSpacing.sm),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(Money(c.amountMinor, currency)
+                                              .format()),
+                                          Text(
+                                              '${c.source.name} · ${_formatDate(c.occurredAt)}',
+                                              style: Theme.of(context)
+                                                  .textTheme
+                                                  .bodySmall),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                             ))
                         .toList(),
                   ),

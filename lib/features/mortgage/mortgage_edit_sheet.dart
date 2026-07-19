@@ -4,7 +4,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/money/currency.dart';
 import '../../core/money/money.dart';
 import '../../core/mortgage/mortgage_engine.dart';
+import '../../core/theme/velora_tokens.dart';
 import '../../data/mortgage/mortgage_model.dart';
+import '../../ui/components/velora_button.dart';
+import '../../ui/components/velora_money_field.dart';
+import '../../ui/components/velora_sheet.dart';
 import 'mortgage_controller.dart';
 
 /// Percent string ("18.5") -> integer basis points (1850), no float on the
@@ -124,42 +128,40 @@ class _MortgageEditSheetState extends ConsumerState<_MortgageEditSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.only(
-          left: 16,
-          right: 16,
-          top: 16,
-          bottom: MediaQuery.of(context).viewInsets.bottom + 16),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
+    return VeloraSheetScaffold(
+      title: widget.existing == null ? 'Yangi ipoteka' : 'Ipotekani tahrirlash',
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           TextField(
               key: const Key('mortgage-name'),
               controller: _name,
               decoration: const InputDecoration(labelText: 'Nomi')),
-          TextField(
+          const SizedBox(height: VeloraSpacing.md),
+          VeloraMoneyField(
               key: const Key('mortgage-initial'),
               controller: _initial,
-              keyboardType: TextInputType.number,
-              decoration:
-                  const InputDecoration(labelText: 'Boshlang\'ich summa')),
-          TextField(
+              currency: _uzs,
+              label: 'Boshlang\'ich summa'),
+          const SizedBox(height: VeloraSpacing.md),
+          VeloraMoneyField(
               key: const Key('mortgage-opening'),
               controller: _opening,
-              keyboardType: TextInputType.number,
-              decoration:
-                  const InputDecoration(labelText: 'Joriy qarz qoldig\'i')),
+              currency: _uzs,
+              label: 'Joriy qarz qoldig\'i'),
+          const SizedBox(height: VeloraSpacing.md),
           TextField(
               key: const Key('mortgage-rate'),
               controller: _rate,
               keyboardType: TextInputType.number,
               decoration: const InputDecoration(labelText: 'Yillik foiz (%)')),
-          TextField(
+          const SizedBox(height: VeloraSpacing.md),
+          VeloraMoneyField(
               key: const Key('mortgage-mandatory'),
               controller: _mandatory,
-              keyboardType: TextInputType.number,
-              decoration:
-                  const InputDecoration(labelText: 'Majburiy oylik to\'lov')),
+              currency: _uzs,
+              label: 'Majburiy oylik to\'lov'),
+          const SizedBox(height: VeloraSpacing.md),
           DropdownButtonFormField<PaymentType>(
             initialValue: _type,
             decoration: const InputDecoration(labelText: 'To\'lov turi'),
@@ -173,17 +175,16 @@ class _MortgageEditSheetState extends ConsumerState<_MortgageEditSheet> {
           ),
           if (_error != null)
             Padding(
-              padding: const EdgeInsets.only(top: 8),
+              padding: const EdgeInsets.only(top: VeloraSpacing.sm),
               child: Text(_error!,
                   style: TextStyle(color: Theme.of(context).colorScheme.error)),
             ),
-          const SizedBox(height: 12),
-          FilledButton(
-            key: const Key('mortgage-save'),
-            onPressed: _save,
-            child: const Text('Saqlash'),
-          ),
         ],
+      ),
+      primaryAction: VeloraPrimaryButton(
+        key: const Key('mortgage-save'),
+        label: 'Saqlash',
+        onPressed: _save,
       ),
     );
   }

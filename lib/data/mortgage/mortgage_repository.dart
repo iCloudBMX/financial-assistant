@@ -182,6 +182,15 @@ class DriftMortgageRepository implements MortgageRepository {
     String? note,
     DateTime? occurredAt,
   }) async {
+    // Repository-layer defense of the §13.3 invariant: the parts must sum to
+    // the total. Callers (MortgageController) already validate this before
+    // reaching here — this guard protects any future/direct caller from
+    // writing a payment where interest silently reduces principal or the
+    // ledger total.
+    if (!split.isBalanced) {
+      throw ArgumentError(
+          'MortgagePaymentSplit parts must sum to the total (§13.3 invariant)');
+    }
     final mortgage = await (db.select(db.mortgagesTable)
           ..where((t) => t.id.equals(mortgageId)))
         .getSingle();

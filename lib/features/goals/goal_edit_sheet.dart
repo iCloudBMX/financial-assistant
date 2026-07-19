@@ -2,8 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/money/currency.dart';
 import '../../core/money/money.dart';
+import '../../core/theme/velora_tokens.dart';
 import '../../data/goals/goal_model.dart';
 import '../../providers/app_providers.dart';
+import '../../ui/components/velora_button.dart';
+import '../../ui/components/velora_money_field.dart';
+import '../../ui/components/velora_sheet.dart';
 import 'goal_controller.dart';
 
 /// Opens the goal create/edit sheet. Pass [existing] to edit; omit to
@@ -104,33 +108,24 @@ class _GoalEditSheetState extends ConsumerState<_GoalEditSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.only(
-        left: 16,
-        right: 16,
-        top: 16,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 16,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
+    return VeloraSheetScaffold(
+      title: widget.existing == null ? 'Yangi maqsad' : 'Maqsadni tahrirlash',
+      body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(widget.existing == null ? 'Yangi maqsad' : 'Maqsadni tahrirlash',
-              style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: 12),
           TextField(
             key: const Key('goal-name'),
             controller: _name,
             decoration: const InputDecoration(labelText: 'Nom'),
           ),
-          const SizedBox(height: 8),
-          TextField(
+          const SizedBox(height: VeloraSpacing.md),
+          VeloraMoneyField(
             key: const Key('goal-target'),
             controller: _target,
-            keyboardType: TextInputType.number,
-            decoration: const InputDecoration(labelText: 'Target summa'),
+            currency: CurrencyRegistry.uzs,
+            label: 'Target summa',
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: VeloraSpacing.md),
           DropdownButtonFormField<GoalPriority>(
             initialValue: _priority,
             decoration: const InputDecoration(labelText: 'Prioritet'),
@@ -139,24 +134,23 @@ class _GoalEditSheetState extends ConsumerState<_GoalEditSheet> {
                 .toList(),
             onChanged: (v) => setState(() => _priority = v ?? _priority),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: VeloraSpacing.md),
           TextField(
             controller: _note,
             decoration: const InputDecoration(labelText: 'Izoh (ixtiyoriy)'),
           ),
           if (_error != null)
             Padding(
-              padding: const EdgeInsets.only(top: 8),
+              padding: const EdgeInsets.only(top: VeloraSpacing.sm),
               child: Text(_error!,
                   style: TextStyle(color: Theme.of(context).colorScheme.error)),
             ),
-          const SizedBox(height: 12),
-          FilledButton(
-            key: const Key('goal-save'),
-            onPressed: _save,
-            child: const Text('Saqlash'),
-          ),
         ],
+      ),
+      primaryAction: VeloraPrimaryButton(
+        key: const Key('goal-save'),
+        label: 'Saqlash',
+        onPressed: _save,
       ),
     );
   }

@@ -147,6 +147,42 @@ void main() {
     );
   });
 
+  test(
+      'recordPayment rejects an unbalanced split at the repository layer '
+      '(defense in depth below the controller)', () async {
+    final acc = await anAccount();
+    final id = await repo.create(draft());
+    await expectLater(
+      repo.recordPayment(
+        mortgageId: id,
+        accountId: acc,
+        split: const MortgagePaymentSplit(
+            totalMinor: 5000000, principalMinor: 3000000, interestMinor: 1000000),
+      ),
+      throwsArgumentError,
+    );
+    expect(await repo.payments(id), isEmpty);
+  });
+
+  test(
+      'a rejected unbalanced split leaves no ledger expense either — the '
+      'payment row and its ledger entry are written or rejected together',
+      () async {
+    final acc = await anAccount();
+    final id = await repo.create(draft());
+    await expectLater(
+      repo.recordPayment(
+        mortgageId: id,
+        accountId: acc,
+        split: const MortgagePaymentSplit(
+            totalMinor: 5000000, principalMinor: 1000000, interestMinor: 1000000),
+      ),
+      throwsArgumentError,
+    );
+    expect(await repo.payments(id), isEmpty);
+    expect(await ledger.entriesForAccount(acc), isEmpty);
+  });
+
   test('archive hides from the default list; delete removes payments only', () async {
     final acc = await anAccount();
     final id = await repo.create(draft());

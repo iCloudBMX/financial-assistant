@@ -1,5 +1,7 @@
 // lib/core/mortgage/mortgage_engine.dart
 
+import '../money/money.dart';
+
 /// How each period's principal/interest split is derived (§13.1).
 enum PaymentType { annuity, differential, custom }
 
@@ -290,6 +292,94 @@ MortgageProjection applyExtraPayment({
     asOf: asOf,
     isApproximate: strategy == PayoffStrategy.unclear
         || (strategy == PayoffStrategy.lowerPayment && type == PaymentType.differential),
+  );
+}
+
+/// §6.9/§13.3: how the mortgage payment sheet derives or accepts the split
+/// between principal and interest for one payment.
+enum MortgageSplitMode { auto, manual }
+
+/// The mortgage payment sheet's derived UI state (§6.9). Pure and
+/// Flutter-free — the sheet renders this, it never computes it itself.
+/// [difference] is `total − (principal + interest)`; [canSave] is false
+/// whenever a portion is negative, the parts exceed the total, or they
+/// simply do not add up to it.
+class MortgagePaymentSplitState {
+  final MortgageSplitMode mode;
+  final Money total;
+  final Money principal;
+  final Money interest;
+  final Money difference;
+  final bool canSave;
+  const MortgagePaymentSplitState({
+    required this.mode,
+    required this.total,
+    required this.principal,
+    required this.interest,
+    required this.difference,
+    required this.canSave,
+  });
+}
+
+/// Auto split (§6.9): interest is a fact of the current balance and rate —
+/// derived FIRST, directly from [currentPrincipalMinor]/[annualRateBp] via
+/// [monthlyInterestMinor] — and principal absorbs whatever is left of
+/// [total]. This ordering is the correctness invariant: principal is never
+/// computed on its own and then reduced by interest a second time, so
+/// `principal + interest == total` always holds and interest can never act
+/// as a reduction applied to the principal figure.
+MortgagePaymentSplitState deriveAutoSplit({
+  required Money total,
+  required int currentPrincipalMinor,
+  required int annualRateBp,
+}) {
+  final totalMinor = total.minorUnits;
+  if (totalMinor <= 0) {
+    return MortgagePaymentSplitState(
+      mode: MortgageSplitMode.auto,
+      total: total,
+      principal: Money.zero(total.currency),
+      interest: Money.zero(total.currency),
+      difference: Money.zero(total.currency),
+      canSave: false,
+    );
+  }
+  final rawInterest = monthlyInterestMinor(currentPrincipalMinor, annualRateBp);
+  // The mandatory payment can, in principle, undershoot a month's interest
+  // (a "neverCloses" plan) — clamp so principal never goes negative and the
+  // total/principal/interest equation still balances exactly.
+  final interestMinor = rawInterest > totalMinor ? totalMinor : rawInterest;
+  final principalMinor = totalMinor - interestMinor;
+  return MortgagePaymentSplitState(
+    mode: MortgageSplitMode.auto,
+    total: total,
+    principal: Money(principalMinor, total.currency),
+    interest: Money(interestMinor, total.currency),
+    difference: Money.zero(total.currency),
+    canSave: true,
+  );
+}
+
+/// Manual split (§6.9): the user enters both portions directly. [difference]
+/// surfaces exactly how far the live equation is from balancing; [canSave]
+/// requires both portions non-negative AND the equation to balance exactly
+/// (covers "negative", "exceeds the total", and "does not balance" from the
+/// design spec in one check).
+MortgagePaymentSplitState manualSplit({
+  required Money total,
+  required Money principal,
+  required Money interest,
+}) {
+  final diffMinor =
+      total.minorUnits - principal.minorUnits - interest.minorUnits;
+  final nonNegative = principal.minorUnits >= 0 && interest.minorUnits >= 0;
+  return MortgagePaymentSplitState(
+    mode: MortgageSplitMode.manual,
+    total: total,
+    principal: principal,
+    interest: interest,
+    difference: Money(diffMinor, total.currency),
+    canSave: total.minorUnits > 0 && nonNegative && diffMinor == 0,
   );
 }
 

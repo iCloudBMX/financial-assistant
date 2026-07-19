@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/money/money.dart';
+import '../../core/theme/velora_tokens.dart';
 import '../../data/goals/goal_model.dart';
 import '../../providers/app_providers.dart';
 import 'goal_controller.dart';
@@ -41,7 +42,9 @@ Future<void> showGoalCompletedDialog(BuildContext context, WidgetRef ref,
         final canMoveSurplus = excessMinor > 0 && others.isNotEmpty;
 
         return AlertDialog(
-          title: const Text('Tabriklaymiz! 🎉'),
+          icon: const Icon(Icons.celebration_outlined,
+              color: VeloraColors.success, size: 32),
+          title: const Text('Tabriklaymiz!'),
           content: const Text('Maqsadga yetdingiz. Keyingi qadam?'),
           actions: [
             TextButton(

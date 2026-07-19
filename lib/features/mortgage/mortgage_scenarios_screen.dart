@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/money/currency.dart';
 import '../../core/money/money.dart';
 import '../../core/mortgage/mortgage_engine.dart';
+import '../../core/theme/velora_tokens.dart';
 import '../../providers/app_providers.dart';
+import '../../ui/components/velora_card.dart';
 
 class MortgageScenariosScreen extends ConsumerWidget {
   final int mortgageId;
@@ -48,23 +50,36 @@ class MortgageScenariosScreen extends ConsumerWidget {
             asOf: DateTime.now(),
           );
           return ListView(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(VeloraSpacing.lg),
             children: [
-              for (final s in scenarios)
-                Card(
-                  child: ListTile(
-                    title: Text(_labels[s.kind]!),
-                    subtitle: Text(
-                      s.neverCloses
-                          ? 'Yopilmaydi'
-                          : 'Qolgan oylar: ${s.monthsRemaining}\n'
-                              'Tejalgan foiz: ${Money(s.interestSavedMinor, cur).format()}\n'
-                              'Muddat qisqarishi: ${s.monthsSaved} oy\n'
-                              'Oylik: ${Money(s.requiredMonthlyMinor, cur).format()}'
-                              '${s.isApproximate ? '\n(taxminiy)' : ''}',
-                    ),
+              // §6.9: every scenario figure is a projection, not a bank
+              // statement — the "Taxminiy" (estimate) tag applies to all
+              // four rows below, not only the ones flagged approximate.
+              Text('Taxminiy natijalar',
+                  style: Theme.of(context).textTheme.labelLarge),
+              const SizedBox(height: VeloraSpacing.sm),
+              for (final s in scenarios) ...[
+                VeloraCard(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(_labels[s.kind]!,
+                          style: Theme.of(context).textTheme.titleMedium),
+                      const SizedBox(height: VeloraSpacing.xs),
+                      Text(
+                        s.neverCloses
+                            ? 'Yopilmaydi'
+                            : 'Qolgan oylar: ${s.monthsRemaining}\n'
+                                'Taxminiy tejaladigan foiz: ${Money(s.interestSavedMinor, cur).format()}\n'
+                                'Taxminiy muddat qisqarishi: ${s.monthsSaved} oy\n'
+                                'Oylik: ${Money(s.requiredMonthlyMinor, cur).format()}'
+                                '${s.isApproximate ? '\n(taxminiy hisob-kitob)' : ''}',
+                      ),
+                    ],
                   ),
                 ),
+                const SizedBox(height: VeloraSpacing.md),
+              ],
             ],
           );
         },

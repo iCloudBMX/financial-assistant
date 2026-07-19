@@ -4,7 +4,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/money/currency.dart';
 import '../../core/money/money.dart';
 import '../../core/mortgage/mortgage_engine.dart';
+import '../../core/theme/velora_tokens.dart';
 import '../../providers/app_providers.dart';
+import '../../ui/components/velora_button.dart';
+import '../../ui/components/velora_card.dart';
+import '../../ui/components/velora_money_field.dart';
+import '../../ui/components/velora_sheet.dart';
 import 'mortgage_controller.dart';
 
 Future<void> showMortgageExtraPaymentSheet(
@@ -90,38 +95,42 @@ class _ExtraSheetState extends ConsumerState<_ExtraSheet> {
       final interestSaved = (before.totalRemainingInterestMinor -
               after.totalRemainingInterestMinor)
           .clamp(0, 1 << 62);
-      preview = 'Muddat qisqarishi: $monthsSaved oy\n'
+      // §6.9: every projection is informational, never a bank statement —
+      // the "Taxminiy" (estimate) word is always present here, not only when
+      // the plan itself is flagged approximate.
+      preview = 'Taxminiy natija:\n'
+          'Muddat qisqarishi: $monthsSaved oy\n'
           'Tejalgan foiz: ${Money(interestSaved, _uzs).format()}'
-          '${after.isApproximate ? '\n(taxminiy)' : ''}';
+          '${after.isApproximate ? ' (taxminiy hisob-kitob)' : ''}';
     }
-    return Padding(
-      padding: EdgeInsets.only(
-          left: 16,
-          right: 16,
-          top: 16,
-          bottom: MediaQuery.of(context).viewInsets.bottom + 16),
-      child: Column(mainAxisSize: MainAxisSize.min, children: [
-        TextField(
-            key: const Key('extra-amount'),
-            controller: _amount,
-            keyboardType: TextInputType.number,
-            decoration:
-                const InputDecoration(labelText: 'Qo\'shimcha to\'lov summasi')),
-        if (preview.isNotEmpty)
-          Padding(
-              padding: const EdgeInsets.only(top: 12), child: Text(preview)),
-        if (_error != null)
-          Padding(
-            padding: const EdgeInsets.only(top: 8),
-            child: Text(_error!,
-                style: TextStyle(color: Theme.of(context).colorScheme.error)),
-          ),
-        const SizedBox(height: 12),
-        FilledButton(
-            key: const Key('extra-save'),
-            onPressed: _save,
-            child: const Text('Saqlash')),
-      ]),
+    return VeloraSheetScaffold(
+      title: 'Qo\'shimcha to\'lov',
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          VeloraMoneyField(
+              key: const Key('extra-amount'),
+              controller: _amount,
+              currency: _uzs,
+              label: 'Qo\'shimcha to\'lov summasi',
+              autofocus: true),
+          if (preview.isNotEmpty) ...[
+            const SizedBox(height: VeloraSpacing.md),
+            VeloraCard(child: Text(preview)),
+          ],
+          if (_error != null)
+            Padding(
+              padding: const EdgeInsets.only(top: VeloraSpacing.sm),
+              child: Text(_error!,
+                  style: TextStyle(color: Theme.of(context).colorScheme.error)),
+            ),
+        ],
+      ),
+      primaryAction: VeloraPrimaryButton(
+        key: const Key('extra-save'),
+        label: 'Saqlash',
+        onPressed: _save,
+      ),
     );
   }
 }

@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/theme/velora_tokens.dart';
 import '../../providers/app_providers.dart';
+import '../../ui/components/velora_async_state.dart';
+import '../../ui/components/velora_button.dart';
 import 'goal_card.dart';
 import 'goal_detail_screen.dart';
 import 'goal_edit_sheet.dart';
@@ -19,27 +22,33 @@ class GoalsScreen extends ConsumerWidget {
       ),
       body: goals.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Xatolik: $e')),
+        error: (e, _) => VeloraErrorState(
+          message: 'Xatolik yuz berdi',
+          onRetry: () => ref.invalidate(goalsProvider),
+        ),
         data: (list) {
           if (list.isEmpty) {
-            return const Center(
-              child: Padding(
-                padding: EdgeInsets.all(24),
-                child: Text(
-                  "Hali maqsad yo'q. Birinchi moliyaviy maqsadingizni qo'shing.",
-                  textAlign: TextAlign.center,
-                ),
+            return VeloraEmptyState(
+              icon: Icons.flag_outlined,
+              title: "Hali maqsad yo'q",
+              message: "Birinchi moliyaviy maqsadingizni qo'shing.",
+              action: VeloraPrimaryButton(
+                label: 'Maqsad qo\'shish',
+                onPressed: () => showGoalEditSheet(context, ref),
               ),
             );
           }
           return ListView.builder(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(VeloraSpacing.md),
             itemCount: list.length,
-            itemBuilder: (_, i) => GoalCard(
-              item: list[i],
-              onTap: () => Navigator.of(context).push(MaterialPageRoute(
-                builder: (_) => GoalDetailScreen(goalId: list[i].goal.id),
-              )),
+            itemBuilder: (_, i) => Padding(
+              padding: const EdgeInsets.only(bottom: VeloraSpacing.md),
+              child: GoalCard(
+                item: list[i],
+                onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                  builder: (_) => GoalDetailScreen(goalId: list[i].goal.id),
+                )),
+              ),
             ),
           );
         },

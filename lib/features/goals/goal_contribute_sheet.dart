@@ -2,7 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/money/currency.dart';
 import '../../core/money/money.dart';
+import '../../core/theme/velora_tokens.dart';
 import '../../providers/app_providers.dart';
+import '../../ui/components/velora_button.dart';
+import '../../ui/components/velora_card.dart';
+import '../../ui/components/velora_money_field.dart';
+import '../../ui/components/velora_sheet.dart';
 import 'goal_completed_dialog.dart';
 import 'goal_controller.dart';
 
@@ -72,43 +77,76 @@ class _ContributeSheetState extends ConsumerState<_ContributeSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.only(
-        left: 16,
-        right: 16,
-        top: 16,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 16,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
+    final theme = Theme.of(context);
+    final goals = ref.watch(goalsProvider).value;
+    final matches = goals?.where((g) => g.goal.id == widget.goalId);
+    final item = (matches == null || matches.isEmpty) ? null : matches.first;
+    final currency = item?.progress.saved.currency ?? CurrencyRegistry.uzs;
+    final amount = Money.tryParse(_amount.text, currency);
+
+    // §6.8: contribution and withdrawal show their effect before commit.
+    Widget? preview;
+    if (item != null && amount != null && amount.minorUnits > 0) {
+      final saved = item.progress.saved.minorUnits;
+      final target = item.progress.target.minorUnits;
+      final afterMinor = widget.withdraw
+          ? saved - amount.minorUnits
+          : saved + amount.minorUnits;
+      final after = Money(afterMinor < 0 ? 0 : afterMinor, currency);
+      final remainingAfter =
+          Money((target - after.minorUnits).clamp(0, target), currency);
+      preview = VeloraCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              widget.withdraw
+                  ? "Yechishdan so'ng jamg'arma: ${after.format()}"
+                  : "Hissadan so'ng jamg'arma: ${after.format()}",
+              style: theme.textTheme.bodyMedium,
+            ),
+            const SizedBox(height: VeloraSpacing.xs),
+            Text('Maqsadgacha qoldi: ${remainingAfter.format()}',
+                style: theme.textTheme.bodySmall),
+          ],
+        ),
+      );
+    }
+
+    return VeloraSheetScaffold(
+      title: widget.withdraw ? 'Yechish' : "Hissa qo'shish",
+      body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(widget.withdraw ? 'Yechish' : "Hissa qo'shish",
-              style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: 12),
-          TextField(
+          VeloraMoneyField(
             key: const Key('contrib-amount'),
             controller: _amount,
-            keyboardType: TextInputType.number,
-            decoration: const InputDecoration(labelText: 'Summa'),
+            currency: currency,
+            label: 'Summa',
+            autofocus: true,
+            onChanged: (_) => setState(() {}),
           ),
+          const SizedBox(height: VeloraSpacing.md),
           TextField(
             controller: _note,
             decoration: const InputDecoration(labelText: 'Izoh (ixtiyoriy)'),
           ),
+          if (preview != null) ...[
+            const SizedBox(height: VeloraSpacing.md),
+            preview,
+          ],
           if (_error != null)
             Padding(
-              padding: const EdgeInsets.only(top: 8),
+              padding: const EdgeInsets.only(top: VeloraSpacing.sm),
               child: Text(_error!,
-                  style: TextStyle(color: Theme.of(context).colorScheme.error)),
+                  style: TextStyle(color: theme.colorScheme.error)),
             ),
-          const SizedBox(height: 12),
-          FilledButton(
-            key: const Key('contrib-save'),
-            onPressed: _submit,
-            child: Text(widget.withdraw ? 'Yechish' : 'Saqlash'),
-          ),
         ],
+      ),
+      primaryAction: VeloraPrimaryButton(
+        key: const Key('contrib-save'),
+        label: widget.withdraw ? 'Yechish' : 'Saqlash',
+        onPressed: _submit,
       ),
     );
   }

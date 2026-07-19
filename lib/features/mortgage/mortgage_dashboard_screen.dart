@@ -2,7 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/money/currency.dart';
 import '../../core/money/money.dart';
+import '../../core/theme/velora_tokens.dart';
 import '../../providers/app_providers.dart';
+import '../../ui/components/velora_async_state.dart';
+import '../../ui/components/velora_button.dart';
+import '../../ui/components/velora_card.dart';
 import 'mortgage_edit_sheet.dart';
 import 'mortgage_payment_sheet.dart';
 import 'mortgage_extra_payment_sheet.dart';
@@ -19,50 +23,66 @@ class MortgageDashboardScreen extends ConsumerWidget {
       appBar: AppBar(title: const Text('Ipoteka')),
       body: async.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (_, _) => const Center(child: Text('Xatolik yuz berdi')),
+        error: (_, _) => VeloraErrorState(
+          message: 'Xatolik yuz berdi',
+          onRetry: () => ref.invalidate(mortgagesProvider),
+        ),
         data: (list) {
           if (list.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Text('Ipoteka qo\'shilmagan'),
-                  const SizedBox(height: 12),
-                  FilledButton(
-                    onPressed: () => showMortgageEditSheet(context, ref),
-                    child: const Text('Ipoteka qo\'shish'),
-                  ),
-                ],
+            return VeloraEmptyState(
+              icon: Icons.account_balance_outlined,
+              title: 'Ipoteka qo\'shilmagan',
+              message: 'Ipotekangizni qo\'shib, to\'lovlarni kuzating.',
+              action: VeloraPrimaryButton(
+                label: 'Ipoteka qo\'shish',
+                onPressed: () => showMortgageEditSheet(context, ref),
               ),
             );
           }
           final m = list.first; // MVP: one primary mortgage on the dashboard
           final cur = CurrencyRegistry.byCode(m.mortgage.currencyCode);
           Money money(int v) => Money(v, cur);
+          // Every payoff date is an estimate (§6.9) — never presented as an
+          // exact bank figure.
           final payoff = m.projection.neverCloses
               ? 'Joriy to\'lovda yopilmaydi'
               : (m.projection.payoffDate?.toString().split(' ').first ?? '—');
           return ListView(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(VeloraSpacing.lg),
             children: [
               Text(m.mortgage.name,
                   style: Theme.of(context).textTheme.headlineSmall),
-              const SizedBox(height: 8),
-              _row('Joriy qarz qoldig\'i', money(m.currentPrincipalMinor).format()),
-              _row('Yillik foiz', '${m.mortgage.annualRateBp ~/ 100}.${(m.mortgage.annualRateBp % 100).toString().padLeft(2, '0')}%'),
-              _row('Navbatdagi to\'lov', money(m.mortgage.mandatoryPaymentMinor).format()),
-              _row('Navbatdagi sana',
-                  m.mortgage.nextPaymentDate.toString().split(' ').first),
-              _row('Jami to\'langan', money(m.totals.paidMinor).format()),
-              _row('Asosiy qarzga', money(m.totals.principalPaidMinor).format()),
-              _row('Foizga', money(m.totals.interestPaidMinor).format()),
-              _row('Qo\'shimcha to\'lovlar', money(m.totals.extraPaidMinor).format()),
-              _row('Bajarilishi', '${(m.completionBp / 100).toStringAsFixed(1)}%'),
-              _row('Taxminiy yopilish', payoff),
-              const SizedBox(height: 16),
+              const SizedBox(height: VeloraSpacing.md),
+              VeloraCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _row('Joriy qarz qoldig\'i',
+                        money(m.currentPrincipalMinor).format()),
+                    _row('Yillik foiz',
+                        '${m.mortgage.annualRateBp ~/ 100}.${(m.mortgage.annualRateBp % 100).toString().padLeft(2, '0')}%'),
+                    _row('Navbatdagi to\'lov',
+                        money(m.mortgage.mandatoryPaymentMinor).format()),
+                    _row('Navbatdagi sana',
+                        m.mortgage.nextPaymentDate.toString().split(' ').first),
+                    const Divider(),
+                    _row('Jami to\'langan', money(m.totals.paidMinor).format()),
+                    _row('Asosiy qarzga',
+                        money(m.totals.principalPaidMinor).format()),
+                    _row('Foizga', money(m.totals.interestPaidMinor).format()),
+                    _row('Qo\'shimcha to\'lovlar',
+                        money(m.totals.extraPaidMinor).format()),
+                    const Divider(),
+                    _row('Bajarilishi',
+                        '${(m.completionBp / 100).toStringAsFixed(1)}%'),
+                    _row('Taxminiy yopilish sanasi', payoff),
+                  ],
+                ),
+              ),
+              const SizedBox(height: VeloraSpacing.lg),
               MortgageRecommendations(item: m),
-              const SizedBox(height: 16),
-              Wrap(spacing: 8, children: [
+              const SizedBox(height: VeloraSpacing.lg),
+              Wrap(spacing: VeloraSpacing.sm, runSpacing: VeloraSpacing.sm, children: [
                 FilledButton(
                   onPressed: () =>
                       showMortgagePaymentSheet(context, ref, m.mortgage.id),
@@ -88,10 +108,19 @@ class MortgageDashboardScreen extends ConsumerWidget {
   }
 
   Widget _row(String label, String value) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 6),
+        padding: const EdgeInsets.symmetric(vertical: VeloraSpacing.xs),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [Text(label), Text(value)],
+          children: [
+            Text(label),
+            Flexible(
+              child: Text(
+                value,
+                textAlign: TextAlign.end,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
         ),
       );
 }

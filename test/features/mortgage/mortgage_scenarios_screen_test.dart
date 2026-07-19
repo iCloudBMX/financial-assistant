@@ -7,6 +7,7 @@ import 'package:financial_assistant/data/db/app_database.dart';
 import 'package:financial_assistant/data/mortgage/mortgage_model.dart';
 import 'package:financial_assistant/features/mortgage/mortgage_scenarios_screen.dart';
 import 'package:financial_assistant/providers/app_providers.dart';
+import 'package:financial_assistant/ui/components/velora_card.dart';
 
 void main() {
   testWidgets('scenarios screen lists the four scenario rows', (t) async {
@@ -35,8 +36,11 @@ void main() {
     await t.pumpAndSettle();
 
     // Baseline scenario row (ScenarioKind.mandatoryOnly) renders with its
-    // exact label, and all four scenario rows render as Cards.
+    // exact label, and all four scenario rows render as VeloraCards.
     expect(find.text('Faqat majburiy to\'lov'), findsOneWidget);
-    expect(find.byType(Card), findsNWidgets(4));
+    expect(find.byType(VeloraCard), findsNWidgets(4));
+
+    // §6.9: scenario projections are always labeled as estimates.
+    expect(find.textContaining('Taxminiy'), findsWidgets);
   });
 }
