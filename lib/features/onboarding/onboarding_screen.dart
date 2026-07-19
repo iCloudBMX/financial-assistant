@@ -77,7 +77,7 @@ class OnboardingScreen extends ConsumerWidget {
                       if (controller.isLast) {
                         await controller.commit();
                         if (context.mounted) {
-                          context.go(RouteNames.home);
+                          context.goNamed(RouteNames.home);
                         }
                       } else {
                         controller.next();

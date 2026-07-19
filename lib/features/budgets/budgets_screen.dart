@@ -134,24 +134,27 @@ class _CategoryBudgetTile extends StatelessWidget {
               '${Money(c.weeklyLimitMinor!, view.weekSpent.currency).format()}',
               style: TextStyle(color: weekColor),
             ),
-        ],
-      ),
-      trailing: Wrap(
-        crossAxisAlignment: WrapCrossAlignment.center,
-        spacing: 4,
-        children: [
-          ActionChip(
-            label: Text(categoryKindLabel(c.kind)),
-            onPressed: () => controller.setKind(
-              c.id,
-              c.kind == CategoryKind.mandatory
-                  ? CategoryKind.variable
-                  : CategoryKind.mandatory,
-            ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.edit_outlined),
-            onPressed: () => _editLimit(context),
+          const SizedBox(height: 8),
+          Wrap(
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 4,
+            runSpacing: 4,
+            children: [
+              ActionChip(
+                label: Text(categoryKindLabel(c.kind)),
+                onPressed: () => controller.setKind(
+                  c.id,
+                  c.kind == CategoryKind.mandatory
+                      ? CategoryKind.variable
+                      : CategoryKind.mandatory,
+                ),
+              ),
+              IconButton(
+                tooltip: 'Limitni tahrirlash',
+                icon: const Icon(Icons.edit_outlined),
+                onPressed: () => _editLimit(context),
+              ),
+            ],
           ),
         ],
       ),

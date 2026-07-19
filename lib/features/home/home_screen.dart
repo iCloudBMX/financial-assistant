@@ -23,7 +23,7 @@ class HomeScreen extends ConsumerWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.account_balance_wallet_outlined),
-            onPressed: () => context.push(RouteNames.accounts),
+            onPressed: () => context.pushNamed(RouteNames.accounts),
           ),
         ],
       ),
@@ -91,8 +91,12 @@ class HomeScreen extends ConsumerWidget {
   Widget _row(String label, String value) => Padding(
         padding: const EdgeInsets.symmetric(vertical: 8),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [Text(label), Text(value)],
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(child: Text(label)),
+            const SizedBox(width: 8),
+            Flexible(child: Text(value, textAlign: TextAlign.end)),
+          ],
         ),
       );
 }
