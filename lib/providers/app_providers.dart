@@ -5,6 +5,7 @@ import '../core/budget/category_budget_engine.dart';
 import '../core/goal/goal_engine.dart';
 import '../core/ledger/summary_engine.dart';
 import '../core/limit/safe_limit_engine.dart';
+import '../core/money/currency.dart';
 import '../core/money/money.dart';
 import '../core/mortgage/mortgage_engine.dart';
 import '../core/time/financial_period.dart';
@@ -86,14 +87,74 @@ final dashboardProvider = FutureProvider<DashboardData>((ref) async {
   final accounts =
       await ref.watch(accountRepositoryProvider).list(includeArchived: false);
   final entries = await ref.watch(ledgerRepositoryProvider).allEntries();
+  // Reuses the existing goal/mortgage providers (not raw repositories) so
+  // this stays the single place Home-related repository reads are wired,
+  // per the Velora presentation-architecture boundary: widgets only ever
+  // consume the resulting DashboardData.
+  final goals = await ref.watch(goalsProvider.future);
+  final mortgages = await ref.watch(mortgagesProvider.future);
   return buildDashboard(
     accounts: accounts,
     entries: entries,
     primaryCurrency: settings.primaryCurrency,
     periodStartDay: settings.periodStartDay,
     now: DateTime.now(),
+    primaryGoal: _selectPrimaryGoal(goals),
+    mortgageSummary: _selectMortgageSummary(mortgages),
   );
 });
+
+/// Picks the Home "primary goal": the active goal with the highest priority
+/// (critical > high > medium > low), tie-broken by the earliest target date
+/// (goals with no deadline sort last), then by `sortOrder`.
+PrimaryGoalSummary? _selectPrimaryGoal(List<GoalWithProgress> goals) {
+  final active =
+      goals.where((g) => g.goal.status == GoalStatus.active).toList()
+        ..sort((a, b) {
+          final byPriority =
+              a.goal.priority.index.compareTo(b.goal.priority.index);
+          if (byPriority != 0) return byPriority;
+          final ad = a.goal.targetDate;
+          final bd = b.goal.targetDate;
+          if (ad != null && bd != null) {
+            final byDate = ad.compareTo(bd);
+            if (byDate != 0) return byDate;
+          } else if (ad != null) {
+            return -1;
+          } else if (bd != null) {
+            return 1;
+          }
+          return a.goal.sortOrder.compareTo(b.goal.sortOrder);
+        });
+  if (active.isEmpty) return null;
+  final top = active.first;
+  return PrimaryGoalSummary(
+    id: top.goal.id,
+    name: top.goal.name,
+    icon: top.goal.icon,
+    saved: top.progress.saved,
+    target: top.progress.target,
+    percentBp: top.progress.percentBp,
+    remaining: top.progress.remaining,
+  );
+}
+
+/// Picks the Home mortgage summary: the first mortgage, matching the
+/// existing single-mortgage-card behavior in `MortgageSummaryCard`.
+MortgageSummaryView? _selectMortgageSummary(
+    List<MortgageWithProjection> mortgages) {
+  if (mortgages.isEmpty) return null;
+  final m = mortgages.first;
+  final cur = CurrencyRegistry.byCode(m.mortgage.currencyCode);
+  return MortgageSummaryView(
+    id: m.mortgage.id,
+    name: m.mortgage.name,
+    currentPrincipal: Money(m.currentPrincipalMinor, cur),
+    nextPaymentAmount: Money(m.mortgage.mandatoryPaymentMinor, cur),
+    nextPaymentDate: m.mortgage.nextPaymentDate,
+    completionBp: m.completionBp,
+  );
+}
 
 final budgetRepositoryProvider = Provider<BudgetRepository>(
   (ref) => DriftBudgetRepository(ref.watch(databaseProvider)),
