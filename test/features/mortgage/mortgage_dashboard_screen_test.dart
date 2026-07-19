@@ -39,5 +39,6 @@ void main() {
     container.read(ledgerRevisionProvider.notifier).update((n) => n + 1);
     await t.pumpAndSettle();
     expect(find.textContaining('Uy'), findsWidgets);
+    expect(find.byKey(const Key('mortgage-recommendations')), findsOneWidget);
   });
 }
