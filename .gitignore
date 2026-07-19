@@ -49,3 +49,6 @@ ios/Flutter/flutter_export_environment.sh
 
 # Local isolated implementation worktrees
 .worktrees/
+
+# Subagent-driven development scratch state
+.superpowers/sdd/
