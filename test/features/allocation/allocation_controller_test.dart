@@ -2,10 +2,14 @@ import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:financial_assistant/core/ledger/account.dart';
+import 'package:financial_assistant/core/ledger/ledger_entry.dart';
 import 'package:financial_assistant/core/money/currency.dart';
 import 'package:financial_assistant/core/money/money.dart';
+import 'package:financial_assistant/core/mortgage/mortgage_engine.dart';
 import 'package:financial_assistant/data/db/app_database.dart';
 import 'package:financial_assistant/data/goals/goal_model.dart';
+import 'package:financial_assistant/data/mortgage/mortgage_model.dart';
 import 'package:financial_assistant/providers/app_providers.dart';
 import 'package:financial_assistant/features/allocation/allocation_controller.dart';
 import 'package:financial_assistant/features/budgets/budgets_controller.dart';
@@ -208,5 +212,50 @@ void main() {
         reason: 'a manual goal contribution must not create a ledger '
             'transaction — only a goal_contributions row');
     expect(await goalRepo.savedFor(id), 400000);
+  });
+
+  test('confirming a mortgage-bucket allocation writes no mortgage payment',
+      () async {
+    final db = AppDatabase(NativeDatabase.memory());
+    final container = ProviderContainer(overrides: [
+      databaseProvider.overrideWithValue(db),
+    ]);
+    addTearDown(container.dispose);
+    addTearDown(db.close);
+
+    // Arrange: an income to allocate + a mortgage to (not) auto-pay.
+    final accountId = await container.read(accountRepositoryProvider).create(
+          name: 'Karta',
+          type: AccountType.bankCard,
+          openingBalance: const Money(500000000, uzs),
+          icon: 'account_balance_wallet',
+        );
+    final incomeId = await container.read(ledgerRepositoryProvider).addIncome(
+          accountId: accountId,
+          amount: const Money(10000000, uzs),
+          incomeType: IncomeType.salary,
+          occurredAt: DateTime(2026, 7, 1),
+        );
+    final mortgageRepo = container.read(mortgageRepositoryProvider);
+    final mortgageId = await mortgageRepo.create(MortgageDraft(
+      name: 'Uy',
+      initialLoanMinor: 120000000,
+      openingPrincipalMinor: 100000000,
+      annualRateBp: 1800,
+      startDate: DateTime(2025, 1, 1),
+      mandatoryPaymentMinor: 5000000,
+      nextPaymentDate: DateTime(2026, 7, 10),
+      paymentType: PaymentType.annuity,
+    ));
+
+    // Act: allocate part of the income to the mortgage:extra bucket.
+    final ctrl = container.read(allocationControllerProvider);
+    await ctrl.confirm(incomeId, {
+      'mortgage:extra': const Money(2000000, uzs),
+    });
+
+    // Assert: no mortgage payment was auto-created (planning-only).
+    expect(await mortgageRepo.payments(mortgageId), isEmpty);
+    expect(await mortgageRepo.currentPrincipalMinor(mortgageId), 100000000);
   });
 }
