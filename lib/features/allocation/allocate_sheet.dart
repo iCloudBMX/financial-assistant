@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/allocation/allocation_result_labels.dart';
 import '../../core/money/money.dart';
 import 'allocation_controller.dart';
+import 'variable_budget_offer.dart';
 
 /// §8.4 confirm screen: shows total income, each direction's amount (editable),
 /// total allocated, undistributed remainder, and free balance after. Returns
@@ -116,6 +117,10 @@ class _AllocateSheetState extends ConsumerState<AllocateSheet> {
                     await ref
                         .read(allocationControllerProvider)
                         .confirm(widget.incomeId, current);
+                    if (context.mounted) {
+                      await maybeOfferVariableBudgetUpdate(
+                          context, ref, current);
+                    }
                     if (context.mounted) Navigator.pop(context, true);
                   },
             child: const Text('Tasdiqlash'),

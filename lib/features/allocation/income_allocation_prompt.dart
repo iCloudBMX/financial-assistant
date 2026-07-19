@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/money/money.dart';
 import 'allocate_sheet.dart';
 import 'allocation_controller.dart';
+import 'variable_budget_offer.dart';
 
 /// §7.2: after an income is saved, offer allocate-now / later / apply-template.
 Future<void> showAllocationChoice(
@@ -51,6 +52,9 @@ Future<void> showAllocationChoice(
     await ref
         .read(allocationControllerProvider)
         .confirm(incomeId, result.perBucket);
+    if (context.mounted) {
+      await maybeOfferVariableBudgetUpdate(context, ref, result.perBucket);
+    }
   }
   // 'later' / dismissed: leave the income undistributed.
 }
