@@ -6,6 +6,7 @@ import '../core/goal/goal_engine.dart';
 import '../core/ledger/summary_engine.dart';
 import '../core/limit/safe_limit_engine.dart';
 import '../core/money/money.dart';
+import '../core/mortgage/mortgage_engine.dart';
 import '../core/time/financial_period.dart';
 import '../core/time/weekday.dart';
 import '../data/accounts/account_repository.dart';
@@ -19,6 +20,8 @@ import '../data/goals/goal_repository.dart';
 import '../data/ledger/ledger_repository.dart';
 import '../data/meta/meta_model.dart';
 import '../data/meta/meta_repository.dart';
+import '../data/mortgage/mortgage_model.dart';
+import '../data/mortgage/mortgage_repository.dart';
 import '../data/recurring/recurring_repository.dart';
 import '../data/settings/settings_model.dart';
 import '../data/settings/settings_repository.dart';
@@ -145,6 +148,80 @@ final goalContributionsProvider =
   return ref.watch(goalRepositoryProvider).contributions(goalId);
 });
 
+final mortgageRepositoryProvider = Provider<MortgageRepository>(
+  (ref) => DriftMortgageRepository(
+    ref.watch(databaseProvider),
+    ref.watch(ledgerRepositoryProvider),
+  ),
+);
+
+/// A mortgage paired with its derived balance, totals, and forward projection.
+class MortgageWithProjection {
+  final Mortgage mortgage;
+  final int currentPrincipalMinor;
+  final MortgageTotals totals;
+  final MortgageProjection projection;
+  final int completionBp; // 0..10000 vs initialLoan
+  const MortgageWithProjection({
+    required this.mortgage,
+    required this.currentPrincipalMinor,
+    required this.totals,
+    required this.projection,
+    required this.completionBp,
+  });
+}
+
+final mortgagesProvider =
+    FutureProvider<List<MortgageWithProjection>>((ref) async {
+  ref.watch(ledgerRevisionProvider);
+  final repo = ref.watch(mortgageRepositoryProvider);
+  final mortgages = await repo.list();
+  final now = DateTime.now();
+  final out = <MortgageWithProjection>[];
+  for (final m in mortgages) {
+    // TODO(multi-currency): mortgages in a non-primary currency are out of MVP scope.
+    final balance = await repo.currentPrincipalMinor(m.id);
+    final totals = await repo.totals(m.id);
+    final projection = projectPayoff(
+      currentPrincipalMinor: balance,
+      annualRateBp: m.annualRateBp,
+      type: m.paymentType,
+      monthlyPaymentMinor: m.mandatoryPaymentMinor,
+      // differential fixed principal ≈ opening / calendar-months of the term
+      monthlyPrincipalMinor: _differentialPrincipal(m),
+      asOf: now,
+      isApproximate: m.paymentType == PaymentType.custom,
+    );
+    final completionBp = m.initialLoanMinor <= 0
+        ? 0
+        : (((m.initialLoanMinor - balance) * 10000) ~/ m.initialLoanMinor)
+            .clamp(0, 10000);
+    out.add(MortgageWithProjection(
+      mortgage: m,
+      currentPrincipalMinor: balance,
+      totals: totals,
+      projection: projection,
+      completionBp: completionBp,
+    ));
+  }
+  return out;
+});
+
+int _differentialPrincipal(Mortgage m) {
+  if (m.paymentType != PaymentType.differential) return 0;
+  final end = m.endDate;
+  if (end == null) return 0;
+  final months = (end.year * 12 + end.month) - (m.startDate.year * 12 + m.startDate.month);
+  final n = months < 1 ? 1 : months;
+  return m.openingPrincipalMinor ~/ n;
+}
+
+final mortgagePaymentsProvider =
+    FutureProvider.family<List<MortgagePayment>, int>((ref, mortgageId) async {
+  ref.watch(ledgerRevisionProvider);
+  return ref.watch(mortgageRepositoryProvider).payments(mortgageId);
+});
+
 /// A category with its spend and status for the month and the week.
 class CategoryBudgetView {
   final Category category;
@@ -223,6 +300,11 @@ final safeLimitProvider = FutureProvider<SafeLimit>((ref) async {
   final totalAvailable = totals[currency] ?? Money.zero(currency);
   final goalReserveMinor =
       await ref.watch(goalRepositoryProvider).activeReserveMinor();
+  final unpaidMandatoryMinor =
+      await ref.watch(mortgageRepositoryProvider).unpaidMandatoryMinor(
+            periodStart: period.start,
+            periodEndExclusive: period.endExclusive,
+          );
 
   final inputs = SafeLimitInputs(
     variableBudget: settings.variableBudget,
@@ -233,7 +315,7 @@ final safeLimitProvider = FutureProvider<SafeLimit>((ref) async {
         ? settings.minReserve
         : Money.zero(currency),
     goalReserves: Money(goalReserveMinor, currency),
-    unpaidMandatory: Money.zero(currency), // SP4 supplies real values
+    unpaidMandatory: Money(unpaidMandatoryMinor, currency),
     todaySpent: spentOn(now, entries, currency),
     period: period,
     asOf: now,
