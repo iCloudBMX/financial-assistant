@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/money/currency.dart';
 import '../../core/money/money.dart';
 import '../../providers/app_providers.dart';
+import 'goal_completed_dialog.dart';
 import 'goal_controller.dart';
 
 Future<void> showGoalContributeSheet(BuildContext context, WidgetRef ref,
@@ -46,11 +47,24 @@ class _ContributeSheetState extends ConsumerState<_ContributeSheet> {
         ? await ctrl.withdraw(goalId: widget.goalId, amount: amount, note: note)
         : await ctrl.contribute(
             goalId: widget.goalId, amount: amount, note: note);
-    result.when(
-      ok: (_) {
+    await result.when(
+      ok: (_) async {
         if (mounted) Navigator.of(context).pop();
+        if (widget.withdraw) return;
+        // Detect completion off the freshly-recomputed goalsProvider — NOT
+        // the possibly-stale `.valueOrNull` — since goalsProvider only
+        // recomputes after the ledgerRevisionProvider bump the controller
+        // just triggered.
+        final goals = await ref.read(goalsProvider.future);
+        final matches = goals.where((g) => g.goal.id == widget.goalId);
+        final done = matches.isNotEmpty &&
+            matches.first.progress.remaining.minorUnits == 0;
+        if (done && context.mounted) {
+          // ignore: use_build_context_synchronously
+          await showGoalCompletedDialog(context, ref, goalId: widget.goalId);
+        }
       },
-      err: (f) => setState(() => _error = widget.withdraw
+      err: (f) async => setState(() => _error = widget.withdraw
           ? "Jamg'armadan ko'p yechib bo'lmaydi"
           : "Summani tekshiring"),
     );
