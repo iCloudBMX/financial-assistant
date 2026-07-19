@@ -50,6 +50,20 @@ void main() {
   });
 
   group('MoneyTextInputFormatter', () {
+    TextEditingValue enter(
+      MoneyTextInputFormatter formatter,
+      TextEditingValue oldValue,
+      String text,
+    ) {
+      return formatter.formatEditUpdate(
+        oldValue,
+        TextEditingValue(
+          text: text,
+          selection: TextSelection.collapsed(offset: text.length),
+        ),
+      );
+    }
+
     test('formats UZS while preserving digit-relative caret', () {
       final formatter = MoneyTextInputFormatter(CurrencyRegistry.uzs);
       final out = formatter.formatEditUpdate(
@@ -67,15 +81,82 @@ void main() {
       expect(out.selection.baseOffset, 7);
     });
 
-    test('formats decimal currency input', () {
+    test('preserves each sequential decimal draft keystroke', () {
       final formatter = MoneyTextInputFormatter(CurrencyRegistry.usd);
-      final out = formatter.formatEditUpdate(
-        TextEditingValue.empty,
-        const TextEditingValue(
-          text: '1234.56',
-          selection: TextSelection.collapsed(offset: 7),
-        ),
+      var value = TextEditingValue.empty;
+
+      for (final step in const [
+        (input: '1', expected: '1'),
+        (input: '1.', expected: '1.'),
+        (input: '1.2', expected: '1.2'),
+        (input: '1.25', expected: '1.25'),
+      ]) {
+        value = enter(formatter, value, step.input);
+        expect(value.text, step.expected);
+        expect(value.selection.baseOffset, step.expected.length);
+      }
+    });
+
+    test(
+      'groups only the integer portion during a mid-string decimal edit',
+      () {
+        final formatter = MoneyTextInputFormatter(CurrencyRegistry.usd);
+        final out = formatter.formatEditUpdate(
+          const TextEditingValue(
+            text: '123.45',
+            selection: TextSelection.collapsed(offset: 2),
+          ),
+          const TextEditingValue(
+            text: '1293.45',
+            selection: TextSelection.collapsed(offset: 3),
+          ),
+        );
+
+        expect(out.text, '1 293.45');
+        expect(out.selection.baseOffset, 4);
+      },
+    );
+
+    test('backspaces through fraction, trailing separator, and integer', () {
+      final formatter = MoneyTextInputFormatter(CurrencyRegistry.usd);
+      var value = const TextEditingValue(
+        text: '1.25',
+        selection: TextSelection.collapsed(offset: 4),
       );
+
+      for (final expected in const ['1.2', '1.', '1']) {
+        value = enter(formatter, value, expected);
+        expect(value.text, expected);
+        expect(value.selection.baseOffset, expected.length);
+      }
+    });
+
+    test(
+      'preserves the previous value when fraction precision is exceeded',
+      () {
+        final formatter = MoneyTextInputFormatter(CurrencyRegistry.usd);
+        const oldValue = TextEditingValue(
+          text: '1.25',
+          selection: TextSelection.collapsed(offset: 4),
+        );
+
+        final out = enter(formatter, oldValue, '1.256');
+
+        expect(out, oldValue);
+      },
+    );
+
+    test('normalizes a pasted US-style decimal value', () {
+      final formatter = MoneyTextInputFormatter(CurrencyRegistry.usd);
+      final out = enter(formatter, TextEditingValue.empty, r'$1,234.56');
+
+      expect(out.text, '1 234.56');
+      expect(out.selection.baseOffset, 8);
+    });
+
+    test('normalizes a pasted European-style decimal value', () {
+      final formatter = MoneyTextInputFormatter(CurrencyRegistry.eur);
+      final out = enter(formatter, TextEditingValue.empty, '1.234,56 €');
 
       expect(out.text, '1 234.56');
       expect(out.selection.baseOffset, 8);
