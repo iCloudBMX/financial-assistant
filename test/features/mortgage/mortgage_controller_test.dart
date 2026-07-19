@@ -95,4 +95,68 @@ void main() {
     );
     expect((await repo.byId(id))!.status, MortgageStatus.closed);
   });
+
+  test('recordPayment advancing a day-31 due date clamps to the month end', () async {
+    final id = (await ctrl.create(MortgageDraft(
+      name: 'Uy',
+      initialLoanMinor: 120000000,
+      openingPrincipalMinor: 100000000,
+      annualRateBp: 1800,
+      startDate: DateTime(2025, 1, 1),
+      mandatoryPaymentMinor: 5000000,
+      nextPaymentDate: DateTime(2026, 1, 31),
+      paymentType: PaymentType.annuity,
+    )))
+        .valueOrNull!;
+    final res = await ctrl.recordPayment(
+      mortgageId: id,
+      accountId: accountId,
+      split: const MortgagePaymentSplit(
+          totalMinor: 5000000, principalMinor: 3500000, interestMinor: 1500000),
+    );
+    expect(res.isOk, isTrue);
+    // Jan 31 + 1 month clamps to Feb 28 (2026 is not a leap year), not Mar 3.
+    expect((await repo.byId(id))!.nextPaymentDate, DateTime(2026, 2, 28));
+  });
+
+  test('recordPayment rejects a split with a negative part', () async {
+    final id = (await ctrl.create(draft())).valueOrNull!;
+    final res = await ctrl.recordPayment(
+      mortgageId: id,
+      accountId: accountId,
+      split: const MortgagePaymentSplit(
+          totalMinor: 5000000,
+          principalMinor: -1000000,
+          interestMinor: 6000000),
+    );
+    expect(res.isOk, isFalse);
+    expect(await repo.payments(id), isEmpty);
+  });
+
+  test('closeMortgage sets status closed', () async {
+    final id = (await ctrl.create(draft())).valueOrNull!;
+    await ctrl.closeMortgage(id);
+    expect((await repo.byId(id))!.status, MortgageStatus.closed);
+  });
+
+  test('update changes a field and persists it', () async {
+    final id = (await ctrl.create(draft())).valueOrNull!;
+    final res = await ctrl.update(
+      id,
+      MortgageDraft(
+        name: 'Yangi uy',
+        initialLoanMinor: 120000000,
+        openingPrincipalMinor: 100000000,
+        annualRateBp: 1800,
+        startDate: DateTime(2025, 1, 1),
+        mandatoryPaymentMinor: 6000000,
+        nextPaymentDate: DateTime(2026, 7, 10),
+        paymentType: PaymentType.annuity,
+      ),
+    );
+    expect(res.isOk, isTrue);
+    final after = await repo.byId(id);
+    expect(after!.name, 'Yangi uy');
+    expect(after.mandatoryPaymentMinor, 6000000);
+  });
 }

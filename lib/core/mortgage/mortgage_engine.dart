@@ -33,7 +33,10 @@ int monthlyInterestMinor(int balanceMinor, int annualRateBp) {
   return (balanceMinor * annualRateBp + 60000) ~/ 120000;
 }
 
-DateTime _addMonths(DateTime from, int months) {
+/// Advance [from] by [months] calendar months, clamping the day to the target
+/// month's last day (Jan 31 + 1 month -> Feb 28/29, never overflowing into the
+/// following month).
+DateTime addMonths(DateTime from, int months) {
   final totalMonths = from.month - 1 + months;
   final year = from.year + totalMonths ~/ 12;
   final month = totalMonths % 12 + 1;
@@ -97,7 +100,7 @@ MortgageProjection projectPayoff({
     );
   }
   return MortgageProjection(
-    payoffDate: _addMonths(asOf, months),
+    payoffDate: addMonths(asOf, months),
     monthsRemaining: months,
     totalRemainingInterestMinor: totalInterest,
     neverCloses: false,

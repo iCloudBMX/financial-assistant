@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/money/money.dart';
+import '../../core/mortgage/mortgage_engine.dart';
 import '../../core/result/failure.dart';
 import '../../core/result/result.dart';
 import '../../data/mortgage/mortgage_model.dart';
@@ -109,9 +110,8 @@ class MortgageController {
   Future<void> _advanceDueDate(int mortgageId) async {
     final m = await _repo.byId(mortgageId);
     if (m == null) return;
-    final d = m.nextPaymentDate;
     await _repo.setNextPaymentDate(
-        mortgageId, DateTime(d.year, d.month + 1, d.day));
+        mortgageId, addMonths(m.nextPaymentDate, 1));
   }
 
   Future<void> _closeIfPaidOff(int mortgageId) async {
