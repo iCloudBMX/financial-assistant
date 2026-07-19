@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -24,7 +25,7 @@ void main() {
   });
 
   test('goalsProvider computes progress for each goal', () async {
-    final repo = container.read(goalRepositoryProvider);
+    final GoalRepository repo = container.read(goalRepositoryProvider);
     final id = await repo.create(GoalDraft(
       name: 'Sayohat',
       targetAmountMinor: 1000000,
@@ -42,25 +43,44 @@ void main() {
   });
 
   test('goal reserve reduces the daily safe limit', () async {
-    final settings = container.read(settingsRepositoryProvider);
-    // Give the period a variable budget and some available balance via settings
-    // + an account so freeBalance is positive, then confirm the reserve bites.
-    // (Uses the same wiring as the SP2 safe-limit provider test.)
-    final repo = container.read(goalRepositoryProvider);
-    final before = await container.read(safeLimitProvider.future);
+    // Seed an account with a modest opening balance and a variable budget
+    // that's larger than that balance, so `freeBalance` (which the goal
+    // reserve eats into) — not `remainingVariable` — is the binding
+    // constraint on `spendable`. Mirrors the account/budget seeding pattern
+    // in safe_limit_providers_test.dart.
+    await db.into(db.accountsTable).insert(
+          AccountsTableCompanion.insert(
+            name: 'Naqd',
+            type: 'cash',
+            openingBalanceMinor: const Value(300000),
+          ),
+        );
+    final settingsRepo = container.read(settingsRepositoryProvider);
+    final baseSettings = await settingsRepo.read();
+    await settingsRepo.write(baseSettings.copyWith(
+      variableBudget: const Money(1400000, CurrencyRegistry.uzs),
+    ));
+    container.read(ledgerRevisionProvider.notifier).update((n) => n + 1);
 
+    final before = await container.read(safeLimitProvider.future);
+    // Sanity check: the setup actually produces a positive spendable amount
+    // before the goal exists, otherwise a decrease wouldn't be observable.
+    expect(before.spendable.minorUnits, greaterThan(0));
+
+    final GoalRepository repo = container.read(goalRepositoryProvider);
     final id = await repo.create(GoalDraft(
       name: 'Zaxira',
       targetAmountMinor: 1000000,
       startDate: DateTime(2026, 1, 1),
     ));
     await repo.addContribution(
-        goalId: id, signedAmountMinor: 500000, source: ContributionSource.manual);
+        goalId: id, signedAmountMinor: 100000, source: ContributionSource.manual);
     container.read(ledgerRevisionProvider.notifier).update((n) => n + 1);
 
     final after = await container.read(safeLimitProvider.future);
-    expect(after.spendable.minorUnits <= before.spendable.minorUnits, isTrue);
-    // ignore: unused_local_variable
-    final _ = settings;
+    // The goal reserve must strictly reduce spendable, and not simply floor
+    // it at 0 (which would also pass a non-strict `<=` check vacuously).
+    expect(after.spendable.minorUnits, lessThan(before.spendable.minorUnits));
+    expect(after.spendable.minorUnits, greaterThan(0));
   });
 }
