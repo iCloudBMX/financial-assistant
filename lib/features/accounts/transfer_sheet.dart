@@ -1,8 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/money/currency.dart';
 import '../../core/money/money.dart';
 import '../../core/result/failure_messages.dart';
+import '../../core/theme/velora_tokens.dart';
 import '../../providers/app_providers.dart';
+import '../../ui/components/account_card_picker.dart';
+import '../../ui/components/velora_button.dart';
+import '../../ui/components/velora_money_field.dart';
+import '../../ui/components/velora_sheet.dart';
 import 'accounts_controller.dart';
 
 Future<void> showTransferSheet(BuildContext context, WidgetRef ref) async {
@@ -16,49 +22,143 @@ Future<void> showTransferSheet(BuildContext context, WidgetRef ref) async {
     }
     return;
   }
-  final amountCtrl = TextEditingController();
-  var fromId = accounts[0].account.id;
-  var toId = accounts[1].account.id;
   if (!context.mounted) return;
   await showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
-    builder: (ctx) => Padding(
-      padding: EdgeInsets.only(
-          bottom: MediaQuery.of(ctx).viewInsets.bottom, left: 16, right: 16, top: 16),
-      child: StatefulBuilder(
-        builder: (ctx, setState) => Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            DropdownButton<int>(
-              value: fromId, isExpanded: true,
-              onChanged: (v) => setState(() => fromId = v ?? fromId),
-              items: [for (final a in accounts) DropdownMenuItem(value: a.account.id, child: Text('Dan: ${a.account.name}'))],
-            ),
-            DropdownButton<int>(
-              value: toId, isExpanded: true,
-              onChanged: (v) => setState(() => toId = v ?? toId),
-              items: [for (final a in accounts) DropdownMenuItem(value: a.account.id, child: Text('Ga: ${a.account.name}'))],
-            ),
-            TextField(controller: amountCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Summa')),
-            const SizedBox(height: 12),
-            FilledButton(
-              onPressed: () async {
-                final amount = Money.tryParse(amountCtrl.text, currency);
-                if (amount == null) return;
-                final r = await ref.read(accountsControllerProvider.notifier)
-                    .transfer(fromId: fromId, toId: toId, amount: amount);
-                if (!ctx.mounted) return;
-                Navigator.of(ctx).pop();
-                r.when(ok: (_) {}, err: (f) => ScaffoldMessenger.of(ctx)
-                    .showSnackBar(SnackBar(content: Text(userMessage(f)))));
-              },
-              child: const Text('O\'tkazish'),
-            ),
-            const SizedBox(height: 12),
-          ],
-        ),
-      ),
+    useSafeArea: true,
+    builder: (ctx) => _TransferSheetBody(
+      currency: currency,
+      fromId: accounts[0].account.id,
+      toId: accounts[1].account.id,
     ),
   );
+}
+
+class _TransferSheetBody extends ConsumerStatefulWidget {
+  const _TransferSheetBody({
+    required this.currency,
+    required this.fromId,
+    required this.toId,
+  });
+
+  final Currency currency;
+  final int fromId;
+  final int toId;
+
+  @override
+  ConsumerState<_TransferSheetBody> createState() => _TransferSheetBodyState();
+}
+
+class _TransferSheetBodyState extends ConsumerState<_TransferSheetBody> {
+  late final TextEditingController _amountCtrl;
+  Money? _amount;
+  late int _fromId;
+  late int _toId;
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _amountCtrl = TextEditingController();
+    _fromId = widget.fromId;
+    _toId = widget.toId;
+  }
+
+  @override
+  void dispose() {
+    _amountCtrl.dispose();
+    super.dispose();
+  }
+
+  void _selectFrom(int id) {
+    setState(() {
+      _fromId = id;
+      if (_toId == id) {
+        // Keep source and destination distinct.
+        _toId = _fromId == widget.toId ? widget.fromId : widget.toId;
+      }
+    });
+  }
+
+  void _selectTo(int id) {
+    setState(() {
+      _toId = id;
+      if (_fromId == id) {
+        _fromId = _toId == widget.fromId ? widget.toId : widget.fromId;
+      }
+    });
+  }
+
+  Future<void> _save() async {
+    if (_amount == null) return;
+    setState(() => _saving = true);
+    final result = await ref.read(accountsControllerProvider.notifier)
+        .transfer(fromId: _fromId, toId: _toId, amount: _amount!);
+    if (!mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    result.when(
+      ok: (_) => Navigator.of(context).pop(),
+      err: (f) {
+        setState(() => _saving = false);
+        messenger.showSnackBar(SnackBar(content: Text(userMessageFor(f))));
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final accountsAsync = ref.watch(accountsControllerProvider);
+
+    return VeloraSheetScaffold(
+      title: 'O\'tkazma',
+      body: accountsAsync.when(
+        data: (list) {
+          final accounts = [for (final a in list) a.account];
+          final balances = {for (final a in list) a.account.id: a.balance};
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text('Qayerdan', style: Theme.of(context).textTheme.labelLarge),
+              const SizedBox(height: VeloraSpacing.sm),
+              AccountCardPicker(
+                key: const Key('transfer-from-picker'),
+                accounts: accounts,
+                availableBalances: balances,
+                selectedId: _fromId,
+                onSelected: _selectFrom,
+              ),
+              const SizedBox(height: VeloraSpacing.lg),
+              Text('Qayerga', style: Theme.of(context).textTheme.labelLarge),
+              const SizedBox(height: VeloraSpacing.sm),
+              AccountCardPicker(
+                key: const Key('transfer-to-picker'),
+                accounts: accounts,
+                availableBalances: balances,
+                selectedId: _toId,
+                onSelected: _selectTo,
+              ),
+              const SizedBox(height: VeloraSpacing.lg),
+              VeloraMoneyField(
+                controller: _amountCtrl,
+                currency: widget.currency,
+                label: 'Summa',
+                onChanged: (m) => setState(() => _amount = m),
+              ),
+            ],
+          );
+        },
+        loading: () => const SizedBox(
+          height: 200,
+          child: Center(child: CircularProgressIndicator()),
+        ),
+        error: (_, _) => const SizedBox.shrink(),
+      ),
+      primaryAction: VeloraPrimaryButton(
+        label: 'O\'tkazish',
+        loading: _saving,
+        onPressed: _amount == null || _saving || _fromId == _toId ? null : _save,
+      ),
+    );
+  }
 }

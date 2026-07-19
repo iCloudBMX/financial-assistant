@@ -1,13 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/money/currency.dart';
 import '../../core/money/money.dart';
+import '../../core/result/failure_messages.dart';
+import '../../core/theme/velora_tokens.dart';
 import '../../data/categories/category_model.dart';
 import '../../providers/app_providers.dart';
+import '../../ui/components/account_card_picker.dart';
+import '../../ui/components/category_picker.dart';
+import '../../ui/components/velora_button.dart';
+import '../../ui/components/velora_money_field.dart';
+import '../../ui/components/velora_sheet.dart';
 import '../accounts/account_edit_sheet.dart';
+import '../accounts/accounts_controller.dart';
 import 'expense_entry_controller.dart';
 
-/// 3-step quick expense: amount -> category -> save (PRD §9.1). Optional
-/// fields (account/date/note) stay hidden behind defaults for speed.
+/// Quick expense (PRD §9.1, Velora design §6.3): amount focused first, last-
+/// used account preselected, four one-tap categories plus a searchable full
+/// selector, and optional fields collapsed behind "Batafsil" for speed.
 Future<void> showExpenseEntrySheet(BuildContext context, WidgetRef ref) async {
   final settings = await ref.read(settingsProvider.future);
   final currency = settings.primaryCurrency;
@@ -22,71 +32,234 @@ Future<void> showExpenseEntrySheet(BuildContext context, WidgetRef ref) async {
   }
   final categories = await ref.read(categoryRepositoryProvider).list();
   if (categories.isEmpty) return;
-  final amountCtrl = TextEditingController();
-  int? categoryId = categories.first.id;
+  final entryState = await ref.read(expenseEntryControllerProvider.future);
   if (!context.mounted) return;
   await showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
-    builder: (ctx) => Padding(
-      padding: EdgeInsets.only(
-          bottom: MediaQuery.of(ctx).viewInsets.bottom, left: 16, right: 16, top: 16),
-      child: StatefulBuilder(
-        builder: (ctx, setState) => Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: amountCtrl,
-              autofocus: true,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(labelText: 'Summa'),
-            ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              children: [
-                for (final Category cat in categories)
-                  ChoiceChip(
-                    label: Text(cat.name),
-                    selected: categoryId == cat.id,
-                    onSelected: (_) => setState(() => categoryId = cat.id),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            FilledButton(
-              onPressed: () async {
-                final amount = Money.tryParse(amountCtrl.text, currency);
-                if (amount == null || amount.minorUnits <= 0 || categoryId == null) return;
-                final id = await ref.read(expenseEntryControllerProvider.notifier)
-                    .save(amount: amount, categoryId: categoryId!);
-                if (!ctx.mounted) return;
-                final messenger = ScaffoldMessenger.of(ctx);
-                Navigator.of(ctx).pop();
-                // Only report success when the entry actually persisted; a null
-                // id means nothing was written, so never show a false "saved".
-                if (id == null) {
-                  messenger.showSnackBar(const SnackBar(
-                      content: Text('Chiqim saqlanmadi. Qayta urinib ko\'ring.')));
-                  return;
-                }
-                messenger.showSnackBar(SnackBar(
-                  content: const Text('Chiqim saqlandi'),
-                  action: SnackBarAction(
-                    label: 'Bekor qilish',
-                    onPressed: () =>
-                        ref.read(expenseEntryControllerProvider.notifier).undo(),
-                  ),
-                ));
-              },
-              child: const Text('Saqlash'),
-            ),
-            const SizedBox(height: 12),
-          ],
-        ),
-      ),
+    useSafeArea: true,
+    builder: (ctx) => _ExpenseEntrySheetBody(
+      currency: currency,
+      categories: categories,
+      quickIds: entryState.quickPickCategoryIds,
+      defaultAccountId: entryState.defaultAccountId,
     ),
   );
+}
+
+class _ExpenseEntrySheetBody extends ConsumerStatefulWidget {
+  const _ExpenseEntrySheetBody({
+    required this.currency,
+    required this.categories,
+    required this.quickIds,
+    required this.defaultAccountId,
+  });
+
+  final Currency currency;
+  final List<Category> categories;
+  final List<int> quickIds;
+  final int? defaultAccountId;
+
+  @override
+  ConsumerState<_ExpenseEntrySheetBody> createState() =>
+      _ExpenseEntrySheetBodyState();
+}
+
+class _ExpenseEntrySheetBodyState
+    extends ConsumerState<_ExpenseEntrySheetBody> {
+  late final TextEditingController _amountCtrl;
+  late final TextEditingController _noteCtrl;
+  Money? _amount;
+  int? _categoryId;
+  int? _accountId;
+  DateTime _occurredAt = DateTime.now();
+  bool _planned = true;
+  bool _detailsOpen = false;
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _amountCtrl = TextEditingController();
+    _noteCtrl = TextEditingController();
+    _accountId = widget.defaultAccountId;
+    final quickFirst = widget.quickIds.isNotEmpty ? widget.quickIds.first : null;
+    _categoryId = quickFirst ??
+        (widget.categories.isEmpty ? null : widget.categories.first.id);
+  }
+
+  @override
+  void dispose() {
+    _amountCtrl.dispose();
+    _noteCtrl.dispose();
+    super.dispose();
+  }
+
+  bool get _canSave =>
+      !_saving && _amount != null && _amount!.minorUnits > 0 &&
+      _categoryId != null && _accountId != null;
+
+  Future<void> _save() async {
+    setState(() => _saving = true);
+    // Captured before the sheet pops (and this State disposes) so the undo
+    // action — invoked later, from a SnackBar that outlives this widget —
+    // never touches a `ref` from an unmounted ConsumerState.
+    final controller = ref.read(expenseEntryControllerProvider.notifier);
+    final result = await controller.save(
+      amount: _amount!,
+      categoryId: _categoryId!,
+      accountId: _accountId,
+      occurredAt: _occurredAt,
+      note: _noteCtrl.text.trim().isEmpty ? null : _noteCtrl.text.trim(),
+      planned: _planned,
+    );
+    if (!mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    Navigator.of(context).pop();
+    result.when(
+      ok: (_) => messenger.showSnackBar(SnackBar(
+        content: const Text('Chiqim saqlandi'),
+        action: SnackBarAction(
+          label: 'Bekor qilish',
+          onPressed: controller.undo,
+        ),
+      )),
+      err: (f) => messenger.showSnackBar(SnackBar(content: Text(userMessageFor(f)))),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final accountsAsync = ref.watch(accountsControllerProvider);
+
+    return VeloraSheetScaffold(
+      title: 'Chiqim',
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          VeloraMoneyField(
+            controller: _amountCtrl,
+            currency: widget.currency,
+            label: 'Summa',
+            autofocus: true,
+            onChanged: (m) => setState(() => _amount = m),
+          ),
+          const SizedBox(height: VeloraSpacing.lg),
+          accountsAsync.when(
+            data: (list) => AccountCardPicker(
+              accounts: [for (final a in list) a.account],
+              availableBalances: {
+                for (final a in list) a.account.id: a.balance,
+              },
+              selectedId: _accountId,
+              onSelected: (id) => setState(() => _accountId = id),
+            ),
+            loading: () => const SizedBox(height: 116),
+            error: (_, _) => const SizedBox.shrink(),
+          ),
+          const SizedBox(height: VeloraSpacing.lg),
+          CategoryPicker(
+            categories: widget.categories,
+            quickIds: widget.quickIds,
+            selectedId: _categoryId,
+            onSelected: (id) => setState(() => _categoryId = id),
+          ),
+          const SizedBox(height: VeloraSpacing.sm),
+          _DetailsSection(
+            open: _detailsOpen,
+            onToggle: () => setState(() => _detailsOpen = !_detailsOpen),
+            occurredAt: _occurredAt,
+            onPickDate: () async {
+              final picked = await showDatePicker(
+                context: context,
+                initialDate: _occurredAt,
+                firstDate: DateTime(2000),
+                lastDate: DateTime(2100),
+              );
+              if (picked != null) setState(() => _occurredAt = picked);
+            },
+            noteController: _noteCtrl,
+            planned: _planned,
+            onPlannedChanged: (v) => setState(() => _planned = v),
+          ),
+        ],
+      ),
+      primaryAction: VeloraPrimaryButton(
+        label: 'Saqlash',
+        loading: _saving,
+        onPressed: _canSave ? _save : null,
+      ),
+    );
+  }
+}
+
+/// Optional fields (date/time, note, planned flag) collapsed behind
+/// "Batafsil" so quick expense stays fast by default (design spec §6.3).
+class _DetailsSection extends StatelessWidget {
+  const _DetailsSection({
+    required this.open,
+    required this.onToggle,
+    required this.occurredAt,
+    required this.onPickDate,
+    required this.noteController,
+    required this.planned,
+    required this.onPlannedChanged,
+  });
+
+  final bool open;
+  final VoidCallback onToggle;
+  final DateTime occurredAt;
+  final VoidCallback onPickDate;
+  final TextEditingController noteController;
+  final bool planned;
+  final ValueChanged<bool> onPlannedChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        TextButton.icon(
+          onPressed: onToggle,
+          icon: Icon(open ? Icons.expand_less : Icons.expand_more),
+          label: const Text('Batafsil'),
+        ),
+        AnimatedSize(
+          duration: VeloraMotion.standard,
+          curve: Curves.easeOut,
+          alignment: Alignment.topCenter,
+          child: !open
+              ? const SizedBox.shrink()
+              : Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    OutlinedButton.icon(
+                      onPressed: onPickDate,
+                      icon: const Icon(Icons.event_outlined),
+                      label: Text(
+                        '${occurredAt.year}-${occurredAt.month.toString().padLeft(2, '0')}-${occurredAt.day.toString().padLeft(2, '0')}',
+                      ),
+                    ),
+                    const SizedBox(height: VeloraSpacing.sm),
+                    TextField(
+                      key: const Key('expense-note-field'),
+                      controller: noteController,
+                      decoration: const InputDecoration(labelText: 'Izoh'),
+                    ),
+                    const SizedBox(height: VeloraSpacing.sm),
+                    SwitchListTile(
+                      key: const Key('expense-planned-switch'),
+                      contentPadding: EdgeInsets.zero,
+                      value: planned,
+                      onChanged: onPlannedChanged,
+                      title: const Text('Rejalashtirilgan xarajat'),
+                    ),
+                  ],
+                ),
+        ),
+      ],
+    );
+  }
 }
 
 /// Shown when the user tries to add an expense before any account exists.

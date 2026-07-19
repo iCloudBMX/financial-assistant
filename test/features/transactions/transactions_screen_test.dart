@@ -81,4 +81,51 @@ void main() {
     final list = await container.read(transactionsControllerProvider.future);
     expect(list, isEmpty);
   });
+
+  testWidgets(
+      'a transfer never labels as income/expense, and a balance adjustment is visibly labeled',
+      (tester) async {
+    final db = AppDatabase(NativeDatabase.memory());
+    addTearDown(db.close);
+    final container =
+        ProviderContainer(overrides: [databaseProvider.overrideWithValue(db)]);
+    addTearDown(container.dispose);
+    final fromId = await container.read(accountRepositoryProvider).create(
+        name: 'Naqd',
+        type: AccountType.cash,
+        openingBalance: const Money(1000000, uzs),
+        icon: 'w');
+    final toId = await container.read(accountRepositoryProvider).create(
+        name: 'Karta',
+        type: AccountType.bankCard,
+        openingBalance: const Money(0, uzs),
+        icon: 'c');
+    final transferResult =
+        await container.read(ledgerRepositoryProvider).transfer(
+              fromId: fromId,
+              toId: toId,
+              amount: const Money(200000, uzs),
+              occurredAt: DateTime(2026, 7, 10),
+            );
+    expect(transferResult.isOk, isTrue);
+    await container.read(ledgerRepositoryProvider).adjustBalance(
+          accountId: fromId,
+          realBalance: const Money(750000, uzs),
+          occurredAt: DateTime(2026, 7, 12),
+        );
+
+    await tester.pumpWidget(UncontrolledProviderScope(
+      container: container,
+      child: const MaterialApp(home: TransactionsScreen()),
+    ));
+    await tester.pumpAndSettle();
+
+    // Transfer legs use their own labels, never "Kirim"/"Chiqim".
+    expect(find.text('O\'tkazma (chiqdi)'), findsOneWidget);
+    expect(find.text('O\'tkazma (kirdi)'), findsOneWidget);
+    expect(find.text('Kirim'), findsNothing);
+    expect(find.text('Chiqim'), findsNothing);
+    // Balance adjustment is visibly labeled.
+    expect(find.text('Balans tuzatish'), findsOneWidget);
+  });
 }

@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/ledger/ledger_entry.dart';
 import '../../core/money/money.dart';
+import '../../core/result/failure.dart';
+import '../../core/result/result.dart';
 import '../../providers/app_providers.dart';
 
 /// Recent-first distinct category ids, back-filled by most-used, capped.
@@ -59,10 +61,11 @@ class ExpenseEntryController extends AsyncNotifier<ExpenseEntryState> {
     );
   }
 
-  /// Persists an expense and returns the new entry id, or `null` when nothing
-  /// was written (non-positive amount, or no account to book it against). The
-  /// caller MUST treat a `null` return as "not saved" and never report success.
-  Future<int?> save({
+  /// Persists an expense and returns the new entry id, or a typed [Failure]
+  /// when nothing was written (non-positive amount, currency mismatch, or no
+  /// account to book it against). The caller MUST treat an [Err] as "not
+  /// saved" and never report success.
+  Future<Result<int>> save({
     required Money amount,
     required int categoryId,
     int? accountId,
@@ -70,17 +73,34 @@ class ExpenseEntryController extends AsyncNotifier<ExpenseEntryState> {
     String? note,
     bool? planned,
   }) async {
-    if (amount.minorUnits <= 0) return null;
+    if (amount.minorUnits <= 0) {
+      return const Err(ValidationFailure('expense amount must be positive'));
+    }
     final accId = accountId ?? state.value?.defaultAccountId;
-    if (accId == null) return null;
-    final id = await ref.read(ledgerRepositoryProvider).addExpense(
-        accountId: accId, amount: amount, categoryId: categoryId,
-        occurredAt: occurredAt ?? DateTime.now(), note: note, planned: planned);
+    if (accId == null) {
+      return const Err(ValidationFailure('no account available for this expense'));
+    }
+    final account = await ref.read(accountRepositoryProvider).byId(accId);
+    if (account == null) {
+      return const Err(NotFoundFailure('account not found'));
+    }
+    if (account.currency != amount.currency) {
+      return const Err(CurrencyFailure(
+          'expense currency does not match the account currency'));
+    }
+    final int id;
+    try {
+      id = await ref.read(ledgerRepositoryProvider).addExpense(
+          accountId: accId, amount: amount, categoryId: categoryId,
+          occurredAt: occurredAt ?? DateTime.now(), note: note, planned: planned);
+    } catch (error) {
+      return Err(PersistenceFailure(error.toString()));
+    }
     ref.read(ledgerRevisionProvider.notifier).state++;
     await future; // rebuild default/quick-pick
     state = AsyncData(
         (state.value ?? const ExpenseEntryState()).copyWith(lastSavedEntryId: id));
-    return id;
+    return Ok(id);
   }
 
   Future<void> undo() async {

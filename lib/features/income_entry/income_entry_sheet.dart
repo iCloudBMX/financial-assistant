@@ -1,11 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/ledger/ledger_entry.dart';
+import '../../core/money/currency.dart';
 import '../../core/money/money.dart';
+import '../../core/result/failure_messages.dart';
+import '../../core/theme/velora_tokens.dart';
+import '../../data/recurring/recurring_model.dart';
 import '../../providers/app_providers.dart';
+import '../../ui/components/account_card_picker.dart';
+import '../../ui/components/velora_button.dart';
+import '../../ui/components/velora_money_field.dart';
+import '../../ui/components/velora_sheet.dart';
+import '../accounts/accounts_controller.dart';
 import '../allocation/income_allocation_prompt.dart';
 import 'income_entry_controller.dart';
 
+/// Income entry (Velora design §6.4): the same money input, account picker,
+/// and optional-detail pattern as quick expense. After save the user chooses
+/// how to allocate the income.
 Future<void> showIncomeEntrySheet(BuildContext context, WidgetRef ref) async {
   final settings = await ref.read(settingsProvider.future);
   final currency = settings.primaryCurrency;
@@ -17,71 +29,262 @@ Future<void> showIncomeEntrySheet(BuildContext context, WidgetRef ref) async {
     }
     return;
   }
-  final amountCtrl = TextEditingController();
-  var accountId = accounts.first.id;
-  var incomeType = IncomeType.salary;
-  var recurring = false;
-  int? savedIncomeId;
-  Money? savedAmount;
+  final defaultAccountId = accounts.first.id;
   if (!context.mounted) return;
-  await showModalBottomSheet<void>(
+
+  final saved = await showModalBottomSheet<({int incomeId, Money amount})>(
     context: context,
     isScrollControlled: true,
-    builder: (ctx) => Padding(
-      padding: EdgeInsets.only(
-          bottom: MediaQuery.of(ctx).viewInsets.bottom, left: 16, right: 16, top: 16),
-      child: StatefulBuilder(
-        builder: (ctx, setState) => Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(controller: amountCtrl, autofocus: true, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Summa')),
-            DropdownButton<IncomeType>(
-              value: incomeType, isExpanded: true,
-              onChanged: (v) => setState(() => incomeType = v ?? incomeType),
-              items: const [
-                DropdownMenuItem(value: IncomeType.salary, child: Text('Oylik maosh')),
-                DropdownMenuItem(value: IncomeType.bonus, child: Text('Bonus')),
-                DropdownMenuItem(value: IncomeType.freelance, child: Text('Freelance')),
-                DropdownMenuItem(value: IncomeType.refund, child: Text('Qaytarilgan pul')),
-                DropdownMenuItem(value: IncomeType.other, child: Text('Boshqa')),
-              ],
-            ),
-            DropdownButton<int>(
-              value: accountId, isExpanded: true,
-              onChanged: (v) => setState(() => accountId = v ?? accountId),
-              items: [for (final a in accounts) DropdownMenuItem(value: a.id, child: Text(a.name))],
-            ),
-            SwitchListTile(
-              value: recurring,
-              onChanged: (v) => setState(() => recurring = v),
-              title: const Text('Takroriy kirim'),
-            ),
-            FilledButton(
-              onPressed: () async {
-                final amount = Money.tryParse(amountCtrl.text, currency);
-                if (amount == null || amount.minorUnits <= 0) return;
-                final id = await ref
-                    .read(incomeEntryControllerProvider.notifier)
-                    .save(
-                        accountId: accountId,
-                        amount: amount,
-                        incomeType: incomeType,
-                        recurring: recurring);
-                savedIncomeId = id;
-                savedAmount = amount;
-                if (ctx.mounted) Navigator.of(ctx).pop();
-              },
-              child: const Text('Saqlash'),
-            ),
-            const SizedBox(height: 12),
-          ],
-        ),
-      ),
+    useSafeArea: true,
+    builder: (ctx) => _IncomeEntrySheetBody(
+      currency: currency,
+      defaultAccountId: defaultAccountId,
     ),
   );
 
-  if (savedIncomeId != null && savedAmount != null && context.mounted) {
+  if (saved != null && context.mounted) {
     await showAllocationChoice(context, ref,
-        incomeId: savedIncomeId!, amount: savedAmount!);
+        incomeId: saved.incomeId, amount: saved.amount);
+  }
+}
+
+const _incomeTypeLabels = {
+  IncomeType.salary: 'Oylik maosh',
+  IncomeType.bonus: 'Bonus',
+  IncomeType.freelance: 'Freelance',
+  IncomeType.refund: 'Qaytarilgan pul',
+  IncomeType.other: 'Boshqa',
+};
+
+class _IncomeEntrySheetBody extends ConsumerStatefulWidget {
+  const _IncomeEntrySheetBody({
+    required this.currency,
+    required this.defaultAccountId,
+  });
+
+  final Currency currency;
+  final int defaultAccountId;
+
+  @override
+  ConsumerState<_IncomeEntrySheetBody> createState() =>
+      _IncomeEntrySheetBodyState();
+}
+
+class _IncomeEntrySheetBodyState extends ConsumerState<_IncomeEntrySheetBody> {
+  late final TextEditingController _amountCtrl;
+  late final TextEditingController _noteCtrl;
+  Money? _amount;
+  int? _accountId;
+  IncomeType _incomeType = IncomeType.salary;
+  bool _recurring = false;
+  IntervalKind _intervalKind = IntervalKind.monthly;
+  DateTime _occurredAt = DateTime.now();
+  bool _detailsOpen = false;
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _amountCtrl = TextEditingController();
+    _noteCtrl = TextEditingController();
+    _accountId = widget.defaultAccountId;
+  }
+
+  @override
+  void dispose() {
+    _amountCtrl.dispose();
+    _noteCtrl.dispose();
+    super.dispose();
+  }
+
+  bool get _canSave =>
+      !_saving && _amount != null && _amount!.minorUnits > 0 && _accountId != null;
+
+  Future<void> _save() async {
+    setState(() => _saving = true);
+    final controller = ref.read(incomeEntryControllerProvider.notifier);
+    final result = await controller.save(
+      accountId: _accountId!,
+      amount: _amount!,
+      incomeType: _incomeType,
+      occurredAt: _occurredAt,
+      note: _noteCtrl.text.trim().isEmpty ? null : _noteCtrl.text.trim(),
+      recurring: _recurring,
+      intervalKind: _intervalKind,
+    );
+    if (!mounted) return;
+    result.when(
+      ok: (value) => Navigator.of(context)
+          .pop((incomeId: value.ledgerEntryId, amount: _amount!)),
+      err: (f) {
+        setState(() => _saving = false);
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(userMessageFor(f))));
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final accountsAsync = ref.watch(accountsControllerProvider);
+
+    return VeloraSheetScaffold(
+      title: 'Kirim',
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          VeloraMoneyField(
+            controller: _amountCtrl,
+            currency: widget.currency,
+            label: 'Summa',
+            autofocus: true,
+            onChanged: (m) => setState(() => _amount = m),
+          ),
+          const SizedBox(height: VeloraSpacing.lg),
+          accountsAsync.when(
+            data: (list) => AccountCardPicker(
+              accounts: [for (final a in list) a.account],
+              availableBalances: {
+                for (final a in list) a.account.id: a.balance,
+              },
+              selectedId: _accountId,
+              onSelected: (id) => setState(() => _accountId = id),
+            ),
+            loading: () => const SizedBox(height: 116),
+            error: (_, _) => const SizedBox.shrink(),
+          ),
+          const SizedBox(height: VeloraSpacing.lg),
+          Wrap(
+            spacing: VeloraSpacing.sm,
+            runSpacing: VeloraSpacing.sm,
+            children: [
+              for (final entry in _incomeTypeLabels.entries)
+                ChoiceChip(
+                  key: Key('income-type-${entry.key.name}'),
+                  label: Text(entry.value),
+                  selected: _incomeType == entry.key,
+                  onSelected: (_) => setState(() => _incomeType = entry.key),
+                ),
+            ],
+          ),
+          const SizedBox(height: VeloraSpacing.md),
+          SwitchListTile(
+            key: const Key('income-recurring-switch'),
+            contentPadding: EdgeInsets.zero,
+            value: _recurring,
+            onChanged: (v) => setState(() => _recurring = v),
+            title: const Text('Takroriy kirim'),
+            subtitle: const Text(
+                'Har oy/hafta rejaga qo\'shiladi; tasdiqlash so\'ralganda yozib olinadi'),
+          ),
+          const SizedBox(height: VeloraSpacing.sm),
+          _IncomeDetailsSection(
+            open: _detailsOpen,
+            onToggle: () => setState(() => _detailsOpen = !_detailsOpen),
+            occurredAt: _occurredAt,
+            onPickDate: () async {
+              final picked = await showDatePicker(
+                context: context,
+                initialDate: _occurredAt,
+                firstDate: DateTime(2000),
+                lastDate: DateTime(2100),
+              );
+              if (picked != null) setState(() => _occurredAt = picked);
+            },
+            noteController: _noteCtrl,
+            recurring: _recurring,
+            intervalKind: _intervalKind,
+            onIntervalKindChanged: (v) => setState(() => _intervalKind = v),
+          ),
+        ],
+      ),
+      primaryAction: VeloraPrimaryButton(
+        label: 'Saqlash',
+        loading: _saving,
+        onPressed: _canSave ? _save : null,
+      ),
+    );
+  }
+}
+
+/// Date/time, note, and (when recurring) interval settings collapsed behind
+/// "Batafsil", matching the quick-expense optional-detail pattern.
+class _IncomeDetailsSection extends StatelessWidget {
+  const _IncomeDetailsSection({
+    required this.open,
+    required this.onToggle,
+    required this.occurredAt,
+    required this.onPickDate,
+    required this.noteController,
+    required this.recurring,
+    required this.intervalKind,
+    required this.onIntervalKindChanged,
+  });
+
+  final bool open;
+  final VoidCallback onToggle;
+  final DateTime occurredAt;
+  final VoidCallback onPickDate;
+  final TextEditingController noteController;
+  final bool recurring;
+  final IntervalKind intervalKind;
+  final ValueChanged<IntervalKind> onIntervalKindChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        TextButton.icon(
+          onPressed: onToggle,
+          icon: Icon(open ? Icons.expand_less : Icons.expand_more),
+          label: const Text('Batafsil'),
+        ),
+        AnimatedSize(
+          duration: VeloraMotion.standard,
+          curve: Curves.easeOut,
+          alignment: Alignment.topCenter,
+          child: !open
+              ? const SizedBox.shrink()
+              : Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    OutlinedButton.icon(
+                      onPressed: onPickDate,
+                      icon: const Icon(Icons.event_outlined),
+                      label: Text(
+                        '${occurredAt.year}-${occurredAt.month.toString().padLeft(2, '0')}-${occurredAt.day.toString().padLeft(2, '0')}',
+                      ),
+                    ),
+                    const SizedBox(height: VeloraSpacing.sm),
+                    TextField(
+                      key: const Key('income-note-field'),
+                      controller: noteController,
+                      decoration: const InputDecoration(labelText: 'Izoh'),
+                    ),
+                    if (recurring) ...[
+                      const SizedBox(height: VeloraSpacing.sm),
+                      SegmentedButton<IntervalKind>(
+                        key: const Key('income-interval-kind'),
+                        segments: const [
+                          ButtonSegment(
+                            value: IntervalKind.monthly,
+                            label: Text('Oylik'),
+                          ),
+                          ButtonSegment(
+                            value: IntervalKind.weekly,
+                            label: Text('Haftalik'),
+                          ),
+                        ],
+                        selected: {intervalKind},
+                        onSelectionChanged: (s) =>
+                            onIntervalKindChanged(s.first),
+                      ),
+                    ],
+                  ],
+                ),
+        ),
+      ],
+    );
   }
 }

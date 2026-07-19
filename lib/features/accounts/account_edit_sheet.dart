@@ -1,65 +1,114 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/ledger/account.dart';
+import '../../core/money/currency.dart';
 import '../../core/money/money.dart';
+import '../../core/theme/velora_tokens.dart';
 import '../../providers/app_providers.dart';
+import '../../ui/components/velora_button.dart';
+import '../../ui/components/velora_money_field.dart';
+import '../../ui/components/velora_sheet.dart';
 import 'accounts_controller.dart';
+
+const _accountTypeLabels = {
+  AccountType.cash: 'Naqd pul',
+  AccountType.bankCard: 'Bank kartasi',
+  AccountType.savings: 'Jamg\'arma',
+  AccountType.other: 'Boshqa',
+};
 
 Future<void> showAccountEditSheet(BuildContext context, WidgetRef ref) async {
   final settings = await ref.read(settingsProvider.future);
   final currency = settings.primaryCurrency;
-  final nameCtrl = TextEditingController();
-  final balanceCtrl = TextEditingController();
-  var type = AccountType.cash;
   if (!context.mounted) return;
   await showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
-    builder: (ctx) => Padding(
-      padding: EdgeInsets.only(
-          bottom: MediaQuery.of(ctx).viewInsets.bottom,
-          left: 16, right: 16, top: 16),
-      child: StatefulBuilder(
-        builder: (ctx, setState) => Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-                controller: nameCtrl,
-                decoration: const InputDecoration(labelText: 'Nomi')),
-            TextField(
-                controller: balanceCtrl,
-                keyboardType: TextInputType.number,
-                decoration:
-                    const InputDecoration(labelText: 'Boshlang\'ich balans')),
-            DropdownButton<AccountType>(
-              value: type,
-              isExpanded: true,
-              onChanged: (v) => setState(() => type = v ?? type),
-              items: const [
-                DropdownMenuItem(value: AccountType.cash, child: Text('Naqd pul')),
-                DropdownMenuItem(value: AccountType.bankCard, child: Text('Bank kartasi')),
-                DropdownMenuItem(value: AccountType.savings, child: Text('Jamg\'arma')),
-                DropdownMenuItem(value: AccountType.other, child: Text('Boshqa')),
-              ],
-            ),
-            const SizedBox(height: 12),
-            FilledButton(
-              onPressed: () async {
-                final opening = Money.tryParse(balanceCtrl.text, currency) ??
-                    Money.zero(currency);
-                await ref.read(accountsControllerProvider.notifier).createAccount(
-                    name: nameCtrl.text.trim().isEmpty ? 'Hisob' : nameCtrl.text.trim(),
-                    type: type,
-                    openingBalance: opening,
-                    icon: 'wallet');
-                if (ctx.mounted) Navigator.of(ctx).pop();
-              },
-              child: const Text('Saqlash'),
-            ),
-            const SizedBox(height: 12),
-          ],
-        ),
-      ),
-    ),
+    useSafeArea: true,
+    builder: (ctx) => _AccountEditSheetBody(currency: currency),
   );
+}
+
+class _AccountEditSheetBody extends ConsumerStatefulWidget {
+  const _AccountEditSheetBody({required this.currency});
+
+  final Currency currency;
+
+  @override
+  ConsumerState<_AccountEditSheetBody> createState() =>
+      _AccountEditSheetBodyState();
+}
+
+class _AccountEditSheetBodyState extends ConsumerState<_AccountEditSheetBody> {
+  late final TextEditingController _nameCtrl;
+  late final TextEditingController _balanceCtrl;
+  Money? _opening;
+  AccountType _type = AccountType.cash;
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameCtrl = TextEditingController();
+    _balanceCtrl = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    _balanceCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    setState(() => _saving = true);
+    await ref.read(accountsControllerProvider.notifier).createAccount(
+        name: _nameCtrl.text.trim().isEmpty ? 'Hisob' : _nameCtrl.text.trim(),
+        type: _type,
+        openingBalance: _opening ?? Money.zero(widget.currency),
+        icon: 'wallet');
+    if (mounted) Navigator.of(context).pop();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return VeloraSheetScaffold(
+      title: 'Yangi hisob',
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          TextField(
+            controller: _nameCtrl,
+            decoration: const InputDecoration(labelText: 'Nomi'),
+          ),
+          const SizedBox(height: VeloraSpacing.lg),
+          VeloraMoneyField(
+            controller: _balanceCtrl,
+            currency: widget.currency,
+            label: 'Boshlang\'ich balans',
+            onChanged: (m) => setState(() => _opening = m),
+          ),
+          const SizedBox(height: VeloraSpacing.lg),
+          Wrap(
+            spacing: VeloraSpacing.sm,
+            runSpacing: VeloraSpacing.sm,
+            children: [
+              for (final entry in _accountTypeLabels.entries)
+                ChoiceChip(
+                  key: Key('account-type-${entry.key.name}'),
+                  label: Text(entry.value),
+                  selected: _type == entry.key,
+                  onSelected: (_) => setState(() => _type = entry.key),
+                ),
+            ],
+          ),
+        ],
+      ),
+      primaryAction: VeloraPrimaryButton(
+        label: 'Saqlash',
+        loading: _saving,
+        onPressed: _saving ? null : _save,
+      ),
+    );
+  }
 }

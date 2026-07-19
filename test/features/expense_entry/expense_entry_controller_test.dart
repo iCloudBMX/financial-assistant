@@ -5,12 +5,14 @@ import 'package:financial_assistant/core/money/currency.dart';
 import 'package:financial_assistant/core/money/money.dart';
 import 'package:financial_assistant/core/ledger/account.dart';
 import 'package:financial_assistant/core/ledger/ledger_entry.dart';
+import 'package:financial_assistant/core/result/failure.dart';
 import 'package:financial_assistant/data/db/app_database.dart';
 import 'package:financial_assistant/providers/app_providers.dart';
 import 'package:financial_assistant/features/expense_entry/expense_entry_controller.dart';
 
 void main() {
   const uzs = CurrencyRegistry.uzs;
+  const usd = CurrencyRegistry.usd;
 
   LedgerEntry exp(int cat) => LedgerEntry(
       id: cat, accountId: 1, type: LedgerEntryType.expense,
@@ -47,7 +49,8 @@ void main() {
     expect(after.totals[uzs], const Money(1000000, uzs));
   });
 
-  test('save no-ops and returns null when there is no account', () async {
+  test('save returns a ValidationFailure and does not persist when there is no account',
+      () async {
     final db = AppDatabase(NativeDatabase.memory());
     addTearDown(db.close);
     final c = ProviderContainer(overrides: [databaseProvider.overrideWithValue(db)]);
@@ -57,9 +60,14 @@ void main() {
     final st = await c.read(expenseEntryControllerProvider.future);
     expect(st.defaultAccountId, isNull);
 
-    final id = await c.read(expenseEntryControllerProvider.notifier)
+    final result = await c.read(expenseEntryControllerProvider.notifier)
         .save(amount: const Money(250000, uzs), categoryId: 1);
-    expect(id, isNull, reason: 'no account => nothing persisted, no false success');
+    expect(result.isOk, isFalse,
+        reason: 'no account => nothing persisted, no false success');
+    result.when(
+      ok: (_) => fail('expected Err'),
+      err: (f) => expect(f, isA<ValidationFailure>()),
+    );
     expect(await c.read(ledgerRepositoryProvider).allEntries(), isEmpty);
   });
 
@@ -74,9 +82,10 @@ void main() {
         openingBalance: const Money(1000000, uzs), icon: 'w');
     await c.read(expenseEntryControllerProvider.future);
 
-    final id = await c.read(expenseEntryControllerProvider.notifier)
+    final result = await c.read(expenseEntryControllerProvider.notifier)
         .save(amount: const Money(250000, uzs), categoryId: 1);
-    expect(id, isNotNull);
+    expect(result.isOk, isTrue);
+    expect(result.valueOrNull, isNotNull);
   });
 
   test('save rejects a non-positive amount and leaves the balance unchanged',
@@ -91,10 +100,35 @@ void main() {
         openingBalance: const Money(1000000, uzs), icon: 'w');
     await c.read(expenseEntryControllerProvider.future);
 
-    await c.read(expenseEntryControllerProvider.notifier)
+    final result = await c.read(expenseEntryControllerProvider.notifier)
         .save(amount: const Money(-5000, uzs), categoryId: 1);
+    result.when(
+      ok: (_) => fail('expected Err'),
+      err: (f) => expect(f, isA<ValidationFailure>()),
+    );
     final data = await c.read(dashboardProvider.future);
     expect(data.totals[uzs], const Money(1000000, uzs));
+    expect(await c.read(ledgerRepositoryProvider).allEntries(), isEmpty);
+  });
+
+  test('save returns CurrencyFailure when the amount currency does not match the account',
+      () async {
+    final db = AppDatabase(NativeDatabase.memory());
+    addTearDown(db.close);
+    final c = ProviderContainer(overrides: [databaseProvider.overrideWithValue(db)]);
+    addTearDown(c.dispose);
+
+    final accId = await c.read(accountRepositoryProvider).create(
+        name: 'Naqd', type: AccountType.cash,
+        openingBalance: const Money(1000000, uzs), icon: 'w');
+    await c.read(expenseEntryControllerProvider.future);
+
+    final result = await c.read(expenseEntryControllerProvider.notifier)
+        .save(amount: const Money(5000, usd), categoryId: 1, accountId: accId);
+    result.when(
+      ok: (_) => fail('expected Err'),
+      err: (f) => expect(f, isA<CurrencyFailure>()),
+    );
     expect(await c.read(ledgerRepositoryProvider).allEntries(), isEmpty);
   });
 }
