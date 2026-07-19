@@ -13,6 +13,23 @@ void main() {
     expect(theme.textTheme.bodyMedium?.fontFamily, 'NotoSans');
   });
 
+  test('Velora dark theme preserves semantic roles and typography', () {
+    final theme = buildDarkTheme();
+    final scheme = theme.colorScheme;
+
+    expect(scheme.brightness, Brightness.dark);
+    expect(
+      scheme.primary.computeLuminance(),
+      greaterThan(VeloraColors.plum.computeLuminance()),
+    );
+    expect(scheme.secondary, VeloraColors.coral);
+    expect(scheme.error, VeloraColors.critical);
+    expect(theme.scaffoldBackgroundColor, scheme.surface);
+    expect(theme.scaffoldBackgroundColor, isNot(VeloraColors.blush));
+    expect(theme.textTheme.headlineSmall?.fontFamily, 'Onest');
+    expect(theme.textTheme.bodyMedium?.fontFamily, 'NotoSans');
+  });
+
   test('Velora tokens expose the approved foundation values', () {
     expect(VeloraColors.plum, const Color(0xFF5B3A6E));
     expect(VeloraColors.coral, const Color(0xFFE96F5C));
