@@ -5,6 +5,7 @@ import '../../providers/app_providers.dart';
 import '../accounts/transfer_sheet.dart';
 import '../expense_entry/expense_entry_sheet.dart';
 import '../income_entry/income_entry_sheet.dart';
+import '../mortgage/mortgage_summary_card.dart';
 import '../recurring/recurring_prompt.dart';
 import '../shell/routes.dart';
 import 'dashboard_data.dart';
@@ -36,6 +37,7 @@ class HomeScreen extends ConsumerWidget {
             _totalCard(context, d),
             const SafeLimitCard(),
             const WeeklySafeLimitCard(),
+            const MortgageSummaryCard(),
             _row('Shu oygi kirim', d.monthIncome.format()),
             _row('Shu oygi chiqim', d.monthExpense.format()),
             _row('Bugun sarflangan', d.todaySpent.format()),
