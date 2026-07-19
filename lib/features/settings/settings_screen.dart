@@ -2,8 +2,71 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/money/currency.dart';
 import '../../core/money/money.dart';
+import '../../core/theme/velora_tokens.dart';
 import '../../data/settings/settings_model.dart';
 import 'settings_controller.dart';
+
+/// A group header for the grouped Settings layout (design spec sec. 6.12):
+/// profile, financial preferences, notifications, appearance, privacy &
+/// security, and data management -- each with its own heading so the
+/// screen reads as sections rather than one long flat list.
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader(this.label);
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.fromLTRB(
+          VeloraSpacing.lg,
+          VeloraSpacing.xl,
+          VeloraSpacing.lg,
+          VeloraSpacing.sm,
+        ),
+        child: Text(
+          label,
+          style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                color: Theme.of(context).colorScheme.primary,
+                fontWeight: FontWeight.w600,
+              ),
+        ),
+      );
+}
+
+/// A dropdown trailing constrained to a fixed max width with ellipsis text,
+/// used for every settings row that picks from a short list of values. A
+/// bare `DropdownButton` sizes itself to its widest item's intrinsic width
+/// and never shrinks below it, so at narrow widths (320px, or a long label
+/// like "Belgilangan kunlik summa") it would overflow the `ListTile` row
+/// instead of reflowing (spec sec. 8: dense rows reflow, never clip via a
+/// layout exception).
+class _DropdownField<T> extends StatelessWidget {
+  const _DropdownField({
+    required this.value,
+    required this.items,
+    required this.onChanged,
+  });
+
+  final T value;
+  final List<DropdownMenuItem<T>> items;
+  final ValueChanged<T?> onChanged;
+
+  @override
+  Widget build(BuildContext context) => ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 150),
+        child: DropdownButton<T>(
+          value: value,
+          isExpanded: true,
+          items: items,
+          onChanged: onChanged,
+        ),
+      );
+}
+
+DropdownMenuItem<T> _dropdownItem<T>(T value, String label) =>
+    DropdownMenuItem(
+      value: value,
+      child: Text(label, overflow: TextOverflow.ellipsis),
+    );
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -55,19 +118,20 @@ class SettingsScreen extends ConsumerWidget {
 
           return ListView(
             children: [
+              const _SectionHeader('Profil'),
               ListTile(
                 title: const Text('Ism'),
                 subtitle: Text(s.name),
                 trailing: const Icon(Icons.edit),
                 onTap: () => _editName(context, s.name, save, s),
               ),
+              const _SectionHeader('Moliyaviy sozlamalar'),
               ListTile(
                 title: const Text('Valyuta'),
-                trailing: DropdownButton<String>(
+                trailing: _DropdownField<String>(
                   value: s.primaryCurrency.code,
                   items: [
-                    for (final c in _currencies)
-                      DropdownMenuItem(value: c.code, child: Text(c.code)),
+                    for (final c in _currencies) _dropdownItem(c.code, c.code),
                   ],
                   onChanged: (code) {
                     if (code == null) return;
@@ -81,11 +145,10 @@ class SettingsScreen extends ConsumerWidget {
               ),
               ListTile(
                 title: const Text('Sana formati'),
-                trailing: DropdownButton<String>(
+                trailing: _DropdownField<String>(
                   value: s.dateFormat,
                   items: [
-                    for (final f in _dateFormats)
-                      DropdownMenuItem(value: f, child: Text(f)),
+                    for (final f in _dateFormats) _dropdownItem(f, f),
                   ],
                   onChanged: (f) {
                     if (f == null) return;
@@ -95,11 +158,11 @@ class SettingsScreen extends ConsumerWidget {
               ),
               ListTile(
                 title: const Text('Davr boshlanish kuni'),
-                trailing: DropdownButton<int>(
+                trailing: _DropdownField<int>(
                   value: s.periodStartDay,
                   items: [
                     for (var day = 1; day <= 31; day++)
-                      DropdownMenuItem(value: day, child: Text('$day')),
+                      _dropdownItem(day, '$day'),
                   ],
                   onChanged: (day) {
                     if (day == null) return;
@@ -109,12 +172,11 @@ class SettingsScreen extends ConsumerWidget {
               ),
               ListTile(
                 title: const Text('Hafta boshlanish kuni'),
-                trailing: DropdownButton<int>(
+                trailing: _DropdownField<int>(
                   value: s.weekStartIso,
                   items: [
                     for (var i = 0; i < _weekdayNames.length; i++)
-                      DropdownMenuItem(
-                          value: i + 1, child: Text(_weekdayNames[i])),
+                      _dropdownItem(i + 1, _weekdayNames[i]),
                   ],
                   onChanged: (iso) {
                     if (iso == null) return;
@@ -124,12 +186,11 @@ class SettingsScreen extends ConsumerWidget {
               ),
               ListTile(
                 title: const Text('Kunlik limit usuli'),
-                trailing: DropdownButton<DailyLimitMethod>(
+                trailing: _DropdownField<DailyLimitMethod>(
                   value: s.dailyLimitMethod,
                   items: [
                     for (final m in DailyLimitMethod.values)
-                      DropdownMenuItem(
-                          value: m, child: Text(_dailyLimitLabel(m))),
+                      _dropdownItem(m, _dailyLimitLabel(m)),
                   ],
                   onChanged: (m) {
                     if (m == null) return;
@@ -143,14 +204,20 @@ class SettingsScreen extends ConsumerWidget {
                 trailing: const Icon(Icons.edit),
                 onTap: () => _editReserve(context, s, save),
               ),
+              const _SectionHeader('Bildirishnomalar'),
+              const ListTile(
+                enabled: false,
+                title: Text('Bildirishnoma turlari'),
+                subtitle: Text('(keyingi bosqichda)'),
+              ),
+              const _SectionHeader("Ko'rinish"),
               ListTile(
                 title: const Text('Mavzu'),
-                trailing: DropdownButton<ThemeModeSetting>(
+                trailing: _DropdownField<ThemeModeSetting>(
                   value: s.themeMode,
                   items: [
                     for (final mode in ThemeModeSetting.values)
-                      DropdownMenuItem(
-                          value: mode, child: Text(_themeLabel(mode))),
+                      _dropdownItem(mode, _themeLabel(mode)),
                   ],
                   onChanged: (mode) {
                     if (mode == null) return;
@@ -158,6 +225,7 @@ class SettingsScreen extends ConsumerWidget {
                   },
                 ),
               ),
+              const _SectionHeader('Maxfiylik va xavfsizlik'),
               SwitchListTile(
                 title: const Text('Ilova qulfi'),
                 value: s.appLockEnabled,
@@ -168,7 +236,7 @@ class SettingsScreen extends ConsumerWidget {
                 value: s.biometricEnabled,
                 onChanged: (v) => save(s.copyWith(biometricEnabled: v)),
               ),
-              const Divider(),
+              const _SectionHeader("Ma'lumotlar"),
               const ListTile(
                 enabled: false,
                 title: Text("Ma'lumotlarni eksport qilish"),

@@ -32,7 +32,7 @@ void main() {
     // ever rendering the shell with a defaulted-to-false value while
     // settings was still loading.
     expect(find.text('Ilova qulflangan'), findsOneWidget);
-    expect(find.byKey(const Key('app_lock_pin_field')), findsOneWidget);
+    expect(find.byKey(const Key('app_lock_keypad')), findsOneWidget);
     expect(find.byType(NavigationBar), findsNothing);
   });
 }

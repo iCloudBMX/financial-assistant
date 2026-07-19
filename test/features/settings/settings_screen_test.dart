@@ -57,4 +57,58 @@ void main() {
     final persisted = await repo.read();
     expect(persisted.minReserve, const Money(500000, uzs));
   });
+
+  testWidgets(
+      'Settings is grouped into the design-spec sections (profile, '
+      'financial preferences, notifications, appearance, privacy & '
+      'security, data management), top to bottom', (tester) async {
+    // Tall surface so every grouped section renders without needing to
+    // scroll to find its header (ListView virtualizes offscreen children).
+    tester.view.physicalSize = const Size(400, 1800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final db = AppDatabase(NativeDatabase.memory());
+    addTearDown(db.close);
+
+    final container = ProviderContainer(
+        overrides: [databaseProvider.overrideWithValue(db)]);
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(UncontrolledProviderScope(
+      container: container,
+      child: const MaterialApp(home: SettingsScreen()),
+    ));
+    await tester.pumpAndSettle();
+
+    const sectionsInOrder = [
+      'Profil',
+      'Moliyaviy sozlamalar',
+      'Bildirishnomalar',
+      "Ko'rinish",
+      'Maxfiylik va xavfsizlik',
+      "Ma'lumotlar",
+    ];
+
+    for (final section in sectionsInOrder) {
+      expect(find.text(section), findsOneWidget,
+          reason: 'missing Settings section header: $section');
+    }
+
+    final positions = [
+      for (final section in sectionsInOrder)
+        tester.getTopLeft(find.text(section)).dy,
+    ];
+    for (var i = 1; i < positions.length; i++) {
+      expect(positions[i], greaterThan(positions[i - 1]),
+          reason: 'Settings sections must appear in the design-spec order');
+    }
+
+    // Financial-preference and privacy/security controls still live under
+    // their grouped headers.
+    expect(find.text('Valyuta'), findsOneWidget);
+    expect(find.text('Ilova qulfi'), findsOneWidget);
+    expect(find.text('Biometrik autentifikatsiya'), findsOneWidget);
+  });
 }

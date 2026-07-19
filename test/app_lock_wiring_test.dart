@@ -42,13 +42,16 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Ilova qulflangan'), findsOneWidget);
-    expect(find.byKey(const Key('app_lock_pin_field')), findsOneWidget);
+    expect(find.byKey(const Key('app_lock_keypad')), findsOneWidget);
     // The 5-tab shell must not be visible behind the lock.
     expect(find.byType(NavigationBar), findsNothing);
 
-    await tester.enterText(
-        find.byKey(const Key('app_lock_pin_field')), '1234');
-    await tester.tap(find.byKey(const Key('app_lock_unlock_button')));
+    // The PIN keypad submits automatically after the fourth digit -- there
+    // is no separate unlock button to tap.
+    for (final d in '1234'.split('')) {
+      await tester.tap(find.byKey(Key('app_lock_key_$d')));
+      await tester.pump();
+    }
     await tester.pumpAndSettle();
 
     // Correct PIN unlocks into the 5-tab shell.

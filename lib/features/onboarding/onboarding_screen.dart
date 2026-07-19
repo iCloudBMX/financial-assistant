@@ -2,24 +2,30 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/theme/velora_tokens.dart';
 import '../../providers/app_providers.dart';
 import '../shell/routes.dart';
 import 'onboarding_controller.dart';
 import 'onboarding_step.dart';
+import 'steps/account_step.dart';
 import 'steps/currency_step.dart';
+import 'steps/financial_baseline_step.dart';
 import 'steps/period_step.dart';
-import 'steps/reserve_step.dart';
 import 'steps/theme_step.dart';
 import 'steps/welcome_step.dart';
 
-/// Foundation's ordered onboarding steps. Later sub-projects can override
-/// this provider to insert/append their own steps without touching
-/// Foundation code.
+/// Foundation's ordered onboarding steps, progressive and skippable
+/// (design spec sec. 6.1): welcome+name, currency, financial-period start,
+/// first account + opening balance, financial baseline (variable budget +
+/// minimal reserve), and appearance. Later sub-projects can override this
+/// provider to insert/append their own steps without touching Foundation
+/// code.
 final onboardingStepsProvider = Provider<List<OnboardingStep>>((ref) => [
       WelcomeStep(),
       CurrencyStep(),
       PeriodStep(),
-      ReserveStep(),
+      AccountStep(),
+      FinancialBaselineStep(),
       ThemeStep(),
     ]);
 
@@ -43,12 +49,36 @@ class OnboardingScreen extends ConsumerWidget {
     final controller = ref.read(onboardingControllerProvider.notifier);
     final step = steps[draft.index];
 
+    Future<void> finishOrAdvance() async {
+      if (controller.isLast) {
+        await controller.commit();
+        if (context.mounted) {
+          context.goNamed(RouteNames.home);
+        }
+      } else {
+        controller.next();
+      }
+    }
+
     return Scaffold(
       body: SafeArea(
         child: Column(
           children: [
-            LinearProgressIndicator(
-              value: (draft.index + 1) / steps.length,
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: VeloraSpacing.xl,
+                vertical: VeloraSpacing.md,
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(VeloraRadii.control),
+                child: LinearProgressIndicator(
+                  key: const Key('onboarding_progress'),
+                  value: (draft.index + 1) / steps.length,
+                  minHeight: 6,
+                  color: VeloraColors.coral,
+                  backgroundColor: VeloraColors.coral.withValues(alpha: 0.15),
+                ),
+              ),
             ),
             Expanded(
               child: Center(
@@ -62,27 +92,33 @@ class OnboardingScreen extends ConsumerWidget {
             ),
             Padding(
               padding: const EdgeInsets.symmetric(
-                horizontal: 24,
-                vertical: 16,
+                horizontal: VeloraSpacing.xl,
+                vertical: VeloraSpacing.lg,
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              // `Wrap` (not `Row`) so at 200% text scale / 320px width the
+              // three controls fall onto their own line instead of
+              // overflowing -- "Orqaga"/"O'tkazib yuborish"/"Keyingi" never
+              // all fit on one line together at that scale.
+              child: Wrap(
+                alignment: WrapAlignment.spaceBetween,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: VeloraSpacing.sm,
+                runSpacing: VeloraSpacing.xs,
                 children: [
                   TextButton(
+                    key: const Key('onboarding_back_button'),
                     onPressed: draft.index > 0 ? controller.back : null,
                     child: const Text('Orqaga'),
                   ),
+                  if (!controller.isLast)
+                    TextButton(
+                      key: const Key('onboarding_skip_button'),
+                      onPressed: controller.next,
+                      child: const Text("O'tkazib yuborish"),
+                    ),
                   FilledButton(
-                    onPressed: () async {
-                      if (controller.isLast) {
-                        await controller.commit();
-                        if (context.mounted) {
-                          context.goNamed(RouteNames.home);
-                        }
-                      } else {
-                        controller.next();
-                      }
-                    },
+                    key: const Key('onboarding_next_button'),
+                    onPressed: finishOrAdvance,
                     child: Text(controller.isLast ? 'Yakunlash' : 'Keyingi'),
                   ),
                 ],

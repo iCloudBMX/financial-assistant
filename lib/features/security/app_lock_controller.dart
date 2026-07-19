@@ -58,8 +58,15 @@ class AppLockController {
     return PinHasher.hash(pin, salt) == stored;
   }
 
-  /// Thin device-only adapter over `local_auth`. Not unit-tested: it talks
-  /// to a platform plugin and is exercised via manual/integration testing.
+  /// Thin device-only adapter over `local_auth`. Not unit-tested here: it
+  /// talks to a platform plugin and is exercised via manual/integration
+  /// testing. `AppLockGate`'s PIN-first lock screen calls this exactly once
+  /// automatically on lock entry (from a post-frame callback, never from
+  /// `build`) when biometrics are enabled, and again whenever the user taps
+  /// the retry icon -- it never renders its own biometric UI, only the
+  /// platform's native prompt via this method. Subclassable in tests (see
+  /// `test/features/security/app_lock_gate_test.dart`) since it talks to a
+  /// platform channel that isn't available in the widget-test environment.
   Future<bool> authenticateBiometric() async {
     try {
       final supported = await _auth.isDeviceSupported();
