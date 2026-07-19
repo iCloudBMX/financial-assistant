@@ -75,7 +75,7 @@ app.dart / main.dart  ← composition root, router, provider scope
   - `add` / `subtract` — same-currency only; a mismatched currency returns a typed `Failure` (never a silent coercion).
   - `negate`, `compareTo`, `isNegative`, `zero(currency)`.
   - `parse(userText, currency)` — tolerant of space/comma grouping separators.
-  - `format()` → e.g. `1 234 567 so'm` (space grouping, symbol per currency).
+  - `format()` → e.g. `1 234 567 so‘m` (space grouping, symbol per currency).
 - Percentage/ratio allocation math is **not** in Foundation; it arrives with sub-project 2.
 - Persisted as `(minorUnits INTEGER, currencyCode TEXT)` column pairs.
 

@@ -24,25 +24,25 @@ class VeloraMoneyField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Semantics(
-      textField: true,
-      label: '$label, ${currency.code}',
-      child: TextField(
-        controller: controller,
-        autofocus: autofocus,
-        enabled: enabled,
-        keyboardType: TextInputType.numberWithOptions(
-          decimal: currency.decimalDigits > 0,
-        ),
-        inputFormatters: [MoneyTextInputFormatter(currency)],
-        decoration: InputDecoration(
-          labelText: label,
-          suffixText: currency.symbol,
-        ),
-        onChanged: (value) {
-          onChanged?.call(parseMoneyInput(value, currency));
-        },
+    return TextField(
+      controller: controller,
+      autofocus: autofocus,
+      enabled: enabled,
+      keyboardType: TextInputType.numberWithOptions(
+        decimal: currency.decimalDigits > 0,
       ),
+      inputFormatters: [MoneyTextInputFormatter(currency)],
+      decoration: InputDecoration(
+        label: Semantics(
+          label: '$label, ${currency.code}',
+          excludeSemantics: true,
+          child: Text(label),
+        ),
+        suffixText: currency.symbol,
+      ),
+      onChanged: (value) {
+        onChanged?.call(parseMoneyInput(value, currency));
+      },
     );
   }
 }

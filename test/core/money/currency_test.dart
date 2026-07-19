@@ -5,6 +5,7 @@ void main() {
   test('UZS has zero decimal digits and after-position symbol', () {
     final uzs = CurrencyRegistry.uzs;
     expect(uzs.code, 'UZS');
+    expect(uzs.symbol, 'so\u2018m');
     expect(uzs.decimalDigits, 0);
     expect(uzs.symbolPosition, SymbolPosition.after);
   });

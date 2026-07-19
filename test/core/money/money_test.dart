@@ -41,7 +41,7 @@ void main() {
   });
 
   test('format groups thousands and places symbol after for UZS', () {
-    expect(Money(1234567, uzs).format(), "1 234 567 so'm");
+    expect(Money(1234567, uzs).format(), '1 234 567 so\u2018m');
   });
 
   test('format shows two decimals and leading symbol for USD', () {

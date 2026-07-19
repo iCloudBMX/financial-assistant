@@ -36,7 +36,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // Sanity: the list tile shows the formatted (symbol-bearing) value.
-    expect(find.text("500 000 so'm"), findsOneWidget);
+    expect(find.text('500 000 so\u2018m'), findsOneWidget);
 
     // Open the "Minimal zaxira" editor.
     await tester.tap(find.text('Minimal zaxira'));

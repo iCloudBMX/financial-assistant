@@ -13,6 +13,10 @@ void main() {
         )?.minorUnits,
         1250000,
       );
+      expect(
+        parseMoneyInput("1 250 000 so'm", CurrencyRegistry.uzs)?.minorUnits,
+        1250000,
+      );
     });
 
     test('normalizes US-style grouped decimal input', () {

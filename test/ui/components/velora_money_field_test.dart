@@ -1,3 +1,5 @@
+import 'dart:ui' show SemanticsAction, Tristate;
+
 import 'package:financial_assistant/core/money/currency.dart';
 import 'package:financial_assistant/core/money/money.dart';
 import 'package:financial_assistant/ui/components/velora_money_field.dart';
@@ -5,7 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  testWidgets('autofocuses, formats UZS, and announces currency', (
+  testWidgets('autofocuses, formats UZS, and displays canonical symbol', (
     tester,
   ) async {
     final controller = TextEditingController();
@@ -28,11 +30,40 @@ void main() {
     await tester.enterText(find.byType(TextField), '1250000');
 
     expect(controller.text, '1 250 000');
-    expect(find.text("so'm"), findsOneWidget);
-    expect(
-      tester.getSemantics(find.byType(VeloraMoneyField)).label,
-      contains('Summa, UZS'),
+    expect(find.text('so\u2018m'), findsOneWidget);
+  });
+
+  testWidgets('announces label and currency once with editable actions', (
+    tester,
+  ) async {
+    final controller = TextEditingController();
+    addTearDown(controller.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: VeloraMoneyField(
+            controller: controller,
+            currency: CurrencyRegistry.uzs,
+            label: 'Summa',
+          ),
+        ),
+      ),
     );
+
+    await tester.enterText(find.byType(TextField), '1250000');
+    await tester.pump();
+
+    final node = tester.getSemantics(find.byType(EditableText));
+    final data = node.getSemanticsData();
+    expect(data.label, 'Summa, UZS');
+    expect(data.value, '1 250 000');
+    expect(data.flagsCollection.isTextField, isTrue);
+    expect(data.flagsCollection.isEnabled, Tristate.isTrue);
+    expect(data.hasAction(SemanticsAction.setText), isTrue);
+    expect(data.hasAction(SemanticsAction.setSelection), isTrue);
+    expect(find.bySemanticsLabel('Summa, UZS'), findsOneWidget);
+    expect(find.bySemanticsLabel('Summa'), findsNothing);
   });
 
   testWidgets('reports empty input as null and zero as money', (tester) async {
@@ -114,5 +145,15 @@ void main() {
 
     expect(tester.testTextInput.hasAnyClients, isFalse);
     expect(controller.text, '10 000');
+
+    final data = tester
+        .getSemantics(find.byType(EditableText))
+        .getSemanticsData();
+    expect(data.label, 'Summa, UZS');
+    expect(data.value, '10 000');
+    expect(data.flagsCollection.isTextField, isTrue);
+    expect(data.flagsCollection.isEnabled, Tristate.isFalse);
+    expect(data.hasAction(SemanticsAction.setText), isFalse);
+    expect(data.hasAction(SemanticsAction.setSelection), isFalse);
   });
 }

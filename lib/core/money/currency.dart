@@ -26,7 +26,7 @@ class CurrencyRegistry {
 
   static const uzs = Currency(
     code: 'UZS',
-    symbol: "so'm",
+    symbol: 'so\u2018m',
     decimalDigits: 0,
     symbolPosition: SymbolPosition.after,
   );
