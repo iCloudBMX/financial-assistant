@@ -303,7 +303,10 @@ final safeLimitProvider = FutureProvider<SafeLimit>((ref) async {
   });
 
   final totals = totalsByCurrency(accounts, entries);
-  final totalAvailable = totals[currency] ?? Money.zero(currency);
+  // Ownership contract: this is the full cash balance derived from the
+  // ledger. Goal earmarks, the minimum reserve, and unpaid mandatory amounts
+  // do not mutate it; dailySafeLimit subtracts each reserve exactly once.
+  final ledgerCash = totals[currency] ?? Money.zero(currency);
   final goalReserveMinor =
       await ref.watch(goalRepositoryProvider).activeReserveMinor();
   final unpaidMandatoryMinor =
@@ -316,7 +319,7 @@ final safeLimitProvider = FutureProvider<SafeLimit>((ref) async {
     variableBudget: settings.variableBudget,
     variableSpent: Money(variableSpentMinor, currency),
     manualBuffer: settings.safetyBuffer,
-    totalAvailable: totalAvailable,
+    totalAvailable: ledgerCash,
     minReserve: settings.minReserve.currency == currency
         ? settings.minReserve
         : Money.zero(currency),

@@ -27,4 +27,18 @@ void main() {
     expect(msg.toLowerCase(), isNot(contains('sqlite')));
     expect(msg, isNotEmpty);
   });
+
+  test('userMessageFor maps typed failures without exposing debug details', () {
+    const failures = <Failure>[
+      ValidationFailure('amount_minor must be positive'),
+      PersistenceFailure('SQLITE_CONSTRAINT: transactions.account_id'),
+      CurrencyFailure('cannot aggregate USD with UZS'),
+    ];
+
+    for (final failure in failures) {
+      final message = userMessageFor(failure);
+      expect(message, isNotEmpty);
+      expect(message, isNot(contains(failure.debugDetail)));
+    }
+  });
 }

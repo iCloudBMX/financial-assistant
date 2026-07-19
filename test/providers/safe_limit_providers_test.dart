@@ -6,6 +6,8 @@ import 'package:financial_assistant/core/budget/category_budget_engine.dart';
 import 'package:financial_assistant/core/money/currency.dart';
 import 'package:financial_assistant/core/money/money.dart';
 import 'package:financial_assistant/data/db/app_database.dart';
+import 'package:financial_assistant/data/goals/goal_model.dart';
+import 'package:financial_assistant/data/goals/goal_repository.dart';
 import 'package:financial_assistant/data/settings/settings_repository.dart';
 import 'package:financial_assistant/data/budget/budget_repository.dart';
 import 'package:financial_assistant/providers/app_providers.dart';
@@ -47,6 +49,51 @@ void main() {
     // numerator 1,400,000 - 200,000(spent variable) = 1,200,000; today spent 200,000.
     expect(limit.spendable.minorUnits, 1200000);
     expect(limit.todaySpent, const Money(200000, CurrencyRegistry.uzs));
+    await db.close();
+  });
+
+  test('safeLimitProvider subtracts a goal earmark once from ledger cash',
+      () async {
+    final db = AppDatabase(NativeDatabase.memory());
+    await db.into(db.accountsTable).insert(
+          AccountsTableCompanion.insert(
+            name: 'Naqd',
+            type: 'cash',
+            openingBalanceMinor: const Value(1000000),
+          ),
+        );
+    final settingsRepo = DriftSettingsRepository(db);
+    final base = await settingsRepo.read();
+    await settingsRepo.write(base.copyWith(
+      variableBudget: const Money(2000000, CurrencyRegistry.uzs),
+      minReserve: Money.zero(CurrencyRegistry.uzs),
+      safetyBuffer: Money.zero(CurrencyRegistry.uzs),
+    ));
+
+    final container = ProviderContainer(overrides: [
+      databaseProvider.overrideWithValue(db),
+    ]);
+    addTearDown(container.dispose);
+
+    final GoalRepository goals = container.read(goalRepositoryProvider);
+    final goalId = await goals.create(GoalDraft(
+      name: 'Zaxira',
+      targetAmountMinor: 1000000,
+      startDate: DateTime.now(),
+    ));
+    await goals.addContribution(
+      goalId: goalId,
+      signedAmountMinor: 300000,
+      source: ContributionSource.manual,
+    );
+
+    // A goal contribution is an earmark, not a ledger transaction. The
+    // provider must pass the full 1,000,000 ledger cash as totalAvailable;
+    // dailySafeLimit owns the one 300,000 reserve subtraction.
+    expect(
+      (await container.read(safeLimitProvider.future)).spendable.minorUnits,
+      700000,
+    );
     await db.close();
   });
 

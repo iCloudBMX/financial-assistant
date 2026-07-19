@@ -1,14 +1,17 @@
 import '../money/money.dart';
 import '../time/financial_period.dart';
 
-/// All the figures the safe-limit computation needs (§11.2). `goalReserves`
-/// and `unpaidMandatory` are 0 in SP2; SP3/SP4 supply real values without
-/// changing this engine.
+/// All the figures the safe-limit computation needs (§11.2).
+///
+/// Ownership contract: [totalAvailable] is cash derived directly from the
+/// ledger, before [minReserve], [goalReserves], or [unpaidMandatory] are
+/// deducted. This engine owns those three deductions so no provider should
+/// pre-subtract them.
 class SafeLimitInputs {
   final Money variableBudget;
   final Money variableSpent;
   final Money manualBuffer;
-  final Money totalAvailable;
+  final Money totalAvailable; // full ledger cash before reserve deductions
   final Money minReserve;
   final Money goalReserves;
   final Money unpaidMandatory;

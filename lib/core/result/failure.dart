@@ -15,6 +15,16 @@ class ValidationFailure extends Failure {
   const ValidationFailure(super.debugDetail);
 }
 
+/// A local repository or database operation could not be completed.
+class PersistenceFailure extends Failure {
+  const PersistenceFailure(super.debugDetail);
+}
+
+/// Values in incompatible currencies reached an operation without conversion.
+class CurrencyFailure extends Failure {
+  const CurrencyFailure(super.debugDetail);
+}
+
 class NotFoundFailure extends Failure {
   const NotFoundFailure(super.debugDetail);
 }
