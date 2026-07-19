@@ -254,9 +254,10 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('rejects a missing active-account available balance', (
+  testWidgets('excludes an account with a missing available balance', (
     tester,
   ) async {
+    final selected = <int>[];
     await tester.pumpWidget(
       _testApp(
         AccountCardPicker(
@@ -265,18 +266,21 @@ void main() {
             1: Money(975000, CurrencyRegistry.uzs),
           },
           selectedId: 1,
-          onSelected: (_) {},
+          onSelected: selected.add,
         ),
       ),
     );
 
-    expect(
-      tester.takeException().toString(),
-      contains('Missing available balance for active account 2'),
-    );
+    expect(tester.takeException(), isNull);
+    expect(find.text('Asosiy karta'), findsOneWidget);
+    expect(find.text('Naqd'), findsNothing);
+    expect(find.byKey(const Key('account-card-2')), findsNothing);
+
+    await tester.tap(find.text('Asosiy karta'));
+    expect(selected, <int>[1]);
   });
 
-  testWidgets('rejects a currency-mismatched available balance', (
+  testWidgets('excludes a currency-mismatched available balance', (
     tester,
   ) async {
     await tester.pumpWidget(
@@ -293,10 +297,111 @@ void main() {
       ),
     );
 
-    expect(
-      tester.takeException().toString(),
-      contains('Available balance currency USD does not match account 2 UZS'),
+    expect(tester.takeException(), isNull);
+    expect(find.text('Asosiy karta'), findsOneWidget);
+    expect(find.text('Naqd'), findsNothing);
+    expect(find.byKey(const Key('account-card-2')), findsNothing);
+  });
+
+  testWidgets('all-invalid balances render a stable empty state', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _testApp(
+        AccountCardPicker(
+          accounts: accounts,
+          availableBalances: const <int, Money>{},
+          selectedId: 1,
+          onSelected: (_) {},
+        ),
+      ),
     );
+
+    expect(tester.takeException(), isNull);
+    expect(find.byKey(const Key('account-picker-empty')), findsOneWidget);
+    expect(find.byType(PageView), findsNothing);
+    expect(find.byKey(const Key('account-card-1')), findsNothing);
+    expect(find.byKey(const Key('account-card-2')), findsNothing);
+  });
+
+  testWidgets('valid balance arrival resyncs without callback feedback', (
+    tester,
+  ) async {
+    var balances = <int, Money>{};
+    late StateSetter updateHost;
+    final selected = <int>[];
+    await tester.pumpWidget(
+      _testApp(
+        StatefulBuilder(
+          builder: (context, setState) {
+            updateHost = setState;
+            return AccountCardPicker(
+              accounts: accounts,
+              availableBalances: balances,
+              selectedId: 2,
+              onSelected: selected.add,
+            );
+          },
+        ),
+      ),
+    );
+    expect(tester.takeException(), isNull);
+    expect(find.byKey(const Key('account-picker-empty')), findsOneWidget);
+
+    updateHost(() => balances = availableBalances);
+    await tester.pump();
+    await tester.pumpAndSettle();
+
+    final controller = tester
+        .widget<PageView>(find.byType(PageView))
+        .controller!;
+    expect(tester.takeException(), isNull);
+    expect(controller.page, 1);
+    expect(
+      tester
+          .getSemantics(find.byKey(const Key('account-card-2')))
+          .flagsCollection
+          .isSelected,
+      Tristate.isTrue,
+    );
+    expect(selected, isEmpty);
+  });
+
+  testWidgets('balance invalidation resyncs to a remaining valid account', (
+    tester,
+  ) async {
+    var balances = availableBalances;
+    late StateSetter updateHost;
+    final selected = <int>[];
+    await tester.pumpWidget(
+      _testApp(
+        StatefulBuilder(
+          builder: (context, setState) {
+            updateHost = setState;
+            return AccountCardPicker(
+              accounts: accounts,
+              availableBalances: balances,
+              selectedId: 2,
+              onSelected: selected.add,
+            );
+          },
+        ),
+      ),
+    );
+    expect(tester.widget<PageView>(find.byType(PageView)).controller!.page, 1);
+
+    updateHost(
+      () =>
+          balances = const <int, Money>{1: Money(975000, CurrencyRegistry.uzs)},
+    );
+    await tester.pump();
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('Asosiy karta'), findsOneWidget);
+    expect(find.text('Naqd'), findsNothing);
+    expect(tester.widget<PageView>(find.byType(PageView)).controller!.page, 0);
+    expect(selected, isEmpty);
   });
 
   testWidgets('reflows at 320px and 200 percent text scale', (tester) async {

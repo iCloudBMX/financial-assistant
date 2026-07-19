@@ -7,6 +7,8 @@ import 'velora_card.dart';
 
 /// A controlled account selector. Page and tap interactions are reported to
 /// [onSelected]; the caller remains the source of truth for [selectedId].
+/// Accounts without a same-currency entry in [availableBalances] are excluded
+/// until their derived balance becomes available.
 class AccountCardPicker extends StatefulWidget {
   const AccountCardPicker({
     super.key,
@@ -31,20 +33,19 @@ class _AccountCardPickerState extends State<AccountCardPicker> {
   int _syncGeneration = 0;
   int? _visibleAccountId;
 
-  List<Account> get _activeAccounts => widget.accounts
-      .where((account) => !account.archived)
-      .toList(growable: false);
+  List<Account> get _selectableAccounts =>
+      _selectableFrom(widget.accounts, widget.availableBalances);
 
   @override
   void initState() {
     super.initState();
-    final activeAccounts = _activeAccounts;
-    final selectedIndex = activeAccounts.indexWhere(
+    final selectableAccounts = _selectableAccounts;
+    final selectedIndex = selectableAccounts.indexWhere(
       (account) => account.id == widget.selectedId,
     );
     final initialIndex = selectedIndex < 0 ? 0 : selectedIndex;
-    if (activeAccounts.isNotEmpty) {
-      _visibleAccountId = activeAccounts[initialIndex].id;
+    if (selectableAccounts.isNotEmpty) {
+      _visibleAccountId = selectableAccounts[initialIndex].id;
     }
     _controller = PageController(
       initialPage: initialIndex,
@@ -55,14 +56,17 @@ class _AccountCardPickerState extends State<AccountCardPicker> {
   @override
   void didUpdateWidget(covariant AccountCardPicker oldWidget) {
     super.didUpdateWidget(oldWidget);
-    final oldActive = _activeFrom(oldWidget.accounts);
-    final newActive = _activeAccounts;
+    final oldSelectable = _selectableFrom(
+      oldWidget.accounts,
+      oldWidget.availableBalances,
+    );
+    final newSelectable = _selectableAccounts;
     if (oldWidget.selectedId == widget.selectedId &&
-        _sameAccountOrder(oldActive, newActive)) {
+        _sameAccountOrder(oldSelectable, newSelectable)) {
       return;
     }
 
-    if (newActive.isEmpty) {
+    if (newSelectable.isEmpty) {
       _syncGeneration++;
       _visibleAccountId = null;
       return;
@@ -71,19 +75,19 @@ class _AccountCardPickerState extends State<AccountCardPicker> {
     final oldPage = _controller.hasClients
         ? (_controller.page ?? _controller.initialPage.toDouble()).round()
         : _controller.initialPage;
-    final selectedIndex = newActive.indexWhere(
+    final selectedIndex = newSelectable.indexWhere(
       (account) => account.id == widget.selectedId,
     );
-    final retainedIndex = newActive.indexWhere(
+    final retainedIndex = newSelectable.indexWhere(
       (account) => account.id == _visibleAccountId,
     );
     final targetIndex = selectedIndex >= 0
         ? selectedIndex
         : retainedIndex >= 0
         ? retainedIndex
-        : oldPage.clamp(0, newActive.length - 1);
+        : oldPage.clamp(0, newSelectable.length - 1);
 
-    _visibleAccountId = newActive[targetIndex].id;
+    _visibleAccountId = newSelectable[targetIndex].id;
     _scheduleControlledSync(targetIndex);
   }
 
@@ -98,8 +102,8 @@ class _AccountCardPickerState extends State<AccountCardPicker> {
     final generation = ++_syncGeneration;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || generation != _syncGeneration) return;
-      final activeAccounts = _activeAccounts;
-      if (!_controller.hasClients || targetIndex >= activeAccounts.length) {
+      final selectableAccounts = _selectableAccounts;
+      if (!_controller.hasClients || targetIndex >= selectableAccounts.length) {
         return;
       }
       _moveToPage(targetIndex, animate: false);
@@ -138,9 +142,14 @@ class _AccountCardPickerState extends State<AccountCardPicker> {
 
   @override
   Widget build(BuildContext context) {
-    final activeAccounts = _activeAccounts;
-    if (activeAccounts.isEmpty) return const SizedBox.shrink();
-    final availableBalances = _validatedAvailableBalances(activeAccounts);
+    final selectableAccounts = _selectableAccounts;
+    if (selectableAccounts.isEmpty) {
+      return const SizedBox(
+        key: Key('account-picker-empty'),
+        height: 48,
+        child: Center(child: Text('Mavjud hisob topilmadi')),
+      );
+    }
 
     final textScale = MediaQuery.textScalerOf(context).scale(1);
     final height = 116.0 + ((textScale - 1).clamp(0.0, 1.0) * 156.0);
@@ -149,20 +158,22 @@ class _AccountCardPickerState extends State<AccountCardPicker> {
       height: height,
       child: PageView.builder(
         controller: _controller,
-        itemCount: activeAccounts.length,
+        itemCount: selectableAccounts.length,
         onPageChanged: (index) {
-          final account = activeAccounts[index];
+          final account = selectableAccounts[index];
           _visibleAccountId = account.id;
           if (_suppressedPageMovements == 0) {
             widget.onSelected(account.id);
           }
         },
         itemBuilder: (context, index) {
-          final account = activeAccounts[index];
-          final availableBalance = availableBalances[account.id]!;
+          final account = selectableAccounts[index];
+          final availableBalance = widget.availableBalances[account.id]!;
           return Padding(
             padding: EdgeInsetsDirectional.only(
-              end: index == activeAccounts.length - 1 ? 0 : VeloraSpacing.md,
+              end: index == selectableAccounts.length - 1
+                  ? 0
+                  : VeloraSpacing.md,
             ),
             child: Semantics(
               key: Key('account-card-${account.id}'),
@@ -183,30 +194,18 @@ class _AccountCardPickerState extends State<AccountCardPicker> {
       ),
     );
   }
-
-  Map<int, Money> _validatedAvailableBalances(List<Account> activeAccounts) {
-    final validated = <int, Money>{};
-    for (final account in activeAccounts) {
-      final balance = widget.availableBalances[account.id];
-      if (balance == null) {
-        throw FlutterError(
-          'Missing available balance for active account ${account.id}.',
-        );
-      }
-      if (balance.currency != account.currency) {
-        throw FlutterError(
-          'Available balance currency ${balance.currency.code} does not match '
-          'account ${account.id} ${account.currency.code}.',
-        );
-      }
-      validated[account.id] = balance;
-    }
-    return validated;
-  }
 }
 
-List<Account> _activeFrom(List<Account> accounts) =>
-    accounts.where((account) => !account.archived).toList(growable: false);
+List<Account> _selectableFrom(
+  List<Account> accounts,
+  Map<int, Money> availableBalances,
+) => accounts
+    .where((account) {
+      if (account.archived) return false;
+      final balance = availableBalances[account.id];
+      return balance != null && balance.currency == account.currency;
+    })
+    .toList(growable: false);
 
 bool _sameAccountOrder(List<Account> a, List<Account> b) {
   if (a.length != b.length) return false;
