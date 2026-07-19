@@ -76,5 +76,6 @@ class _AllocationTemplateScreenState
         AllocationMethod.percentage =>
           'Foiz: ${(d.percentBp ?? 0) / 100}%',
         AllocationMethod.remaining => 'Qolgan summa',
+        AllocationMethod.goalBased => 'Maqsad asosida',
       };
 }

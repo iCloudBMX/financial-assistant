@@ -20,6 +20,7 @@ AllocationResult computeAllocation(Money income, AllocationTemplate template) {
       AllocationMethod.percentage =>
         income.minorUnits * (d.percentBp ?? 0) ~/ 10000,
       AllocationMethod.remaining => remaining < 0 ? 0 : remaining,
+      AllocationMethod.goalBased => 0,
     };
     if (requested < 0) requested = 0;
 

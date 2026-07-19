@@ -1,7 +1,8 @@
 import '../money/money.dart';
 
-/// How a direction claims money from an income. `goalBased` is deferred to SP3.
-enum AllocationMethod { fixedAmount, percentage, remaining }
+/// How a direction claims money from an income. `goalBased` is resolved to a
+/// fixedAmount in the provider layer (SP3) before computeAllocation runs.
+enum AllocationMethod { fixedAmount, percentage, remaining, goalBased }
 
 /// One line of an allocation template: send money to [bucketKey] via [method].
 /// [amount] is set for `fixedAmount`; [percentBp] (basis points) for
