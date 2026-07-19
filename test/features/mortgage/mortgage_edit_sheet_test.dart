@@ -50,6 +50,49 @@ void main() {
     expect(list.single.openingPrincipalMinor, 100000000);
   });
 
+  testWidgets('a malformed rate blocks save and keeps the sheet open',
+      (tester) async {
+    final db = AppDatabase(NativeDatabase.memory());
+    addTearDown(db.close);
+    final container = ProviderContainer(
+      overrides: [databaseProvider.overrideWithValue(db)],
+    );
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(UncontrolledProviderScope(
+      container: container,
+      child: MaterialApp(
+        home: Scaffold(
+          body: Consumer(builder: (context, ref, _) {
+            return ElevatedButton(
+              onPressed: () => showMortgageEditSheet(context, ref),
+              child: const Text('open'),
+            );
+          }),
+        ),
+      ),
+    ));
+
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byKey(const Key('mortgage-name')), 'Uy');
+    await tester.enterText(
+        find.byKey(const Key('mortgage-initial')), '120000000');
+    await tester.enterText(
+        find.byKey(const Key('mortgage-opening')), '100000000');
+    await tester.enterText(find.byKey(const Key('mortgage-rate')), '18.5.5');
+    await tester.enterText(
+        find.byKey(const Key('mortgage-mandatory')), '5000000');
+    await tester.tap(find.byKey(const Key('mortgage-save')));
+    await tester.pumpAndSettle();
+
+    // Sheet is still open (save was rejected) and nothing was persisted.
+    expect(find.byKey(const Key('mortgage-save')), findsOneWidget);
+    expect((await container.read(mortgageRepositoryProvider).list()).isEmpty,
+        isTrue);
+  });
+
   test('parseRateToBp parses percent to basis points, integer-only', () {
     expect(parseRateToBp('18'), 1800);
     expect(parseRateToBp('18.5'), 1850);

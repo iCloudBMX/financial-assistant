@@ -64,7 +64,9 @@ class _MortgageEditSheetState extends ConsumerState<_MortgageEditSheet> {
     _opening = TextEditingController(
         text: e == null ? '' : m(e.openingPrincipalMinor).formatNumber());
     _rate = TextEditingController(
-        text: e == null ? '' : (e.annualRateBp / 100).toStringAsFixed(2));
+        text: e == null
+            ? ''
+            : '${e.annualRateBp ~/ 100}.${(e.annualRateBp % 100).toString().padLeft(2, '0')}');
     _mandatory = TextEditingController(
         text: e == null ? '' : m(e.mandatoryPaymentMinor).formatNumber());
     _type = e?.paymentType ?? PaymentType.annuity;
@@ -83,26 +85,30 @@ class _MortgageEditSheetState extends ConsumerState<_MortgageEditSheet> {
     final initial = Money.tryParse(_initial.text, _uzs);
     final opening = Money.tryParse(_opening.text, _uzs);
     final mandatory = Money.tryParse(_mandatory.text, _uzs);
-    final bp = parseRateToBp(_rate.text) ?? 0;
+    final rateText = _rate.text.trim();
+    final bp = rateText.isEmpty ? 0 : parseRateToBp(rateText); // int?
     if (_name.text.trim().isEmpty ||
         initial == null ||
         opening == null ||
-        mandatory == null) {
+        mandatory == null ||
+        (rateText.isNotEmpty && bp == null)) {
       setState(() => _error = 'Maydonlarni to\'ldiring');
       return;
     }
     final e = widget.existing;
     final draft = MortgageDraft(
       name: _name.text.trim(),
+      bank: e?.bank ?? '',
       initialLoanMinor: initial.minorUnits,
       openingPrincipalMinor: opening.minorUnits,
-      annualRateBp: bp,
+      annualRateBp: bp ?? 0,
       startDate: e?.startDate ?? DateTime.now(),
       endDate: e?.endDate,
       mandatoryPaymentMinor: mandatory.minorUnits,
       nextPaymentDate: e?.nextPaymentDate ?? DateTime.now(),
       paymentType: _type,
       payoffStrategy: _strategy,
+      currencyCode: e?.currencyCode ?? 'UZS',
     );
     final ctrl = ref.read(mortgageControllerProvider);
     final res = e == null
