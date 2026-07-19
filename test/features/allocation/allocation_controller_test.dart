@@ -9,6 +9,7 @@ import 'package:financial_assistant/data/goals/goal_model.dart';
 import 'package:financial_assistant/providers/app_providers.dart';
 import 'package:financial_assistant/features/allocation/allocation_controller.dart';
 import 'package:financial_assistant/features/budgets/budgets_controller.dart';
+import 'package:financial_assistant/features/goals/goal_controller.dart';
 
 /// Inserts a real income transaction (mirrors the pattern in
 /// `allocation_repository_test.dart`'s `insertIncome`) and returns its id —
@@ -172,5 +173,40 @@ void main() {
     final hist = await goalRepo.contributions(id);
     expect(hist.single.source, ContributionSource.incomeAllocation);
     expect(hist.single.incomeTransactionId, incomeId);
+  });
+
+  test(
+      'headline invariant: a manual goal contribution never creates a '
+      'ledger transaction (earmark model — it only writes a '
+      'goal_contributions row)', () async {
+    final db = AppDatabase(NativeDatabase.memory());
+    await db.into(db.accountsTable).insert(
+          AccountsTableCompanion.insert(name: 'Cash', type: 'cash'),
+        );
+    final container = ProviderContainer(overrides: [
+      databaseProvider.overrideWithValue(db),
+    ]);
+    addTearDown(container.dispose);
+    addTearDown(db.close);
+
+    final goalRepo = container.read(goalRepositoryProvider);
+    final id = await goalRepo.create(GoalDraft(
+      name: 'Avto',
+      targetAmountMinor: 5000000,
+      startDate: DateTime(2026, 1, 1),
+    ));
+
+    final before =
+        await db.select(db.transactionsTable).get();
+
+    final r = await container.read(goalControllerProvider).contribute(
+        goalId: id, amount: const Money(400000, uzs));
+    expect(r.isOk, isTrue);
+
+    final after = await db.select(db.transactionsTable).get();
+    expect(after.length, before.length,
+        reason: 'a manual goal contribution must not create a ledger '
+            'transaction — only a goal_contributions row');
+    expect(await goalRepo.savedFor(id), 400000);
   });
 }

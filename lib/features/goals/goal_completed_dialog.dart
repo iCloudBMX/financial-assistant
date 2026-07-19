@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/money/money.dart';
+import '../../data/goals/goal_model.dart';
 import '../../providers/app_providers.dart';
 import 'goal_controller.dart';
 import 'goal_edit_sheet.dart';
@@ -23,7 +24,13 @@ Future<void> showGoalCompletedDialog(BuildContext context, WidgetRef ref,
         final item =
             (selfMatches == null || selfMatches.isEmpty) ? null : selfMatches.first;
 
-        final otherMatches = all?.where((g) => g.goal.id != goalId);
+        // Exclude closed goals: activeReserveMinor doesn't count them, so
+        // surplus moved into one would silently drop out of the reserve.
+        // (archived goals are already excluded by goalsProvider/list().)
+        final otherMatches = all?.where((g) =>
+            g.goal.id != goalId &&
+            (g.goal.status == GoalStatus.active ||
+                g.goal.status == GoalStatus.completed));
         final others = (otherMatches == null || otherMatches.isEmpty)
             ? const <GoalWithProgress>[]
             : otherMatches.toList();

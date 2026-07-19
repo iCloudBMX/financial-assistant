@@ -4,6 +4,7 @@ import '../../core/money/currency.dart';
 import '../../core/money/money.dart';
 import '../../data/goals/goal_model.dart';
 import '../../providers/app_providers.dart';
+import 'goal_controller.dart';
 
 /// Opens the goal create/edit sheet. Pass [existing] to edit; omit to
 /// create a new goal.
@@ -90,6 +91,12 @@ class _GoalEditSheetState extends ConsumerState<_GoalEditSheet> {
       await repo.create(draft);
     } else {
       await repo.update(widget.existing!.id, draft);
+      // A retarget can flip active<->completed (e.g. raising the target on
+      // a completed goal, or lowering it on an active one) — re-derive
+      // status instead of waiting for the next contribute/withdraw.
+      await ref
+          .read(goalControllerProvider)
+          .recomputeCompletion(widget.existing!.id);
     }
     ref.read(ledgerRevisionProvider.notifier).update((n) => n + 1);
     if (mounted) Navigator.of(context).pop();

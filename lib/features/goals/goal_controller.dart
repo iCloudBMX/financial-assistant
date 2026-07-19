@@ -108,6 +108,14 @@ class GoalController {
     return contribute(goalId: toGoalId, amount: amount);
   }
 
+  /// Public entry point to re-derive a goal's active/completed status from
+  /// its current saved-vs-target balance. Needed after edits (e.g. via the
+  /// edit sheet) that change the target amount without going through
+  /// contribute/withdraw/setNewTarget, which already self-heal completion.
+  Future<void> recomputeCompletion(int goalId) async {
+    await _recomputeCompletion(goalId);
+  }
+
   Future<void> _recomputeCompletion(int goalId) async {
     final goals = await _repo.list(includeArchived: true);
     final g = goals.firstWhere((x) => x.id == goalId);
