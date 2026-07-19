@@ -46,3 +46,6 @@ ios/Flutter/flutter_export_environment.sh
 # Env / secrets
 *.env
 .env*
+
+# Local isolated implementation worktrees
+.worktrees/
