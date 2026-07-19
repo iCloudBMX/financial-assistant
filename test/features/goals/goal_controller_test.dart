@@ -78,4 +78,48 @@ void main() {
     expect(await repo.savedFor(from), 100000);
     expect(await repo.savedFor(to), 200000);
   });
+
+  test('closeGoal sets status closed', () async {
+    final id = await newGoal();
+    await ctrl.closeGoal(id);
+    final g =
+        (await repo.list(includeArchived: true)).firstWhere((x) => x.id == id);
+    expect(g.status, GoalStatus.closed);
+  });
+
+  test('setNewTarget reactivates a closed goal', () async {
+    final id = await newGoal(target: 500000);
+    await ctrl.closeGoal(id);
+    final r = await ctrl.setNewTarget(id, target: m(750000));
+    expect(r.isOk, isTrue);
+    final g =
+        (await repo.list(includeArchived: true)).firstWhere((x) => x.id == id);
+    expect(g.status, GoalStatus.active);
+    expect(g.targetAmountMinor, 750000);
+  });
+
+  test('setNewTarget rejects target <= 0', () async {
+    final id = await newGoal(target: 500000);
+    await ctrl.closeGoal(id);
+    final r = await ctrl.setNewTarget(id, target: m(0));
+    expect(r.isOk, isFalse);
+    final g =
+        (await repo.list(includeArchived: true)).firstWhere((x) => x.id == id);
+    expect(g.status, GoalStatus.closed);
+    expect(g.targetAmountMinor, 500000);
+  });
+
+  test(
+      'setNewTarget on a closed goal whose saved already meets the new target completes it',
+      () async {
+    final id = await newGoal(target: 500000);
+    await ctrl.contribute(goalId: id, amount: m(500000)); // -> completed
+    await ctrl.closeGoal(id); // -> closed
+    final r = await ctrl.setNewTarget(id, target: m(300000));
+    expect(r.isOk, isTrue);
+    final g =
+        (await repo.list(includeArchived: true)).firstWhere((x) => x.id == id);
+    expect(g.status, GoalStatus.completed);
+    expect(g.targetAmountMinor, 300000);
+  });
 }
