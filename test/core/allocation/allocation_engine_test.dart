@@ -67,4 +67,100 @@ void main() {
     expect(r.shortfalls.single.bucketKey, 'minReserve');
     expect(r.shortfalls.single.funded, m(0));
   });
+
+  group('previewAllocation (§8.4 preview: income/directions/allocatedTotal/'
+      'unallocated/freeAfter/shortfall)', () {
+    test('a balanced split leaves unallocated and freeAfter at zero', () {
+      final template = AllocationTemplate([
+        pct('minReserve', 1000), // 10%
+        rest('variableBudget'),
+      ]);
+      final p = previewAllocation(m(1000000), template);
+      expect(p.income, m(1000000));
+      expect(p.directions, template.directions);
+      expect(p.perBucket['minReserve'], m(100000));
+      expect(p.perBucket['variableBudget'], m(900000));
+      expect(p.allocatedTotal, m(1000000));
+      expect(p.unallocated, m(0));
+      expect(p.freeAfter, m(0));
+      expect(p.shortfall, isEmpty);
+    });
+
+    test('with no remaining direction, unallocated and freeAfter equal the '
+        'leftover', () {
+      final p = previewAllocation(
+          m(1000000), AllocationTemplate([fixed('mandatoryExpenses', 300000)]));
+      expect(p.allocatedTotal, m(300000));
+      expect(p.unallocated, m(700000));
+      expect(p.freeAfter, m(700000));
+    });
+
+    test(
+        'insufficient income: priority reduction — the first (highest-'
+        'priority) direction is funded in full, a later direction is '
+        'reduced, and the exact shortfall is exposed', () {
+      final p = previewAllocation(
+        m(500000),
+        AllocationTemplate([
+          fixed('mandatoryExpenses', 400000), // critical, first in order
+          fixed('minReserve', 300000), // lower priority, only 100000 left
+        ]),
+      );
+      expect(p.perBucket['mandatoryExpenses'], m(400000),
+          reason: 'the first/critical direction is never reduced while '
+              'funds remain');
+      expect(p.perBucket['minReserve'], m(100000),
+          reason: 'the later direction absorbs the shortage');
+      expect(p.allocatedTotal, m(500000));
+      expect(p.unallocated, m(0));
+      expect(p.shortfall.single.bucketKey, 'minReserve');
+      expect(p.shortfall.single.shortBy, m(200000));
+      // Never over-allocated by construction — confirm must stay enabled.
+      expect(p.allocatedTotal.minorUnits <= p.income.minorUnits, isTrue);
+    });
+  });
+
+  group('editedAllocationPreview (user-edited amounts, e.g. AllocateSheet)',
+      () {
+    final directions = [
+      const AllocationDirection(
+          bucketKey: 'minReserve', method: AllocationMethod.percentage,
+          percentBp: 1000),
+      const AllocationDirection(
+          bucketKey: 'variableBudget', method: AllocationMethod.remaining),
+    ];
+
+    test('edited amounts under income leave a positive unallocated/freeAfter',
+        () {
+      final p = editedAllocationPreview(m(1000000), directions, {
+        'minReserve': m(100000),
+      });
+      expect(p.allocatedTotal, m(100000));
+      expect(p.unallocated, m(900000));
+      expect(p.freeAfter, m(900000));
+      expect(p.shortfall, isEmpty,
+          reason: 'user-edited totals do not compute a shortfall');
+    });
+
+    test('edited amounts exceeding income make unallocated negative but '
+        'freeAfter stays clamped at zero — the signal that disables '
+        'confirm', () {
+      final p = editedAllocationPreview(m(1000000), directions, {
+        'minReserve': m(700000),
+        'variableBudget': m(500000),
+      });
+      expect(p.allocatedTotal, m(1200000));
+      expect(p.unallocated, m(-200000));
+      expect(p.freeAfter, m(0));
+      expect(p.allocatedTotal.minorUnits <= p.income.minorUnits, isFalse);
+    });
+
+    test('a zero or missing entry contributes nothing', () {
+      final p = editedAllocationPreview(m(1000000), directions, {
+        'minReserve': m(0),
+      });
+      expect(p.perBucket, isEmpty);
+      expect(p.allocatedTotal, m(0));
+    });
+  });
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/theme/velora_tokens.dart';
 import '../../data/categories/category_model.dart';
+import 'category_icons.dart';
 
 /// A controlled hybrid category selector: four fast choices plus a searchable
 /// full list. Selection is always reported to [onSelected].
@@ -172,7 +173,7 @@ class _CategoryOption extends StatelessWidget {
                 child: Row(
                   children: [
                     Icon(
-                      _categoryIcon(category.icon),
+                      categoryIcon(category.icon),
                       color: selected
                           ? theme.colorScheme.primary
                           : theme.colorScheme.onSurfaceVariant,
@@ -319,7 +320,7 @@ class _SheetCategoryOption extends StatelessWidget {
     child: ExcludeSemantics(
       child: ListTile(
         minTileHeight: 48,
-        leading: Icon(_categoryIcon(category.icon)),
+        leading: Icon(categoryIcon(category.icon)),
         title: Text(category.name),
         trailing: selected ? const Icon(Icons.check) : null,
         onTap: onTap,
@@ -328,18 +329,3 @@ class _SheetCategoryOption extends StatelessWidget {
   );
 }
 
-IconData _categoryIcon(String icon) => switch (icon) {
-  'restaurant' => Icons.restaurant_outlined,
-  'directions_car' => Icons.directions_car_outlined,
-  'home' => Icons.home_outlined,
-  'bolt' => Icons.bolt_outlined,
-  'favorite' => Icons.favorite_outline,
-  'school' => Icons.school_outlined,
-  'checkroom' => Icons.checkroom_outlined,
-  'movie' => Icons.movie_outlined,
-  'fastfood' => Icons.fastfood_outlined,
-  'subscriptions' => Icons.subscriptions_outlined,
-  'card_giftcard' => Icons.card_giftcard_outlined,
-  'flight' => Icons.flight_outlined,
-  _ => Icons.category_outlined,
-};

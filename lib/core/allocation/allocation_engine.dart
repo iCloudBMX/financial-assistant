@@ -47,3 +47,72 @@ AllocationResult computeAllocation(Money income, AllocationTemplate template) {
     shortfalls: shortfalls,
   );
 }
+
+/// Preview a [template] split of [income] — §8.4. Wraps [computeAllocation]
+/// with the `unallocated`/`freeAfter` fields the confirm screen needs. Since
+/// `computeAllocation` always caps `totalAllocated` at what is available,
+/// this preview's `unallocated` is never negative — over-allocation only
+/// arises from [editedAllocationPreview], once the user takes over amounts
+/// by hand.
+AllocationPreview previewAllocation(
+    Money income, AllocationTemplate template) {
+  final result = computeAllocation(income, template);
+  return _preview(
+    income: income,
+    directions: template.directions,
+    perBucket: result.perBucket,
+    allocatedTotal: result.totalAllocated,
+    shortfall: result.shortfalls,
+  );
+}
+
+/// Recompute the preview from directly-edited per-direction amounts (the
+/// confirm screen's editable fields) instead of the method-driven engine —
+/// the user has taken over each direction's amount by hand, so no method is
+/// applied and no shortfall is computed against it. A zero or missing entry
+/// contributes nothing. Unlike [previewAllocation], the resulting
+/// `allocatedTotal` CAN exceed [income] (an over-allocated edit), which is
+/// exactly the signal the confirm button uses to disable itself.
+AllocationPreview editedAllocationPreview(
+  Money income,
+  List<AllocationDirection> directions,
+  Map<String, Money> edited,
+) {
+  final currency = income.currency;
+  final perBucket = <String, Money>{};
+  var totalMinor = 0;
+  for (final d in directions) {
+    final amount = edited[d.bucketKey];
+    if (amount == null || amount.minorUnits <= 0) continue;
+    perBucket[d.bucketKey] = amount;
+    totalMinor += amount.minorUnits;
+  }
+  return _preview(
+    income: income,
+    directions: directions,
+    perBucket: perBucket,
+    allocatedTotal: Money(totalMinor, currency),
+    shortfall: const [],
+  );
+}
+
+AllocationPreview _preview({
+  required Money income,
+  required List<AllocationDirection> directions,
+  required Map<String, Money> perBucket,
+  required Money allocatedTotal,
+  required List<Shortfall> shortfall,
+}) {
+  final currency = income.currency;
+  final unallocatedMinor = income.minorUnits - allocatedTotal.minorUnits;
+  final freeAfterMinor = unallocatedMinor < 0 ? 0 : unallocatedMinor;
+  return AllocationPreview(
+    income: income,
+    directions: directions,
+    perBucket: perBucket,
+    allocatedTotal: allocatedTotal,
+    unallocated: Money(unallocatedMinor, currency),
+    freeAfter: Money(freeAfterMinor, currency),
+    shortfall: shortfall,
+  );
+}

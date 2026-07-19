@@ -34,6 +34,30 @@ class BudgetsController {
     _bump();
   }
 
+  /// Creates a new category and returns its id (§6.7 category creation).
+  Future<int> createCategory({required String name, required String icon}) async {
+    final id =
+        await ref.read(categoryRepositoryProvider).create(name: name, icon: icon);
+    _bump();
+    return id;
+  }
+
+  Future<void> renameCategory(int id, String name) async {
+    await ref.read(categoryRepositoryProvider).rename(id, name);
+    _bump();
+  }
+
+  Future<void> setCategoryIcon(int id, String icon) async {
+    await ref.read(categoryRepositoryProvider).setIcon(id, icon);
+    _bump();
+  }
+
+  /// Used categories can only be archived, never deleted (§6.7).
+  Future<void> setCategoryArchived(int id, bool archived) async {
+    await ref.read(categoryRepositoryProvider).setArchived(id, archived);
+    _bump();
+  }
+
   Future<void> _writeSettings(AppSettings Function(AppSettings) mutate) async {
     final repo = ref.read(settingsRepositoryProvider);
     final current = await repo.read();

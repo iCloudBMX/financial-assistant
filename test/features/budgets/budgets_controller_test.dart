@@ -115,4 +115,62 @@ void main() {
     expect(after.firstWhere((v) => v.category.id == 1).monthStatus,
         CategoryLimitStatus.noLimit);
   });
+
+  test('createCategory inserts a new category, bumps the revision, and is '
+      'visible via categoryBudgetsProvider', () async {
+    final db = AppDatabase(NativeDatabase.memory());
+    final container = ProviderContainer(overrides: [
+      databaseProvider.overrideWithValue(db),
+    ]);
+    addTearDown(container.dispose);
+    addTearDown(db.close);
+
+    final before = container.read(ledgerRevisionProvider);
+    final id = await container
+        .read(budgetsControllerProvider)
+        .createCategory(name: 'Sport', icon: 'favorite');
+    expect(container.read(ledgerRevisionProvider), greaterThan(before));
+
+    final views = await container.read(categoryBudgetsProvider.future);
+    final created = views.firstWhere((v) => v.category.id == id);
+    expect(created.category.name, 'Sport');
+    expect(created.category.icon, 'favorite');
+    expect(created.category.kind, CategoryKind.variable,
+        reason: 'new categories default to variable (§10.1)');
+  });
+
+  test('renameCategory and setCategoryIcon update the stored category',
+      () async {
+    final db = AppDatabase(NativeDatabase.memory());
+    final container = ProviderContainer(overrides: [
+      databaseProvider.overrideWithValue(db),
+    ]);
+    addTearDown(container.dispose);
+    addTearDown(db.close);
+
+    final controller = container.read(budgetsControllerProvider);
+    await controller.renameCategory(1, 'Ovqatlanish');
+    await controller.setCategoryIcon(1, 'fastfood');
+
+    final views = await container.read(categoryBudgetsProvider.future);
+    final cat1 = views.firstWhere((v) => v.category.id == 1).category;
+    expect(cat1.name, 'Ovqatlanish');
+    expect(cat1.icon, 'fastfood');
+  });
+
+  test('setCategoryArchived hides the category from the default budgets '
+      'list (used categories can only be archived, never deleted)',
+      () async {
+    final db = AppDatabase(NativeDatabase.memory());
+    final container = ProviderContainer(overrides: [
+      databaseProvider.overrideWithValue(db),
+    ]);
+    addTearDown(container.dispose);
+    addTearDown(db.close);
+
+    await container.read(budgetsControllerProvider).setCategoryArchived(1, true);
+
+    final views = await container.read(categoryBudgetsProvider.future);
+    expect(views.any((v) => v.category.id == 1), isFalse);
+  });
 }

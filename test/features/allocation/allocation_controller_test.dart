@@ -51,7 +51,11 @@ void main() {
     // default template: 10% minReserve, remainder variableBudget
     expect(result.perBucket['minReserve'], const Money(100000, uzs));
     expect(result.perBucket['variableBudget'], const Money(900000, uzs));
-    expect(result.undistributed, const Money(0, uzs));
+    expect(result.income, const Money(1000000, uzs));
+    expect(result.allocatedTotal, const Money(1000000, uzs));
+    expect(result.unallocated, const Money(0, uzs));
+    expect(result.freeAfter, const Money(0, uzs));
+    expect(result.shortfall, isEmpty);
   });
 
   test('confirm writes the split and bumps the revision', () async {

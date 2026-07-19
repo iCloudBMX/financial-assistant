@@ -1,13 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/allocation/allocation_engine.dart';
+import '../../core/allocation/allocation_models.dart';
 import '../../core/allocation/allocation_result_labels.dart';
 import '../../core/money/money.dart';
+import '../../core/theme/velora_tokens.dart';
+import '../../ui/components/velora_button.dart';
+import '../../ui/components/velora_card.dart';
+import '../../ui/components/velora_money_field.dart';
+import '../../ui/components/velora_sheet.dart';
 import 'allocation_controller.dart';
 import 'variable_budget_offer.dart';
 
-/// §8.4 confirm screen: shows total income, each direction's amount (editable),
-/// total allocated, undistributed remainder, and free balance after. Returns
-/// true when the user confirms.
+/// §8.4 confirm screen: total income, each direction (editable), the funded
+/// total, what remains unallocated, and what stays free once this commits.
+/// Confirm is disabled unless `allocatedTotal <= income` — no
+/// over-allocation. Returns true when the user confirms.
 class AllocateSheet extends ConsumerStatefulWidget {
   final int incomeId;
   final Money income;
@@ -20,7 +28,10 @@ class AllocateSheet extends ConsumerStatefulWidget {
 
 class _AllocateSheetState extends ConsumerState<AllocateSheet> {
   final Map<String, TextEditingController> _ctrls = {};
-  bool _loading = true;
+  // The template-computed preview, loaded once: it carries the directions
+  // (priority order) and the §8.5 shortfall list, which stays informational
+  // even as the user edits amounts by hand below.
+  AllocationPreview? _initial;
 
   @override
   void initState() {
@@ -29,15 +40,17 @@ class _AllocateSheetState extends ConsumerState<AllocateSheet> {
   }
 
   Future<void> _load() async {
-    final result =
+    final preview =
         await ref.read(allocationControllerProvider).preview(widget.income);
-    for (final e in result.perBucket.entries) {
+    for (final d in preview.directions) {
+      final funded = preview.perBucket[d.bucketKey];
       // Seed with the symbol-less numeric form so an untouched field
       // re-parses back to the same Money (format() would embed the currency
       // symbol, which tryParse rejects → the field would read as null/zero).
-      _ctrls[e.key] = TextEditingController(text: e.value.formatNumber());
+      _ctrls[d.bucketKey] = TextEditingController(
+          text: (funded ?? Money.zero(widget.income.currency)).formatNumber());
     }
-    if (mounted) setState(() => _loading = false);
+    if (mounted) setState(() => _initial = preview);
   }
 
   Map<String, Money> _current() {
@@ -60,72 +73,94 @@ class _AllocateSheetState extends ConsumerState<AllocateSheet> {
 
   @override
   Widget build(BuildContext context) {
-    if (_loading) {
+    final initial = _initial;
+    if (initial == null) {
       return const SizedBox(
           height: 160, child: Center(child: CircularProgressIndicator()));
     }
-    final current = _current();
-    final allocated = current.values.fold<int>(0, (s, m) => s + m.minorUnits);
-    final undistributed = widget.income.minorUnits - allocated;
-    final c = widget.income.currency;
+    final live =
+        editedAllocationPreview(widget.income, initial.directions, _current());
+    final canConfirm = live.allocatedTotal.minorUnits <= live.income.minorUnits;
 
-    return Padding(
-      padding: EdgeInsets.only(
-        left: 16,
-        right: 16,
-        top: 16,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 16,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
+    return VeloraSheetScaffold(
+      title: 'Kirimni taqsimlash',
+      body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('Kirimni taqsimlash',
-              style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: 4),
-          Text('Jami kirim: ${widget.income.format()}'),
-          const SizedBox(height: 12),
-          ..._ctrls.entries.map((e) => Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                child: Row(
-                  children: [
-                    Expanded(child: Text(bucketLabel(e.key))),
-                    SizedBox(
-                      width: 160,
-                      child: TextField(
-                        controller: e.value,
-                        keyboardType: TextInputType.number,
-                        textAlign: TextAlign.right,
-                        onChanged: (_) => setState(() {}),
-                      ),
+          Text('Jami kirim: ${widget.income.format()}',
+              style: Theme.of(context).textTheme.bodyLarge),
+          const SizedBox(height: VeloraSpacing.lg),
+          for (final d in initial.directions) ...[
+            Text(
+              allocationMethodLabel(d.method) == bucketLabel(d.bucketKey)
+                  ? bucketLabel(d.bucketKey)
+                  : '${bucketLabel(d.bucketKey)} · ${allocationMethodLabel(d.method)}',
+              style: Theme.of(context).textTheme.labelLarge,
+            ),
+            const SizedBox(height: VeloraSpacing.xs),
+            VeloraMoneyField(
+              key: Key('allocate-amount-${d.bucketKey}'),
+              controller: _ctrls[d.bucketKey]!,
+              currency: widget.income.currency,
+              label: bucketLabel(d.bucketKey),
+              onChanged: (_) => setState(() {}),
+            ),
+            const SizedBox(height: VeloraSpacing.md),
+          ],
+          if (initial.shortfall.isNotEmpty) ...[
+            VeloraCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.warning_amber,
+                          color: VeloraColors.critical, size: 18),
+                      const SizedBox(width: VeloraSpacing.xs),
+                      Text('Mablag‘ yetarli emas',
+                          style: Theme.of(context)
+                              .textTheme
+                              .labelLarge
+                              ?.copyWith(color: VeloraColors.critical)),
+                    ],
+                  ),
+                  const SizedBox(height: VeloraSpacing.xs),
+                  for (final s in initial.shortfall)
+                    Text(
+                      '${bucketLabel(s.bucketKey)} uchun ${s.shortBy.format()} '
+                      'yetishmayapti',
+                      style: const TextStyle(color: VeloraColors.critical),
                     ),
-                  ],
-                ),
-              )),
+                ],
+              ),
+            ),
+            const SizedBox(height: VeloraSpacing.md),
+          ],
           const Divider(),
-          Text('Taqsimlangan: ${Money(allocated, c).format()}'),
-          Text('Taqsimlanmagan: ${Money(undistributed, c).format()}',
+          Text('Taqsimlangan: ${live.allocatedTotal.format()}'),
+          Text('Taqsimlanmagan: ${live.unallocated.format()}',
               style: TextStyle(
-                  color: undistributed < 0
+                  color: live.unallocated.isNegative
                       ? Theme.of(context).colorScheme.error
                       : null)),
-          const SizedBox(height: 12),
-          FilledButton(
-            onPressed: undistributed < 0
-                ? null
-                : () async {
-                    await ref
-                        .read(allocationControllerProvider)
-                        .confirm(widget.incomeId, current);
-                    if (context.mounted) {
-                      await maybeOfferVariableBudgetUpdate(
-                          context, ref, current);
-                    }
-                    if (context.mounted) Navigator.pop(context, true);
-                  },
-            child: const Text('Tasdiqlash'),
-          ),
+          Text('Taqsimlashdan keyin erkin: ${live.freeAfter.format()}'),
         ],
+      ),
+      primaryAction: VeloraPrimaryButton(
+        key: const Key('allocate-confirm'),
+        label: 'Tasdiqlash',
+        onPressed: !canConfirm
+            ? null
+            : () async {
+                final current = _current();
+                await ref
+                    .read(allocationControllerProvider)
+                    .confirm(widget.incomeId, current);
+                if (context.mounted) {
+                  await maybeOfferVariableBudgetUpdate(context, ref, current);
+                }
+                if (context.mounted) Navigator.pop(context, true);
+              },
       ),
     );
   }

@@ -2,6 +2,7 @@ import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:financial_assistant/core/ledger/account.dart';
 import 'package:financial_assistant/core/money/currency.dart';
 import 'package:financial_assistant/core/money/money.dart';
 import 'package:financial_assistant/data/categories/category_model.dart';
@@ -102,7 +103,7 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.enterText(
-        find.widgetWithText(TextField, 'Haftalik limit'), '20 000');
+        find.byKey(const Key('category-edit-weekly')), '20 000');
     await tester.tap(find.text('Saqlash'));
     await tester.pumpAndSettle();
 
@@ -111,5 +112,61 @@ void main() {
     final cat1 = views.firstWhere((v) => v.category.id == 1).category;
     expect(cat1.monthlyLimitMinor, 500000, reason: 'unedited, preserved');
     expect(cat1.weeklyLimitMinor, 20000);
+  });
+
+  testWidgets(
+      'a category over its monthly limit shows the over status as BOTH '
+      'text and a warning icon (red reserved for over)', (tester) async {
+    final db = AppDatabase(NativeDatabase.memory());
+    addTearDown(db.close);
+    final container = ProviderContainer(
+        overrides: [databaseProvider.overrideWithValue(db)]);
+    addTearDown(container.dispose);
+
+    await container.read(accountRepositoryProvider).create(
+        name: 'Naqd',
+        type: AccountType.cash,
+        openingBalance: const Money(10000000, uzs),
+        icon: 'w');
+    await container.read(budgetsControllerProvider).setMonthlyLimit(
+        1, const Money(10000, uzs));
+    await container.read(ledgerRepositoryProvider).addExpense(
+          accountId: 1,
+          amount: const Money(20000, uzs),
+          categoryId: 1,
+          occurredAt: DateTime.now(),
+        );
+
+    await tester.pumpWidget(UncontrolledProviderScope(
+      container: container,
+      child: const MaterialApp(home: BudgetsScreen()),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('limitdan oshgan'), findsOneWidget);
+    expect(find.byIcon(Icons.warning_amber), findsOneWidget);
+  });
+
+  testWidgets(
+      'the "Kategoriyalar" app-bar action opens the searchable category '
+      'editor, listing categories and offering "Yangi kategoriya"',
+      (tester) async {
+    final db = AppDatabase(NativeDatabase.memory());
+    addTearDown(db.close);
+    final container = ProviderContainer(
+        overrides: [databaseProvider.overrideWithValue(db)]);
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(UncontrolledProviderScope(
+      container: container,
+      child: const MaterialApp(home: BudgetsScreen()),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Kategoriyalar'));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('category-edit-search')), findsOneWidget);
+    expect(find.byKey(const Key('category-edit-new')), findsOneWidget);
   });
 }

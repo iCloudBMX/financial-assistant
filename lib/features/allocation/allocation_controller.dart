@@ -12,11 +12,11 @@ class AllocationController {
   final Ref ref;
   AllocationController(this.ref);
 
-  Future<AllocationResult> preview(Money income) async {
+  Future<AllocationPreview> preview(Money income) async {
     final template = await ref.read(allocationRepositoryProvider).template();
     final resolved = resolveDynamicAmounts(
         template, await _requiredByGoalBucket(income.currency));
-    return computeAllocation(income, resolved);
+    return previewAllocation(income, resolved);
   }
 
   Future<void> confirm(int incomeId, Map<String, Money> perBucket) async {
