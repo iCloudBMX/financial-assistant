@@ -4,24 +4,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:financial_assistant/data/db/app_database.dart';
 import 'package:financial_assistant/providers/app_providers.dart';
-import 'package:financial_assistant/features/shell/app_shell.dart';
+import 'package:financial_assistant/features/shell/routes.dart';
+import 'package:go_router/go_router.dart';
 
 void main() {
   testWidgets('shows approved labels and preserves tab state', (tester) async {
-    final db = AppDatabase(NativeDatabase.memory());
-    addTearDown(db.close);
-    final container = ProviderContainer(
-      overrides: [databaseProvider.overrideWithValue(db)],
-    );
-    addTearDown(container.dispose);
-
-    await tester.pumpWidget(
-      UncontrolledProviderScope(
-        container: container,
-        child: const MaterialApp(home: AppShell()),
-      ),
-    );
-    await tester.pumpAndSettle();
+    await _pumpShell(tester);
 
     for (final label in ['Bugun', 'Tarix', 'Reja', 'Maqsad', 'Tahlil']) {
       expect(find.text(label), findsOneWidget);
@@ -42,20 +30,7 @@ void main() {
   testWidgets('announces selected tab and the global expense action', (
     tester,
   ) async {
-    final db = AppDatabase(NativeDatabase.memory());
-    addTearDown(db.close);
-    final container = ProviderContainer(
-      overrides: [databaseProvider.overrideWithValue(db)],
-    );
-    addTearDown(container.dispose);
-
-    await tester.pumpWidget(
-      UncontrolledProviderScope(
-        container: container,
-        child: const MaterialApp(home: AppShell()),
-      ),
-    );
-    await tester.pumpAndSettle();
+    await _pumpShell(tester);
 
     expect(
       tester.getSemantics(find.text('Bugun')),
@@ -88,20 +63,7 @@ void main() {
   testWidgets('keeps the global expense action available on all five tabs', (
     tester,
   ) async {
-    final db = AppDatabase(NativeDatabase.memory());
-    addTearDown(db.close);
-    final container = ProviderContainer(
-      overrides: [databaseProvider.overrideWithValue(db)],
-    );
-    addTearDown(container.dispose);
-
-    await tester.pumpWidget(
-      UncontrolledProviderScope(
-        container: container,
-        child: const MaterialApp(home: AppShell()),
-      ),
-    );
-    await tester.pumpAndSettle();
+    await _pumpShell(tester);
 
     for (final label in ['Bugun', 'Tarix', 'Reja', 'Maqsad', 'Tahlil']) {
       await tester.tap(find.text(label));
@@ -113,20 +75,7 @@ void main() {
   testWidgets("Goals tab retains add-goal access beside the expense action", (
     tester,
   ) async {
-    final db = AppDatabase(NativeDatabase.memory());
-    addTearDown(db.close);
-    final container = ProviderContainer(
-      overrides: [databaseProvider.overrideWithValue(db)],
-    );
-    addTearDown(container.dispose);
-
-    await tester.pumpWidget(
-      UncontrolledProviderScope(
-        container: container,
-        child: const MaterialApp(home: AppShell()),
-      ),
-    );
-    await tester.pumpAndSettle();
+    await _pumpShell(tester);
 
     await tester.tap(find.text('Maqsad'));
     await tester.pumpAndSettle();
@@ -152,27 +101,7 @@ void main() {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
-    final db = AppDatabase(NativeDatabase.memory());
-    addTearDown(db.close);
-    final container = ProviderContainer(
-      overrides: [databaseProvider.overrideWithValue(db)],
-    );
-    addTearDown(container.dispose);
-
-    await tester.pumpWidget(
-      UncontrolledProviderScope(
-        container: container,
-        child: MaterialApp(
-          builder: (context, child) => MediaQuery(
-            data: MediaQuery.of(
-              context,
-            ).copyWith(textScaler: const TextScaler.linear(2)),
-            child: child!,
-          ),
-          home: const AppShell(),
-        ),
-      ),
-    );
+    await _pumpShell(tester, textScale: 2, settle: false);
     await tester.tap(find.text('Tahlil'));
     await tester.pumpAndSettle();
 
@@ -180,4 +109,36 @@ void main() {
     expect(find.text('Tahlil'), findsOneWidget);
     expect(find.byKey(const Key('global-expense-action')), findsOneWidget);
   });
+}
+
+Future<GoRouter> _pumpShell(
+  WidgetTester tester, {
+  double textScale = 1,
+  bool settle = true,
+}) async {
+  final db = AppDatabase(NativeDatabase.memory());
+  addTearDown(db.close);
+  final container = ProviderContainer(
+    overrides: [databaseProvider.overrideWithValue(db)],
+  );
+  addTearDown(container.dispose);
+  final router = buildRouter(onboardingComplete: true);
+  addTearDown(router.dispose);
+
+  await tester.pumpWidget(
+    UncontrolledProviderScope(
+      container: container,
+      child: MaterialApp.router(
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(
+            context,
+          ).copyWith(textScaler: TextScaler.linear(textScale)),
+          child: child!,
+        ),
+        routerConfig: router,
+      ),
+    ),
+  );
+  if (settle) await tester.pumpAndSettle();
+  return router;
 }
