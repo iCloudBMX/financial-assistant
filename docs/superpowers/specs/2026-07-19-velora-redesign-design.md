@@ -4,7 +4,7 @@
 
 **Date:** 2026-07-19
 
-**Status:** Visual design approved; written spec awaiting user review
+**Status:** Approved for implementation planning
 
 **Brand:** Velora
 **Depends on:** Foundation, Accounts & Transactions, Allocation & Safe Limit, Goals, and Mortgage specs
