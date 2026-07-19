@@ -23,6 +23,10 @@ class AppSettingsTable extends Table {
       text().withDefault(const Constant('askEachTime'))();
   TextColumn get notificationFlagsJson =>
       text().withDefault(const Constant('{}'))();
+  IntColumn get variableBudgetMinor =>
+      integer().withDefault(const Constant(0))();
+  IntColumn get safetyBufferMinor =>
+      integer().withDefault(const Constant(0))();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -61,6 +65,9 @@ class CategoriesTable extends Table {
   BoolColumn get isDefault => boolean().withDefault(const Constant(false))();
   BoolColumn get archived => boolean().withDefault(const Constant(false))();
   IntColumn get sortOrder => integer().withDefault(const Constant(0))();
+  TextColumn get kind => text().withDefault(const Constant('variable'))();
+  IntColumn get monthlyLimitMinor => integer().nullable()();
+  IntColumn get weeklyLimitMinor => integer().nullable()();
 }
 
 class TransactionsTable extends Table {
@@ -91,4 +98,21 @@ class RecurringIncomePlansTable extends Table {
   IntColumn get anchorDay => integer()();
   DateTimeColumn get nextDueAt => dateTime()();
   BoolColumn get active => boolean().withDefault(const Constant(true))();
+}
+
+class AllocationDirectionsTable extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get bucketKey => text()();
+  TextColumn get method => text()(); // AllocationMethod.name
+  IntColumn get valueMinor => integer().nullable()(); // fixedAmount
+  IntColumn get percentBp => integer().nullable()(); // percentage, basis points
+  IntColumn get sortOrder => integer().withDefault(const Constant(0))();
+}
+
+class IncomeAllocationsTable extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get incomeTransactionId =>
+      integer().references(TransactionsTable, #id)();
+  TextColumn get bucketKey => text()();
+  IntColumn get amountMinor => integer()();
 }

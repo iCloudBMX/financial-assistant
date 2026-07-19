@@ -8,6 +8,7 @@ import '../income_entry/income_entry_sheet.dart';
 import '../recurring/recurring_prompt.dart';
 import '../shell/routes.dart';
 import 'dashboard_data.dart';
+import 'safe_limit_cards.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -33,6 +34,8 @@ class HomeScreen extends ConsumerWidget {
           children: [
             const RecurringPromptBanner(),
             _totalCard(context, d),
+            const SafeLimitCard(),
+            const WeeklySafeLimitCard(),
             _row('Shu oygi kirim', d.monthIncome.format()),
             _row('Shu oygi chiqim', d.monthExpense.format()),
             _row('Bugun sarflangan', d.todaySpent.format()),

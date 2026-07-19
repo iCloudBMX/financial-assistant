@@ -21,6 +21,9 @@ class DriftCategoryRepository implements CategoryRepository {
         icon: r.icon as String,
         isDefault: r.isDefault as bool,
         archived: r.archived as bool,
+        kind: CategoryKind.values.byName(r.kind as String),
+        monthlyLimitMinor: r.monthlyLimitMinor as int?,
+        weeklyLimitMinor: r.weeklyLimitMinor as int?,
       );
 
   @override

@@ -55,4 +55,20 @@ void main() {
   test('tryParse still accepts a single leading minus', () {
     expect(Money.tryParse('-12.34', usd), Money(-1234, usd));
   });
+
+  test('formatNumber round-trips through tryParse and carries no symbol', () {
+    final samples = [
+      Money(1234567, uzs), // grouped, no decimals
+      Money(-1234567, uzs), // negative
+      Money(150050, usd), // fractional 2-decimal
+      Money(-1234, usd), // negative fractional
+      Money(0, uzs), // zero
+    ];
+    for (final m in samples) {
+      expect(Money.tryParse(m.formatNumber(), m.currency), m,
+          reason: 'round-trip failed for ${m.format()}');
+      expect(m.formatNumber().contains(m.currency.symbol), isFalse,
+          reason: 'formatNumber must not contain the currency symbol');
+    }
+  });
 }

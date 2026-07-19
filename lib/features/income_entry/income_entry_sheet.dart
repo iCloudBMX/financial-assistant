@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/ledger/ledger_entry.dart';
 import '../../core/money/money.dart';
 import '../../providers/app_providers.dart';
+import '../allocation/income_allocation_prompt.dart';
 import 'income_entry_controller.dart';
 
 Future<void> showIncomeEntrySheet(BuildContext context, WidgetRef ref) async {
@@ -20,6 +21,8 @@ Future<void> showIncomeEntrySheet(BuildContext context, WidgetRef ref) async {
   var accountId = accounts.first.id;
   var incomeType = IncomeType.salary;
   var recurring = false;
+  int? savedIncomeId;
+  Money? savedAmount;
   if (!context.mounted) return;
   await showModalBottomSheet<void>(
     context: context,
@@ -57,9 +60,15 @@ Future<void> showIncomeEntrySheet(BuildContext context, WidgetRef ref) async {
               onPressed: () async {
                 final amount = Money.tryParse(amountCtrl.text, currency);
                 if (amount == null || amount.minorUnits <= 0) return;
-                await ref.read(incomeEntryControllerProvider.notifier).save(
-                    accountId: accountId, amount: amount, incomeType: incomeType,
-                    recurring: recurring);
+                final id = await ref
+                    .read(incomeEntryControllerProvider.notifier)
+                    .save(
+                        accountId: accountId,
+                        amount: amount,
+                        incomeType: incomeType,
+                        recurring: recurring);
+                savedIncomeId = id;
+                savedAmount = amount;
                 if (ctx.mounted) Navigator.of(ctx).pop();
               },
               child: const Text('Saqlash'),
@@ -70,4 +79,9 @@ Future<void> showIncomeEntrySheet(BuildContext context, WidgetRef ref) async {
       ),
     ),
   );
+
+  if (savedIncomeId != null && savedAmount != null && context.mounted) {
+    await showAllocationChoice(context, ref,
+        incomeId: savedIncomeId!, amount: savedAmount!);
+  }
 }

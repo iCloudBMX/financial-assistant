@@ -69,18 +69,32 @@ class Money {
     return Money(negative ? -total : total, currency);
   }
 
-  String format() {
+  /// The unsigned, grouped numeric body WITHOUT sign or currency symbol,
+  /// e.g. `1 234 567` (UZS) or `12.34` (USD).
+  String _numberBody() {
     final scale = _pow10(currency.decimalDigits);
     final major = (minorUnits.abs() ~/ scale);
     final grouped = _group(major.toString());
-    final sign = isNegative ? '-' : '';
-    String number = grouped;
     if (currency.decimalDigits > 0) {
       final frac = (minorUnits.abs() % scale)
           .toString()
           .padLeft(currency.decimalDigits, '0');
-      number = '$grouped.$frac';
+      return '$grouped.$frac';
     }
+    return grouped;
+  }
+
+  /// The signed, grouped numeric string WITHOUT the currency symbol, e.g.
+  /// `-1 234 567` (UZS) or `12.34` (USD). Round-trips through [tryParse]:
+  /// `Money.tryParse(m.formatNumber(), m.currency) == m` for every [m].
+  String formatNumber() {
+    final sign = isNegative ? '-' : '';
+    return '$sign${_numberBody()}';
+  }
+
+  String format() {
+    final sign = isNegative ? '-' : '';
+    final number = _numberBody();
     return currency.symbolPosition == SymbolPosition.before
         ? '$sign${currency.symbol}$number'
         : '$sign$number ${currency.symbol}';
