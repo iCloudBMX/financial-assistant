@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../budgets/budgets_screen.dart';
 import '../expense_entry/expense_entry_sheet.dart';
+import '../goals/goals_screen.dart';
 import '../home/home_screen.dart';
 import '../transactions/transactions_screen.dart';
 import 'placeholder_tab.dart';
@@ -19,7 +20,7 @@ class _AppShellState extends ConsumerState<AppShell> {
     HomeScreen(),
     TransactionsScreen(),
     BudgetsScreen(),
-    PlaceholderTab(title: "Goal'lar"),
+    GoalsScreen(),
     PlaceholderTab(title: 'Hisobotlar'),
   ];
 
