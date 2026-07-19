@@ -84,9 +84,7 @@ GoalProgress computeGoalProgress(GoalProgressInputs i) {
   final percentBp = i.target.minorUnits <= 0
       ? 10000
       : (i.saved.minorUnits * 10000 ~/ i.target.minorUnits).clamp(0, 10000);
-  final daysToTarget = i.targetDate == null
-      ? null
-      : i.targetDate!.difference(i.asOf).inDays;
+  final daysToTarget = i.targetDate?.difference(i.asOf).inDays;
   final projected = projectedCompletionDate(
     saved: i.saved,
     remaining: remaining,

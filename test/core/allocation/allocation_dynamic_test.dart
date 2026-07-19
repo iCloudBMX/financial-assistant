@@ -9,10 +9,10 @@ void main() {
   Money m(int v) => Money(v, uzs);
 
   test('goalBased direction becomes a fixedAmount from the resolved map', () {
-    final t = AllocationTemplate([
-      const AllocationDirection(bucketKey: 'minReserve', method: AllocationMethod.percentage, percentBp: 1000),
-      const AllocationDirection(bucketKey: 'goal:7', method: AllocationMethod.goalBased),
-      const AllocationDirection(bucketKey: 'variableBudget', method: AllocationMethod.remaining),
+    final t = const AllocationTemplate([
+      AllocationDirection(bucketKey: 'minReserve', method: AllocationMethod.percentage, percentBp: 1000),
+      AllocationDirection(bucketKey: 'goal:7', method: AllocationMethod.goalBased),
+      AllocationDirection(bucketKey: 'variableBudget', method: AllocationMethod.remaining),
     ]);
     final resolved = resolveDynamicAmounts(t, {'goal:7': m(300)});
     final g = resolved.directions[1];
@@ -25,8 +25,8 @@ void main() {
   });
 
   test('unresolved goalBased direction becomes a zero fixedAmount', () {
-    final t = AllocationTemplate([
-      const AllocationDirection(bucketKey: 'goal:9', method: AllocationMethod.goalBased),
+    final t = const AllocationTemplate([
+      AllocationDirection(bucketKey: 'goal:9', method: AllocationMethod.goalBased),
     ]);
     final resolved = resolveDynamicAmounts(t, {});
     expect(resolved.directions.single.method, AllocationMethod.fixedAmount);

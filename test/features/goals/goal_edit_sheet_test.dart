@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:financial_assistant/data/db/app_database.dart';
 import 'package:financial_assistant/data/goals/goal_model.dart';
-import 'package:financial_assistant/data/goals/goal_repository.dart';
 import 'package:financial_assistant/features/goals/goal_edit_sheet.dart';
 import 'package:financial_assistant/providers/app_providers.dart';
 

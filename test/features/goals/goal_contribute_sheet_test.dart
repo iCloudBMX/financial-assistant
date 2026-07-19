@@ -7,7 +7,6 @@ import 'package:financial_assistant/core/money/currency.dart';
 import 'package:financial_assistant/core/money/money.dart';
 import 'package:financial_assistant/data/db/app_database.dart';
 import 'package:financial_assistant/data/goals/goal_model.dart';
-import 'package:financial_assistant/data/goals/goal_repository.dart';
 import 'package:financial_assistant/features/goals/goal_contribute_sheet.dart';
 import 'package:financial_assistant/features/goals/goal_controller.dart';
 import 'package:financial_assistant/providers/app_providers.dart';
