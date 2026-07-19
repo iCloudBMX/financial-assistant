@@ -151,3 +151,42 @@ class GoalContributionsTable extends Table {
   DateTimeColumn get createdAt =>
       dateTime().clientDefault(() => DateTime.now())();
 }
+
+class MortgagesTable extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get name => text()();
+  TextColumn get bank => text().withDefault(const Constant(''))();
+  IntColumn get initialLoanMinor => integer()();
+  IntColumn get openingPrincipalMinor => integer()();
+  IntColumn get annualRateBp => integer().withDefault(const Constant(0))();
+  DateTimeColumn get startDate => dateTime()();
+  DateTimeColumn get endDate => dateTime().nullable()();
+  IntColumn get mandatoryPaymentMinor => integer()();
+  DateTimeColumn get nextPaymentDate => dateTime()();
+  TextColumn get paymentType => text().withDefault(const Constant('annuity'))();
+  TextColumn get payoffStrategy => text().withDefault(const Constant('unclear'))();
+  TextColumn get currencyCode => text().withDefault(const Constant('UZS'))();
+  TextColumn get status => text().withDefault(const Constant('active'))();
+  IntColumn get sortOrder => integer().withDefault(const Constant(0))();
+  DateTimeColumn get createdAt =>
+      dateTime().clientDefault(() => DateTime.now())();
+}
+
+class MortgagePaymentsTable extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get mortgageId => integer().references(MortgagesTable, #id)();
+  IntColumn get totalMinor => integer()();
+  IntColumn get principalPortionMinor => integer()();
+  IntColumn get interestPortionMinor => integer().withDefault(const Constant(0))();
+  IntColumn get commissionMinor => integer().withDefault(const Constant(0))();
+  IntColumn get insuranceMinor => integer().withDefault(const Constant(0))();
+  IntColumn get otherMinor => integer().withDefault(const Constant(0))();
+  BoolColumn get isExtra => boolean().withDefault(const Constant(false))();
+  IntColumn get ledgerTransactionId =>
+      integer().nullable().references(TransactionsTable, #id)();
+  TextColumn get currencyCode => text()();
+  DateTimeColumn get occurredAt => dateTime()();
+  TextColumn get note => text().nullable()();
+  DateTimeColumn get createdAt =>
+      dateTime().clientDefault(() => DateTime.now())();
+}

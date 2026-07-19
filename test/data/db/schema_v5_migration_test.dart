@@ -4,13 +4,13 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:financial_assistant/data/db/app_database.dart';
 
-/// A genuine v3 database: every SP0–SP2 table but NOT the SP3 goals tables.
-/// Reopening this file with the real AppDatabase (v4) must run onUpgrade(3, 4)
-/// and create goals_table + goal_contributions_table.
-class _V3AppDatabase extends AppDatabase {
-  _V3AppDatabase(super.e);
+/// A genuine v4 database: every SP0–SP3 table but NOT the SP4 mortgage tables.
+/// Reopening this file with the real AppDatabase (v5) must run onUpgrade(4, 5)
+/// and create mortgages_table + mortgage_payments_table.
+class _V4AppDatabase extends AppDatabase {
+  _V4AppDatabase(super.e);
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
   @override
   MigrationStrategy get migration => MigrationStrategy(
         onCreate: (m) async {
@@ -22,6 +22,8 @@ class _V3AppDatabase extends AppDatabase {
           await m.createTable(recurringIncomePlansTable);
           await m.createTable(allocationDirectionsTable);
           await m.createTable(incomeAllocationsTable);
+          await m.createTable(goalsTable);
+          await m.createTable(goalContributionsTable);
           await into(appSettingsTable)
               .insert(const AppSettingsTableCompanion(id: Value(0)));
         },
@@ -30,34 +32,33 @@ class _V3AppDatabase extends AppDatabase {
 }
 
 void main() {
-  test('schemaVersion is 4', () {
+  test('schemaVersion is 5', () {
     final db = AppDatabase(NativeDatabase.memory());
     expect(db.schemaVersion, 5);
     db.close();
   });
 
-  test('fresh v4 open has empty, queryable goal tables', () async {
+  test('fresh v5 open has empty, queryable mortgage tables', () async {
     final db = AppDatabase(NativeDatabase.memory());
-    expect(await db.select(db.goalsTable).get(), isEmpty);
-    expect(await db.select(db.goalContributionsTable).get(), isEmpty);
+    expect(await db.select(db.mortgagesTable).get(), isEmpty);
+    expect(await db.select(db.mortgagePaymentsTable).get(), isEmpty);
     await db.close();
   });
 
-  test('real v3 -> v4 onUpgrade creates the goal tables', () async {
-    final tmp = await Directory.systemTemp.createTemp('schema_v4_upgrade');
+  test('real v4 -> v5 onUpgrade creates the mortgage tables', () async {
+    final tmp = await Directory.systemTemp.createTemp('schema_v5_upgrade');
     final dbPath = '${tmp.path}/app.db';
 
-    final v3db = _V3AppDatabase(NativeDatabase(File(dbPath)));
-    await v3db.select(v3db.appSettingsTable).get(); // force onCreate
-    expect(v3db.schemaVersion, 3);
-    await v3db.close();
-
-    final v4db = AppDatabase(NativeDatabase(File(dbPath)));
-    // New tables exist and are queryable after the upgrade.
-    expect(await v4db.select(v4db.goalsTable).get(), isEmpty);
-    expect(await v4db.select(v4db.goalContributionsTable).get(), isEmpty);
-
+    final v4db = _V4AppDatabase(NativeDatabase(File(dbPath)));
+    await v4db.select(v4db.appSettingsTable).get(); // force onCreate
+    expect(v4db.schemaVersion, 4);
     await v4db.close();
+
+    final v5db = AppDatabase(NativeDatabase(File(dbPath)));
+    expect(await v5db.select(v5db.mortgagesTable).get(), isEmpty);
+    expect(await v5db.select(v5db.mortgagePaymentsTable).get(), isEmpty);
+
+    await v5db.close();
     await tmp.delete(recursive: true);
   });
 }

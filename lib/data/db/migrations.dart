@@ -86,6 +86,13 @@ MigrationStrategy buildMigration(AppDatabase db) => MigrationStrategy(
           await m.createTable(db.goalsTable);
           await m.createTable(db.goalContributionsTable);
         }
+        if (from < 5) {
+          // v4 -> v5: mortgages + mortgage_payments. Both tables are new in v5,
+          // so a collapsed v1->v5 pass never created them earlier — a plain
+          // createTable is safe with no _hasColumn guard.
+          await m.createTable(db.mortgagesTable);
+          await m.createTable(db.mortgagePaymentsTable);
+        }
       },
       beforeOpen: (details) async {
         await db.customStatement('PRAGMA foreign_keys = ON');
