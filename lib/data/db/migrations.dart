@@ -79,6 +79,13 @@ MigrationStrategy buildMigration(AppDatabase db) => MigrationStrategy(
           await m.createTable(db.incomeAllocationsTable);
           await seedDefaultAllocationTemplate(db);
         }
+        if (from < 4) {
+          // v3 -> v4: goals + goal_contributions. Both tables are new in v4, so
+          // a collapsed v1->v4 pass never created them earlier — a plain
+          // createTable is safe with no _hasColumn guard.
+          await m.createTable(db.goalsTable);
+          await m.createTable(db.goalContributionsTable);
+        }
       },
       beforeOpen: (details) async {
         await db.customStatement('PRAGMA foreign_keys = ON');

@@ -13,12 +13,14 @@ part 'app_database.g.dart';
   RecurringIncomePlansTable,
   AllocationDirectionsTable,
   IncomeAllocationsTable,
+  GoalsTable,
+  GoalContributionsTable,
 ])
 class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => buildMigration(this);

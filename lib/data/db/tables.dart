@@ -116,3 +116,38 @@ class IncomeAllocationsTable extends Table {
   TextColumn get bucketKey => text()();
   IntColumn get amountMinor => integer()();
 }
+
+class GoalsTable extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get name => text()();
+  TextColumn get type => text().withDefault(const Constant('other'))();
+  TextColumn get icon => text().withDefault(const Constant('flag'))();
+  IntColumn get targetAmountMinor => integer()();
+  TextColumn get currencyCode => text().withDefault(const Constant('UZS'))();
+  DateTimeColumn get startDate => dateTime()();
+  DateTimeColumn get targetDate => dateTime().nullable()();
+  TextColumn get priority => text().withDefault(const Constant('medium'))();
+  TextColumn get status => text().withDefault(const Constant('active'))();
+  IntColumn get linkedAccountId =>
+      integer().nullable().references(AccountsTable, #id)();
+  TextColumn get note => text().nullable()();
+  IntColumn get sortOrder => integer().withDefault(const Constant(0))();
+  DateTimeColumn get createdAt =>
+      dateTime().clientDefault(() => DateTime.now())();
+}
+
+class GoalContributionsTable extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get goalId => integer().references(GoalsTable, #id)();
+  IntColumn get amountMinor => integer()(); // signed: + contribution, − withdrawal
+  TextColumn get currencyCode => text()();
+  TextColumn get source => text()(); // ContributionSource.name
+  IntColumn get sourceAccountId =>
+      integer().nullable().references(AccountsTable, #id)();
+  IntColumn get incomeTransactionId =>
+      integer().nullable().references(TransactionsTable, #id)();
+  TextColumn get note => text().nullable()();
+  DateTimeColumn get occurredAt => dateTime()();
+  DateTimeColumn get createdAt =>
+      dateTime().clientDefault(() => DateTime.now())();
+}
