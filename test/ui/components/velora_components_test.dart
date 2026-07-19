@@ -1,3 +1,5 @@
+import 'dart:ui' show Tristate;
+
 import 'package:financial_assistant/ui/components/velora_async_state.dart';
 import 'package:financial_assistant/ui/components/velora_button.dart';
 import 'package:financial_assistant/ui/components/velora_card.dart';
@@ -46,6 +48,26 @@ void main() {
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
   });
 
+  testWidgets('loading primary button preserves its accessible action state', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: VeloraPrimaryButton(
+          label: 'Saqlash',
+          loading: true,
+          onPressed: () {},
+        ),
+      ),
+    );
+
+    final node = tester.getSemantics(find.byType(VeloraPrimaryButton));
+    expect(node.label, 'Saqlash');
+    expect(node.value, 'Yuklanmoqda');
+    expect(node.flagsCollection.isButton, isTrue);
+    expect(node.flagsCollection.isEnabled, Tristate.isFalse);
+  });
+
   testWidgets('card exposes its child and responds to taps', (tester) async {
     var tapped = false;
     await tester.pumpWidget(
@@ -61,6 +83,39 @@ void main() {
 
     expect(tapped, isTrue);
     expect(find.text('Balans'), findsOneWidget);
+  });
+
+  testWidgets('tappable card enforces a 48 by 48 minimum target', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Center(
+          child: VeloraCard(
+            padding: EdgeInsets.zero,
+            onTap: () {},
+            child: const SizedBox.square(dimension: 8),
+          ),
+        ),
+      ),
+    );
+
+    expect(tester.getSize(find.byType(VeloraCard)), const Size(48, 48));
+  });
+
+  testWidgets('non-tappable card remains content-sized', (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Center(
+          child: VeloraCard(
+            padding: EdgeInsets.zero,
+            child: SizedBox.square(dimension: 8),
+          ),
+        ),
+      ),
+    );
+
+    expect(tester.getSize(find.byType(VeloraCard)), const Size(8, 8));
   });
 
   testWidgets('status badge combines icon label and color', (tester) async {
@@ -80,6 +135,25 @@ void main() {
     expect(
       tester.widget<Icon>(find.byIcon(Icons.check_circle)).color,
       statusColor,
+    );
+  });
+
+  testWidgets('status badge announces its label once', (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Center(
+          child: VeloraStatusBadge(
+            color: Color(0xFF2E9D7C),
+            icon: Icons.check_circle,
+            label: 'Xavfsiz',
+          ),
+        ),
+      ),
+    );
+
+    expect(
+      tester.getSemantics(find.byType(VeloraStatusBadge)).label,
+      'Xavfsiz',
     );
   });
 

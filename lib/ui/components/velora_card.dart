@@ -19,7 +19,7 @@ class VeloraCard extends StatelessWidget {
     final theme = Theme.of(context);
     final borderRadius = BorderRadius.circular(VeloraRadii.card);
 
-    return Material(
+    final card = Material(
       color: theme.colorScheme.surfaceContainerLowest,
       shape: RoundedRectangleBorder(
         borderRadius: borderRadius,
@@ -31,6 +31,13 @@ class VeloraCard extends StatelessWidget {
         borderRadius: borderRadius,
         child: Padding(padding: padding, child: child),
       ),
+    );
+
+    if (onTap == null) return card;
+
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+      child: card,
     );
   }
 }

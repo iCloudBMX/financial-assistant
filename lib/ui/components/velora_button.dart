@@ -14,7 +14,7 @@ class VeloraPrimaryButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
+    final button = SizedBox(
       width: double.infinity,
       height: 52,
       child: FilledButton(
@@ -26,6 +26,16 @@ class VeloraPrimaryButton extends StatelessWidget {
               )
             : Text(label),
       ),
+    );
+
+    if (!loading) return button;
+
+    return Semantics(
+      label: label,
+      value: 'Yuklanmoqda',
+      button: true,
+      enabled: false,
+      child: ExcludeSemantics(child: button),
     );
   }
 }
