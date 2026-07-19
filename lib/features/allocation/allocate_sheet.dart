@@ -78,9 +78,25 @@ class _AllocateSheetState extends ConsumerState<AllocateSheet> {
       return const SizedBox(
           height: 160, child: Center(child: CircularProgressIndicator()));
     }
+    final current = _current();
     final live =
-        editedAllocationPreview(widget.income, initial.directions, _current());
+        editedAllocationPreview(widget.income, initial.directions, current);
     final canConfirm = live.allocatedTotal.minorUnits <= live.income.minorUnits;
+
+    // Re-evaluate the §8.5 shortfall against the CURRENT edited amounts, not
+    // the initial template split: a direction the template underfunded is no
+    // longer short once the user types its full requested amount in. Each
+    // initial shortfall carries the amount that direction wanted
+    // (`requested`); compare it to what the field now funds.
+    final liveShortfall = [
+      for (final s in initial.shortfall)
+        if ((current[s.bucketKey]?.minorUnits ?? 0) < s.requested.minorUnits)
+          Shortfall(
+            s.bucketKey,
+            s.requested,
+            current[s.bucketKey] ?? Money.zero(widget.income.currency),
+          ),
+    ];
 
     return VeloraSheetScaffold(
       title: 'Kirimni taqsimlash',
@@ -91,6 +107,12 @@ class _AllocateSheetState extends ConsumerState<AllocateSheet> {
               style: Theme.of(context).textTheme.bodyLarge),
           const SizedBox(height: VeloraSpacing.lg),
           for (final d in initial.directions) ...[
+            // The bucket + rule-type description lives in its own free-
+            // wrapping caption ABOVE the field — never as the money field's
+            // internal floating label, which reserves single-line height and
+            // would overlap the entered amount when a long label
+            // ("O‘zgaruvchan budjet") wraps at 320px/200% text scale. The
+            // field's own label is a short constant instead.
             Text(
               allocationMethodLabel(d.method) == bucketLabel(d.bucketKey)
                   ? bucketLabel(d.bucketKey)
@@ -102,12 +124,12 @@ class _AllocateSheetState extends ConsumerState<AllocateSheet> {
               key: Key('allocate-amount-${d.bucketKey}'),
               controller: _ctrls[d.bucketKey]!,
               currency: widget.income.currency,
-              label: bucketLabel(d.bucketKey),
+              label: 'Summa',
               onChanged: (_) => setState(() {}),
             ),
             const SizedBox(height: VeloraSpacing.md),
           ],
-          if (initial.shortfall.isNotEmpty) ...[
+          if (liveShortfall.isNotEmpty) ...[
             VeloraCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -125,7 +147,7 @@ class _AllocateSheetState extends ConsumerState<AllocateSheet> {
                     ],
                   ),
                   const SizedBox(height: VeloraSpacing.xs),
-                  for (final s in initial.shortfall)
+                  for (final s in liveShortfall)
                     Text(
                       '${bucketLabel(s.bucketKey)} uchun ${s.shortBy.format()} '
                       'yetishmayapti',

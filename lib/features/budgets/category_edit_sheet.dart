@@ -7,6 +7,7 @@ import '../../data/categories/category_model.dart';
 import '../../providers/app_providers.dart';
 import '../../ui/components/category_icons.dart';
 import '../../ui/components/velora_button.dart';
+import '../../ui/components/velora_money_field.dart';
 import '../../ui/components/velora_sheet.dart';
 import 'budget_labels.dart';
 import 'budgets_controller.dart';
@@ -255,6 +256,37 @@ class _CategoryFormState extends ConsumerState<_CategoryForm> {
     if (mounted) Navigator.of(context).pop();
   }
 
+  /// A monthly/weekly limit money input. The descriptive label ("Oylik
+  /// limit") and the "empty = no limit" hint sit ABOVE the field as free-
+  /// wrapping captions; the `VeloraMoneyField`'s own internal label is a
+  /// short constant ("Summa") so a long label never wraps into the field's
+  /// single-line floating-label slot and overlaps the amount at 320px/200%
+  /// (the same overlap fix applied to the variable-budget field).
+  Widget _limitField(
+    BuildContext context, {
+    required Key fieldKey,
+    required TextEditingController controller,
+    required String label,
+  }) {
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: theme.textTheme.labelLarge),
+        Text('Bo‘sh = limitsiz',
+            style: theme.textTheme.bodySmall
+                ?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+        const SizedBox(height: VeloraSpacing.xs),
+        VeloraMoneyField(
+          key: fieldKey,
+          controller: controller,
+          currency: _currency,
+          label: 'Summa',
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (!_loaded) {
@@ -310,24 +342,18 @@ class _CategoryFormState extends ConsumerState<_CategoryForm> {
             ],
           ),
           const SizedBox(height: VeloraSpacing.md),
-          TextField(
-            key: const Key('category-edit-monthly'),
+          _limitField(
+            context,
+            fieldKey: const Key('category-edit-monthly'),
             controller: _monthlyCtrl,
-            keyboardType: TextInputType.number,
-            decoration: const InputDecoration(
-              labelText: 'Oylik limit',
-              helperText: 'Bo‘sh = limitsiz',
-            ),
+            label: 'Oylik limit',
           ),
           const SizedBox(height: VeloraSpacing.md),
-          TextField(
-            key: const Key('category-edit-weekly'),
+          _limitField(
+            context,
+            fieldKey: const Key('category-edit-weekly'),
             controller: _weeklyCtrl,
-            keyboardType: TextInputType.number,
-            decoration: const InputDecoration(
-              labelText: 'Haftalik limit',
-              helperText: 'Bo‘sh = limitsiz',
-            ),
+            label: 'Haftalik limit',
           ),
           if (widget.categoryId != null) ...[
             const SizedBox(height: VeloraSpacing.md),

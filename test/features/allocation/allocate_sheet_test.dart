@@ -9,6 +9,9 @@ import 'package:financial_assistant/data/db/app_database.dart';
 import 'package:financial_assistant/providers/app_providers.dart';
 import 'package:financial_assistant/features/allocation/allocate_sheet.dart';
 
+import '../../support/golden_devices.dart';
+import '../../support/velora_test_app.dart';
+
 void main() {
   const uzs = CurrencyRegistry.uzs;
 
@@ -167,5 +170,101 @@ void main() {
 
     expect(confirmButton(tester).onPressed, isNull,
         reason: 'allocatedTotal now exceeds income — confirm must disable');
+  });
+
+  testWidgets(
+      'the shortfall banner clears once the user edits the short direction '
+      'up to its requested amount (banner re-evaluates against live edits, '
+      'not the initial split)', (tester) async {
+    final db = AppDatabase(NativeDatabase.memory());
+    addTearDown(db.close);
+    await db.into(db.accountsTable).insert(
+          AccountsTableCompanion.insert(name: 'Cash', type: 'cash'),
+        );
+    final container = ProviderContainer(
+        overrides: [databaseProvider.overrideWithValue(db)]);
+    addTearDown(container.dispose);
+
+    await container.read(allocationRepositoryProvider).saveTemplate(const [
+      AllocationDirection(
+          bucketKey: 'mandatoryExpenses',
+          method: AllocationMethod.fixedAmount,
+          amount: Money(400000, uzs)),
+      AllocationDirection(
+          bucketKey: 'minReserve',
+          method: AllocationMethod.fixedAmount,
+          amount: Money(300000, uzs)),
+    ]);
+    await db.into(db.transactionsTable).insert(
+          TransactionsTableCompanion.insert(
+            accountId: 1,
+            type: 'income',
+            amountMinor: 500000,
+            currencyCode: 'UZS',
+            occurredAt: DateTime(2026, 7, 5),
+            createdAt: DateTime(2026, 7, 5),
+          ),
+        );
+
+    await tester.pumpWidget(UncontrolledProviderScope(
+      container: container,
+      child: const MaterialApp(
+        home: Scaffold(
+          body: AllocateSheet(incomeId: 1, income: Money(500000, uzs)),
+        ),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    // minReserve was underfunded (100 000 of 300 000): banner is shown.
+    expect(find.textContaining('yetarli emas'), findsOneWidget);
+
+    // Type its full requested amount into the field.
+    await tester.enterText(
+        find.byKey(const Key('allocate-amount-minReserve')), '300000');
+    await tester.pumpAndSettle();
+
+    // The shortfall is now resolved for that direction → banner gone.
+    expect(find.textContaining('yetarli emas'), findsNothing);
+  });
+
+  testWidgets(
+      'reflows without overflow at 320px / 200% text scale — the long '
+      'bucket label above the field never overlaps the amount', (tester) async {
+    final db = AppDatabase(NativeDatabase.memory());
+    addTearDown(db.close);
+    await seedIncome(db);
+    final container = ProviderContainer(
+        overrides: [databaseProvider.overrideWithValue(db)]);
+    addTearDown(container.dispose);
+
+    await pumpVelora(
+      tester,
+      child: UncontrolledProviderScope(
+        container: container,
+        child: const AllocateSheet(incomeId: 1, income: Money(1000000, uzs)),
+      ),
+      size: phone320,
+      brightness: Brightness.dark,
+      textScale: textScale200,
+    );
+
+    // No RenderFlex/overflow exception at the narrow, scaled canvas, and the
+    // full-height "O‘zgaruvchan budjet" direction (the long label that used
+    // to wrap into the field) still renders its amount field.
+    expect(tester.takeException(), isNull);
+    expect(
+        find.byKey(const Key('allocate-amount-variableBudget')), findsOneWidget);
+    expect(find.textContaining('O‘zgaruvchan budjet'), findsWidgets);
+
+    // A pixel guard on top of the overflow guard: takeException alone would
+    // NOT catch the original bug (a wrapped floating label overlaps the
+    // amount without throwing). The golden locks in the fixed layout so any
+    // regression that puts a long label back inside the field diffs here.
+    await expectLater(
+      find.byType(AllocateSheet),
+      matchesGoldenFile(
+          '../../goldens/baselines/allocate-sheet-dark-320-scale200.png'),
+    );
   });
 }
