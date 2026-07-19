@@ -86,7 +86,7 @@ class _DecimalDraft {
 _DecimalDraft? _normalizeDecimalDraft(
   String raw,
   Currency currency, {
-  required bool hadDecimalDraft,
+  required bool isSequentialInsertion,
 }) {
   final numeric = raw.replaceAll(_moneyCharactersPattern, '');
   if (numeric.isEmpty) return null;
@@ -117,7 +117,7 @@ _DecimalDraft? _normalizeDecimalDraft(
     final trailingDigits = unsigned.length - lastSeparator - 1;
     if (trailingDigits <= currency.decimalDigits) {
       decimalIndex = lastSeparator;
-    } else if (hadDecimalDraft && unsigned[lastSeparator] == '.') {
+    } else if (isSequentialInsertion) {
       return _DecimalDraft.precisionExceeded;
     }
   }
@@ -170,6 +170,33 @@ String _groupDigits(String digits) {
   return grouped.toString();
 }
 
+bool _isSingleCharacterInsertion(
+  TextEditingValue oldValue,
+  TextEditingValue newValue,
+) {
+  final oldSelection = oldValue.selection;
+  final newSelection = newValue.selection;
+  if (!oldSelection.isValid ||
+      !oldSelection.isCollapsed ||
+      !newSelection.isValid ||
+      !newSelection.isCollapsed ||
+      newValue.text.length != oldValue.text.length + 1) {
+    return false;
+  }
+
+  final insertionOffset = oldSelection.baseOffset;
+  if (insertionOffset < 0 || insertionOffset > oldValue.text.length) {
+    return false;
+  }
+  if (newSelection.baseOffset != insertionOffset + 1) return false;
+
+  return newValue.text.startsWith(
+        oldValue.text.substring(0, insertionOffset),
+      ) &&
+      newValue.text.substring(insertionOffset + 1) ==
+          oldValue.text.substring(insertionOffset);
+}
+
 class MoneyTextInputFormatter extends TextInputFormatter {
   MoneyTextInputFormatter(this.currency, {this.allowNegative = false});
 
@@ -199,7 +226,7 @@ class MoneyTextInputFormatter extends TextInputFormatter {
       final draft = _normalizeDecimalDraft(
         newValue.text,
         currency,
-        hadDecimalDraft: oldValue.text.contains('.'),
+        isSequentialInsertion: _isSingleCharacterInsertion(oldValue, newValue),
       );
       if (draft?.exceedsPrecision ?? false) return oldValue;
       parsed = draft?.money;

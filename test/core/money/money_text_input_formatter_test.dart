@@ -36,6 +36,10 @@ void main() {
           parseMoneyInput('1,234', CurrencyRegistry.usd)?.minorUnits,
           123400,
         );
+        expect(
+          parseMoneyInput('1.234', CurrencyRegistry.eur)?.minorUnits,
+          123400,
+        );
       },
     );
 
@@ -132,7 +136,7 @@ void main() {
     });
 
     test(
-      'preserves the previous value when fraction precision is exceeded',
+      'preserves the previous value for an adjacent third fraction digit',
       () {
         final formatter = MoneyTextInputFormatter(CurrencyRegistry.usd);
         const oldValue = TextEditingValue(
@@ -141,6 +145,52 @@ void main() {
         );
 
         final out = enter(formatter, oldValue, '1.256');
+
+        expect(out, oldValue);
+      },
+    );
+
+    test('re-evaluates a whole-selection replacement as a grouped integer', () {
+      final formatter = MoneyTextInputFormatter(CurrencyRegistry.usd);
+      final out = formatter.formatEditUpdate(
+        const TextEditingValue(
+          text: '1.25',
+          selection: TextSelection(baseOffset: 0, extentOffset: 4),
+        ),
+        const TextEditingValue(
+          text: '1.234',
+          selection: TextSelection.collapsed(offset: 5),
+        ),
+      );
+
+      expect(out.text, '1 234');
+      expect(out.selection.baseOffset, 5);
+    });
+
+    test('re-evaluates a single-separator paste into empty as grouping', () {
+      final formatter = MoneyTextInputFormatter(CurrencyRegistry.eur);
+      final out = enter(formatter, TextEditingValue.empty, '1.234');
+
+      expect(out.text, '1 234');
+      expect(out.selection.baseOffset, 5);
+    });
+
+    test(
+      'preserves the previous value when fraction precision is exceeded in the middle',
+      () {
+        final formatter = MoneyTextInputFormatter(CurrencyRegistry.usd);
+        const oldValue = TextEditingValue(
+          text: '1.25',
+          selection: TextSelection.collapsed(offset: 3),
+        );
+
+        final out = formatter.formatEditUpdate(
+          oldValue,
+          const TextEditingValue(
+            text: '1.235',
+            selection: TextSelection.collapsed(offset: 4),
+          ),
+        );
 
         expect(out, oldValue);
       },
