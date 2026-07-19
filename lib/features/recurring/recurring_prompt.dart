@@ -21,18 +21,31 @@ class RecurringPromptController
   }
 
   /// Confirm this occurrence: record the income at the plan's own amount and
-  /// advance the plan to its next occurrence.
-  Future<void> confirm(RecurringIncomePlan plan) async {
-    await ref.read(ledgerRepositoryProvider).addIncome(
-          accountId: plan.accountId,
-          amount: plan.amount,
-          incomeType: plan.incomeType,
-          occurredAt: DateTime.now(),
-          note: plan.note,
-        );
-    await ref.read(recurringIncomeRepositoryProvider).markConfirmed(plan.id);
+  /// advance the plan to its next occurrence. The two writes run inside one
+  /// `databaseProvider.transaction` (mirrors `IncomeEntryController.save`):
+  /// if `markConfirmed` fails after the income is written, the whole
+  /// transaction rolls back, so the plan never records income while staying
+  /// due -- which would otherwise duplicate the income on the next prompt.
+  Future<Result<void>> confirm(RecurringIncomePlan plan) async {
+    try {
+      await ref.read(databaseProvider).transaction(() async {
+        await ref.read(ledgerRepositoryProvider).addIncome(
+              accountId: plan.accountId,
+              amount: plan.amount,
+              incomeType: plan.incomeType,
+              occurredAt: DateTime.now(),
+              note: plan.note,
+            );
+        await ref.read(recurringIncomeRepositoryProvider).markConfirmed(plan.id);
+      });
+    } catch (error) {
+      // Diagnostic detail stays inside Failure; userMessageFor never
+      // interpolates it into presentation text.
+      return Err(PersistenceFailure(error.toString()));
+    }
     ref.read(ledgerRevisionProvider.notifier).state++;
     await future;
+    return const Ok(null);
   }
 
   /// Confirm this occurrence with an amount edited for THIS occurrence only.
@@ -57,14 +70,22 @@ class RecurringPromptController
       return const Err(CurrencyFailure(
           'income currency does not match the account currency'));
     }
-    await ref.read(ledgerRepositoryProvider).addIncome(
-          accountId: plan.accountId,
-          amount: amount,
-          incomeType: plan.incomeType,
-          occurredAt: occurredAt ?? DateTime.now(),
-          note: plan.note,
-        );
-    await ref.read(recurringIncomeRepositoryProvider).markConfirmed(plan.id);
+    // Same atomic-transaction shape as `confirm` above: a failed
+    // markConfirmed rolls back the income write too.
+    try {
+      await ref.read(databaseProvider).transaction(() async {
+        await ref.read(ledgerRepositoryProvider).addIncome(
+              accountId: plan.accountId,
+              amount: amount,
+              incomeType: plan.incomeType,
+              occurredAt: occurredAt ?? DateTime.now(),
+              note: plan.note,
+            );
+        await ref.read(recurringIncomeRepositoryProvider).markConfirmed(plan.id);
+      });
+    } catch (error) {
+      return Err(PersistenceFailure(error.toString()));
+    }
     ref.read(ledgerRevisionProvider.notifier).state++;
     await future;
     return const Ok(null);
@@ -150,7 +171,7 @@ class _RecurringPlanCard extends ConsumerWidget {
           VeloraPrimaryButton(
             key: Key('recurring-confirm-${plan.id}'),
             label: 'Tasdiqlash',
-            onPressed: () => _controller(ref).confirm(plan),
+            onPressed: () => _confirm(context, ref),
           ),
           const SizedBox(height: VeloraSpacing.sm),
           // Secondary occurrence actions. Wrap so all three stay reachable at
@@ -181,6 +202,16 @@ class _RecurringPlanCard extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+
+  Future<void> _confirm(BuildContext context, WidgetRef ref) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final result = await _controller(ref).confirm(plan);
+    result.when(
+      ok: (_) {},
+      err: (f) =>
+          messenger.showSnackBar(SnackBar(content: Text(userMessageFor(f)))),
     );
   }
 

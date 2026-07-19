@@ -7,13 +7,78 @@ import 'package:financial_assistant/core/ledger/ledger_entry.dart';
 import 'package:financial_assistant/core/money/currency.dart';
 import 'package:financial_assistant/core/money/money.dart';
 import 'package:financial_assistant/core/mortgage/mortgage_engine.dart';
+import 'package:financial_assistant/core/result/failure.dart';
 import 'package:financial_assistant/data/db/app_database.dart';
 import 'package:financial_assistant/data/goals/goal_model.dart';
+import 'package:financial_assistant/data/goals/goal_repository.dart';
 import 'package:financial_assistant/data/mortgage/mortgage_model.dart';
 import 'package:financial_assistant/providers/app_providers.dart';
 import 'package:financial_assistant/features/allocation/allocation_controller.dart';
 import 'package:financial_assistant/features/budgets/budgets_controller.dart';
 import 'package:financial_assistant/features/goals/goal_controller.dart';
+
+/// Wraps a real [GoalRepository] but fails `addContribution`, to prove that
+/// `AllocationController.confirm` rolls back the income allocation write
+/// (`allocateIncome`) when the goal-contribution write in the same
+/// transaction fails (IMPORTANT #3: without a shared transaction, a failed
+/// contribution left the income earmarked with no matching goal history).
+class _ThrowingGoalRepository implements GoalRepository {
+  _ThrowingGoalRepository(this._delegate);
+  final GoalRepository _delegate;
+
+  @override
+  Future<List<Goal>> list({bool includeArchived = false}) =>
+      _delegate.list(includeArchived: includeArchived);
+
+  @override
+  Future<int> create(GoalDraft draft) => _delegate.create(draft);
+
+  @override
+  Future<void> update(int id, GoalDraft draft) => _delegate.update(id, draft);
+
+  @override
+  Future<void> setStatus(int id, GoalStatus status) =>
+      _delegate.setStatus(id, status);
+
+  @override
+  Future<void> setTarget(int id,
+          {required int targetAmountMinor,
+          DateTime? targetDate,
+          bool clearTargetDate = false}) =>
+      _delegate.setTarget(id,
+          targetAmountMinor: targetAmountMinor,
+          targetDate: targetDate,
+          clearTargetDate: clearTargetDate);
+
+  @override
+  Future<void> archive(int id) => _delegate.archive(id);
+
+  @override
+  Future<void> delete(int id) => _delegate.delete(id);
+
+  @override
+  Future<void> addContribution({
+    required int goalId,
+    required int signedAmountMinor,
+    required ContributionSource source,
+    int? sourceAccountId,
+    int? incomeTransactionId,
+    String? note,
+    DateTime? occurredAt,
+  }) async {
+    throw Exception('forced goal-contribution failure');
+  }
+
+  @override
+  Future<List<GoalContribution>> contributions(int goalId) =>
+      _delegate.contributions(goalId);
+
+  @override
+  Future<int> savedFor(int goalId) => _delegate.savedFor(goalId);
+
+  @override
+  Future<int> activeReserveMinor() => _delegate.activeReserveMinor();
+}
 
 /// Inserts a real income transaction (mirrors the pattern in
 /// `allocation_repository_test.dart`'s `insertIncome`) and returns its id —
@@ -261,5 +326,51 @@ void main() {
     // Assert: no mortgage payment was auto-created (planning-only).
     expect(await mortgageRepo.payments(mortgageId), isEmpty);
     expect(await mortgageRepo.currentPrincipalMinor(mortgageId), 100000000);
+  });
+
+  test(
+      'confirm rolls back the income allocation (no partial earmark) and '
+      'reports failure when a goal contribution write fails', () async {
+    final db = AppDatabase(NativeDatabase.memory());
+    await db.into(db.accountsTable).insert(
+          AccountsTableCompanion.insert(name: 'Cash', type: 'cash'),
+        );
+    final realGoalRepo = DriftGoalRepository(db);
+    final container = ProviderContainer(overrides: [
+      databaseProvider.overrideWithValue(db),
+      goalRepositoryProvider.overrideWithValue(
+        _ThrowingGoalRepository(realGoalRepo),
+      ),
+    ]);
+    addTearDown(container.dispose);
+    addTearDown(db.close);
+
+    final goalId = await realGoalRepo.create(GoalDraft(
+      name: 'Avto',
+      targetAmountMinor: 5000000,
+      startDate: DateTime(2026, 1, 1),
+    ));
+    final incomeId = await _createIncome(container);
+
+    final result = await container
+        .read(allocationControllerProvider)
+        .confirm(incomeId, {'goal:$goalId': const Money(400000, uzs)});
+
+    expect(result.isOk, isFalse);
+    result.when(
+      ok: (_) => fail('expected Err'),
+      err: (f) => expect(f, isA<PersistenceFailure>()),
+    );
+    // No partial earmark: neither the goal contribution NOR the income
+    // allocation survive the failed transaction.
+    expect(await realGoalRepo.savedFor(goalId), 0);
+    final row = await (db.select(db.transactionsTable)
+          ..where((t) => t.id.equals(incomeId)))
+        .getSingle();
+    expect(row.allocatedMinor, 0);
+    final allocations = await (db.select(db.incomeAllocationsTable)
+          ..where((t) => t.incomeTransactionId.equals(incomeId)))
+        .get();
+    expect(allocations, isEmpty);
   });
 }

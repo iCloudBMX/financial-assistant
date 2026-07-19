@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/money/money.dart';
+import '../../core/result/failure_messages.dart';
 import 'allocate_sheet.dart';
 import 'allocation_controller.dart';
 import 'variable_budget_offer.dart';
@@ -47,14 +48,21 @@ Future<void> showAllocationChoice(
       builder: (_) => AllocateSheet(incomeId: incomeId, income: amount),
     );
   } else if (choice == 'apply') {
-    final result =
+    final preview =
         await ref.read(allocationControllerProvider).preview(amount);
-    await ref
+    final confirmResult = await ref
         .read(allocationControllerProvider)
-        .confirm(incomeId, result.perBucket);
-    if (context.mounted) {
-      await maybeOfferVariableBudgetUpdate(context, ref, result.perBucket);
+        .confirm(incomeId, preview.perBucket);
+    if (!context.mounted) return;
+    if (!confirmResult.isOk) {
+      confirmResult.when(
+        ok: (_) {},
+        err: (f) => ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(userMessageFor(f)))),
+      );
+      return;
     }
+    await maybeOfferVariableBudgetUpdate(context, ref, preview.perBucket);
   }
   // 'later' / dismissed: leave the income undistributed.
 }

@@ -226,15 +226,24 @@ class SettingsScreen extends ConsumerWidget {
                 ),
               ),
               const _SectionHeader('Maxfiylik va xavfsizlik'),
-              SwitchListTile(
-                title: const Text('Ilova qulfi'),
-                value: s.appLockEnabled,
-                onChanged: (v) => save(s.copyWith(appLockEnabled: v)),
+              // Deferred like the export/notification tiles below: there is
+              // no PIN-setup flow yet (AppLockController.setPin is never
+              // called anywhere in the app), so a live switch here could set
+              // appLockEnabled=true with no PIN ever stored. On the next cold
+              // start AppLockGate would show a PIN pad that can never be
+              // satisfied — verifyPin always returns false with no stored
+              // PIN — permanently locking the user out of their data with
+              // biometrics off. Keep these disabled until a real PIN-setup
+              // flow lands (see settings_screen_test.dart).
+              const ListTile(
+                enabled: false,
+                title: Text('Ilova qulfi'),
+                subtitle: Text('(keyingi bosqichda)'),
               ),
-              SwitchListTile(
-                title: const Text('Biometrik autentifikatsiya'),
-                value: s.biometricEnabled,
-                onChanged: (v) => save(s.copyWith(biometricEnabled: v)),
+              const ListTile(
+                enabled: false,
+                title: Text('Biometrik autentifikatsiya'),
+                subtitle: Text('(keyingi bosqichda)'),
               ),
               const _SectionHeader("Ma'lumotlar"),
               const ListTile(

@@ -111,4 +111,56 @@ void main() {
     expect(find.text('Ilova qulfi'), findsOneWidget);
     expect(find.text('Biometrik autentifikatsiya'), findsOneWidget);
   });
+
+  testWidgets(
+      'App Lock and Biometric are disabled placeholders — there is no '
+      'PIN-setup flow yet, so appLockEnabled can never be flipped true from '
+      'Settings (a live switch here would risk a permanent lockout, since '
+      'AppLockController.setPin is never called anywhere)', (tester) async {
+    // Tall surface so the privacy & security section renders without
+    // needing to scroll to find it (ListView virtualizes offscreen
+    // children, so an unscrolled default-size surface would never build
+    // these tiles at all).
+    tester.view.physicalSize = const Size(400, 1800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final db = AppDatabase(NativeDatabase.memory());
+    addTearDown(db.close);
+
+    final container = ProviderContainer(
+        overrides: [databaseProvider.overrideWithValue(db)]);
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(UncontrolledProviderScope(
+      container: container,
+      child: const MaterialApp(home: SettingsScreen()),
+    ));
+    await tester.pumpAndSettle();
+
+    // No live switch exists for either control.
+    expect(find.byType(SwitchListTile), findsNothing);
+
+    final appLockTile = tester.widget<ListTile>(find.ancestor(
+      of: find.text('Ilova qulfi'),
+      matching: find.byType(ListTile),
+    ));
+    expect(appLockTile.enabled, isFalse);
+
+    final biometricTile = tester.widget<ListTile>(find.ancestor(
+      of: find.text('Biometrik autentifikatsiya'),
+      matching: find.byType(ListTile),
+    ));
+    expect(biometricTile.enabled, isFalse);
+
+    // Tapping where the switches used to be must not change the setting.
+    await tester.tap(find.text('Ilova qulfi'));
+    await tester.tap(find.text('Biometrik autentifikatsiya'));
+    await tester.pumpAndSettle();
+
+    final settings = await container.read(settingsControllerProvider.future);
+    expect(settings.appLockEnabled, isFalse);
+    expect(settings.biometricEnabled, isFalse);
+  });
 }

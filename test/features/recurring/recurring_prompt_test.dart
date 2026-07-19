@@ -9,8 +9,59 @@ import 'package:financial_assistant/core/ledger/ledger_entry.dart';
 import 'package:financial_assistant/core/result/failure.dart';
 import 'package:financial_assistant/data/db/app_database.dart';
 import 'package:financial_assistant/data/recurring/recurring_model.dart';
+import 'package:financial_assistant/data/recurring/recurring_repository.dart';
 import 'package:financial_assistant/providers/app_providers.dart';
 import 'package:financial_assistant/features/recurring/recurring_prompt.dart';
+
+/// Wraps a real [RecurringIncomeRepository] but fails `markConfirmed`, to
+/// prove that `confirm`/`confirmWithAmount` roll back the income ledger
+/// write when the second write of the two-write atomic operation fails
+/// (IMPORTANT #2: without a shared transaction, a failed markConfirmed left
+/// the income recorded but the plan still due, so the next prompt could
+/// record it a second time).
+class _ThrowingMarkConfirmed implements RecurringIncomeRepository {
+  _ThrowingMarkConfirmed(this._delegate);
+  final RecurringIncomeRepository _delegate;
+
+  @override
+  Future<int> create({
+    required int accountId,
+    required Money amount,
+    required IncomeType incomeType,
+    String? note,
+    required IntervalKind intervalKind,
+    required int anchorDay,
+    required DateTime nextDueAt,
+  }) =>
+      _delegate.create(
+        accountId: accountId,
+        amount: amount,
+        incomeType: incomeType,
+        note: note,
+        intervalKind: intervalKind,
+        anchorDay: anchorDay,
+        nextDueAt: nextDueAt,
+      );
+
+  @override
+  Future<List<RecurringIncomePlan>> listActive() => _delegate.listActive();
+
+  @override
+  Future<List<RecurringIncomePlan>> duePlans(DateTime asOf) =>
+      _delegate.duePlans(asOf);
+
+  @override
+  Future<void> markConfirmed(int id) async {
+    throw Exception('forced markConfirmed failure');
+  }
+
+  @override
+  Future<void> postponeTo(int id, DateTime newDueAt) =>
+      _delegate.postponeTo(id, newDueAt);
+
+  @override
+  Future<void> deactivate(int id) => _delegate.deactivate(id);
+}
 
 void main() {
   const uzs = CurrencyRegistry.uzs;
@@ -164,6 +215,91 @@ void main() {
       err: (f) => expect(f, isA<CurrencyFailure>()),
     );
     expect(await c.read(ledgerRepositoryProvider).allEntries(), isEmpty);
+  });
+
+  test(
+      'confirm rolls back the income entry and leaves the plan due when '
+      'markConfirmed fails (no partial state, no duplicate-income risk)',
+      () async {
+    final db = AppDatabase(NativeDatabase.memory());
+    addTearDown(db.close);
+    final realRecurring = DriftRecurringIncomeRepository(db);
+    final c = ProviderContainer(overrides: [
+      databaseProvider.overrideWithValue(db),
+      recurringIncomeRepositoryProvider.overrideWithValue(
+        _ThrowingMarkConfirmed(realRecurring),
+      ),
+    ]);
+    addTearDown(c.dispose);
+    final accId = await c.read(accountRepositoryProvider).create(
+        name: 'Naqd',
+        type: AccountType.cash,
+        openingBalance: const Money(0, uzs),
+        icon: 'w');
+    final planId = await realRecurring.create(
+        accountId: accId,
+        amount: const Money(5000000, uzs),
+        incomeType: IncomeType.salary,
+        intervalKind: IntervalKind.monthly,
+        anchorDay: 5,
+        nextDueAt: DateTime(2026, 7, 5));
+    final plan = (await realRecurring.listActive()).single;
+
+    final result =
+        await c.read(recurringPromptControllerProvider.notifier).confirm(plan);
+
+    expect(result.isOk, isFalse);
+    result.when(
+      ok: (_) => fail('expected Err'),
+      err: (f) => expect(f, isA<PersistenceFailure>()),
+    );
+    // Rolled back: no income entry survives the failed transaction...
+    expect(await c.read(ledgerRepositoryProvider).allEntries(), isEmpty);
+    // ...and the plan is still due (not silently advanced), so it does not
+    // get skipped and does not risk a duplicate income on the next confirm.
+    final stillDue = await realRecurring.duePlans(DateTime(2026, 7, 6));
+    expect(stillDue.map((p) => p.id), contains(planId));
+  });
+
+  test(
+      'confirmWithAmount rolls back the income entry and leaves the plan '
+      'due when markConfirmed fails', () async {
+    final db = AppDatabase(NativeDatabase.memory());
+    addTearDown(db.close);
+    final realRecurring = DriftRecurringIncomeRepository(db);
+    final c = ProviderContainer(overrides: [
+      databaseProvider.overrideWithValue(db),
+      recurringIncomeRepositoryProvider.overrideWithValue(
+        _ThrowingMarkConfirmed(realRecurring),
+      ),
+    ]);
+    addTearDown(c.dispose);
+    final accId = await c.read(accountRepositoryProvider).create(
+        name: 'Naqd',
+        type: AccountType.cash,
+        openingBalance: const Money(0, uzs),
+        icon: 'w');
+    final planId = await realRecurring.create(
+        accountId: accId,
+        amount: const Money(5000000, uzs),
+        incomeType: IncomeType.salary,
+        intervalKind: IntervalKind.monthly,
+        anchorDay: 5,
+        nextDueAt: DateTime(2026, 7, 5));
+    final plan = (await realRecurring.listActive()).single;
+
+    final result = await c
+        .read(recurringPromptControllerProvider.notifier)
+        .confirmWithAmount(plan, amount: const Money(4200000, uzs));
+
+    expect(result.isOk, isFalse);
+    result.when(
+      ok: (_) => fail('expected Err'),
+      err: (f) => expect(f, isA<PersistenceFailure>()),
+    );
+    expect(await c.read(ledgerRepositoryProvider).allEntries(), isEmpty);
+    final stillDue = await realRecurring.duePlans(DateTime(2026, 7, 6));
+    expect(stillDue.map((p) => p.id), contains(planId));
   });
 
   testWidgets('the prompt exposes four distinct actions per due plan',

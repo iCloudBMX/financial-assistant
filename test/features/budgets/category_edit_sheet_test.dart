@@ -4,10 +4,42 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:financial_assistant/core/money/currency.dart';
 import 'package:financial_assistant/core/money/money.dart';
+import 'package:financial_assistant/data/budget/budget_repository.dart';
+import 'package:financial_assistant/data/categories/category_model.dart';
 import 'package:financial_assistant/data/db/app_database.dart';
 import 'package:financial_assistant/providers/app_providers.dart';
 import 'package:financial_assistant/features/budgets/budgets_controller.dart';
 import 'package:financial_assistant/features/budgets/category_edit_sheet.dart';
+
+/// Wraps a real [BudgetRepository] but fails `setCategoryLimits`, to prove
+/// that `BudgetsController.saveCategory` rolls back the rename/icon/kind
+/// writes when the limit write in the same transaction fails (MINOR #5: the
+/// category-editor save is a 5-write sequence -- rename, setIcon, setKind,
+/// and two `_applyLimit` writes -- that must be all-or-nothing).
+class _ThrowingBudgetRepository implements BudgetRepository {
+  _ThrowingBudgetRepository(this._delegate);
+  final BudgetRepository _delegate;
+
+  @override
+  Future<void> setCategoryKind(int id, CategoryKind kind) =>
+      _delegate.setCategoryKind(id, kind);
+
+  @override
+  Future<void> setCategoryLimits(
+    int id, {
+    int? monthlyLimitMinor,
+    bool clearMonthly = false,
+    int? weeklyLimitMinor,
+    bool clearWeekly = false,
+  }) async {
+    throw Exception('forced limit-write failure');
+  }
+
+  @override
+  Future<List<Category>> categoriesWithBudgets(
+          {bool includeArchived = false}) =>
+      _delegate.categoriesWithBudgets(includeArchived: includeArchived);
+}
 
 void main() {
   const uzs = CurrencyRegistry.uzs;
@@ -173,6 +205,40 @@ void main() {
 
     final views = await container.read(categoryBudgetsProvider.future);
     expect(views.any((v) => v.category.name == 'Sport'), isTrue);
+  });
+
+  testWidgets(
+      'a failed limit write rolls back the rename/icon/kind edits in the '
+      'same Saqlash (atomic save, no partial category edit)', (tester) async {
+    final db = AppDatabase(NativeDatabase.memory());
+    addTearDown(db.close);
+    final realBudgetRepo = DriftBudgetRepository(db);
+    final container = ProviderContainer(overrides: [
+      databaseProvider.overrideWithValue(db),
+      budgetRepositoryProvider.overrideWithValue(
+        _ThrowingBudgetRepository(realBudgetRepo),
+      ),
+    ]);
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(UncontrolledProviderScope(
+      container: container,
+      child: harness(categoryId: 1),
+    ));
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+        find.byKey(const Key('category-edit-name')), 'Ovqatlanish');
+    await tester.tap(find.text('Saqlash'));
+    await tester.pumpAndSettle();
+
+    // The sheet stays open (Saqlash did not pop as a success) and the
+    // rename was rolled back along with the failed limit write.
+    expect(find.byKey(const Key('category-edit-name')), findsOneWidget);
+    final views = await container.read(categoryBudgetsProvider.future);
+    final cat1 = views.firstWhere((v) => v.category.id == 1).category;
+    expect(cat1.name, isNot('Ovqatlanish'));
   });
 
   testWidgets('Saqlash stays disabled while the name is empty',

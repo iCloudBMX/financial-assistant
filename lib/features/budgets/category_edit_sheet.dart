@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/money/currency.dart';
 import '../../core/money/money.dart';
+import '../../core/result/failure_messages.dart';
 import '../../core/theme/velora_tokens.dart';
 import '../../data/categories/category_model.dart';
 import '../../providers/app_providers.dart';
@@ -221,32 +222,39 @@ class _CategoryFormState extends ConsumerState<_CategoryForm> {
   Future<void> _save() async {
     final controller = ref.read(budgetsControllerProvider);
     final name = _nameCtrl.text.trim();
-    final int id;
-    if (widget.categoryId != null) {
-      id = widget.categoryId!;
-      await controller.renameCategory(id, name);
-      await controller.setCategoryIcon(id, _icon);
-      await controller.setKind(id, _kind);
-    } else {
-      id = await controller.createCategory(name: name, icon: _icon);
-      if (_kind != CategoryKind.variable) {
-        await controller.setKind(id, _kind);
-      }
-    }
-    await _applyLimit(
-        _monthlyCtrl.text, (m) => controller.setMonthlyLimit(id, m));
-    await _applyLimit(
-        _weeklyCtrl.text, (m) => controller.setWeeklyLimit(id, m));
-    if (mounted) Navigator.of(context).pop();
+    final monthly = _parseLimit(_monthlyCtrl.text);
+    final weekly = _parseLimit(_weeklyCtrl.text);
+    final messenger = ScaffoldMessenger.of(context);
+
+    final result = await controller.saveCategory(
+      id: widget.categoryId,
+      name: name,
+      icon: _icon,
+      kind: _kind,
+      monthlyLimit: monthly.value,
+      monthlyLimitUnparseable: monthly.unparseable,
+      weeklyLimit: weekly.value,
+      weeklyLimitUnparseable: weekly.unparseable,
+    );
+    if (!mounted) return;
+    result.when(
+      ok: (_) => Navigator.of(context).pop(),
+      err: (f) =>
+          messenger.showSnackBar(SnackBar(content: Text(userMessageFor(f)))),
+    );
   }
 
-  Future<void> _applyLimit(
-      String text, Future<void> Function(Money?) setter) {
+  /// Mirrors the old `_applyLimit`'s three-way parse rule: empty text means
+  /// "clear the limit" (`value: null, unparseable: false`); unparseable text
+  /// means "leave this field untouched" (`unparseable: true`, so
+  /// `saveCategory` skips the write instead of clearing it); otherwise the
+  /// parsed [Money].
+  ({Money? value, bool unparseable}) _parseLimit(String text) {
     final trimmed = text.trim();
-    if (trimmed.isEmpty) return setter(null);
+    if (trimmed.isEmpty) return (value: null, unparseable: false);
     final m = Money.tryParse(trimmed, _currency);
-    if (m == null) return Future.value(); // unparseable: keep as-is
-    return setter(m);
+    if (m == null) return (value: null, unparseable: true);
+    return (value: m, unparseable: false);
   }
 
   Future<void> _toggleArchived() async {

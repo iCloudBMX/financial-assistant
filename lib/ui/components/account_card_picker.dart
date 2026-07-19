@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/ledger/account.dart';
 import '../../core/money/money.dart';
 import '../../core/theme/velora_tokens.dart';
+import '../../features/accounts/account_labels.dart';
 import 'velora_card.dart';
 
 /// A controlled account selector. Page and tap interactions are reported to
@@ -258,7 +259,7 @@ class VeloraAccountCard extends StatelessWidget {
                 const Spacer(),
                 const SizedBox(width: VeloraSpacing.sm),
                 Icon(
-                  _accountIcon(account.icon, account.type),
+                  accountTypeIcon(account.type, icon: account.icon),
                   color: theme.colorScheme.primary,
                 ),
               ],
@@ -267,7 +268,7 @@ class VeloraAccountCard extends StatelessWidget {
               spacing: VeloraSpacing.sm,
               runSpacing: VeloraSpacing.xs,
               children: [
-                Text(_accountTypeLabel(account.type)),
+                Text(accountTypeLabel(account.type)),
                 Text(
                   account.currency.code,
                   style: theme.textTheme.labelMedium?.copyWith(
@@ -294,25 +295,5 @@ class VeloraAccountCard extends StatelessWidget {
 }
 
 String _accountSemanticLabel(Account account, Money availableBalance) =>
-    '${account.name}, ${_accountTypeLabel(account.type)}, '
+    '${account.name}, ${accountTypeLabel(account.type)}, '
     '${account.currency.code}, ${availableBalance.format()}';
-
-String _accountTypeLabel(AccountType type) => switch (type) {
-  AccountType.bankCard => 'Bank kartasi',
-  AccountType.cash => 'Naqd pul',
-  AccountType.savings => 'Jamg‘arma',
-  AccountType.other => 'Boshqa hisob',
-};
-
-IconData _accountIcon(String icon, AccountType type) => switch (icon) {
-  'credit_card' => Icons.credit_card_outlined,
-  'payments' => Icons.payments_outlined,
-  'savings' => Icons.savings_outlined,
-  'account_balance' => Icons.account_balance_outlined,
-  _ => switch (type) {
-    AccountType.bankCard => Icons.credit_card_outlined,
-    AccountType.cash => Icons.payments_outlined,
-    AccountType.savings => Icons.savings_outlined,
-    AccountType.other => Icons.account_balance_wallet_outlined,
-  },
-};

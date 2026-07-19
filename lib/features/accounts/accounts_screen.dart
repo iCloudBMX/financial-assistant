@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../core/ledger/account.dart';
 import '../../core/theme/velora_tokens.dart';
 import '../../ui/components/velora_async_state.dart';
 import '../../ui/components/velora_card.dart';
@@ -62,7 +61,8 @@ class AccountsScreen extends ConsumerWidget {
                     child: Row(
                       children: [
                         Icon(
-                          _accountIcon(it.account.type),
+                          accountTypeIcon(it.account.type,
+                              icon: it.account.icon),
                           color: VeloraColors.plum,
                         ),
                         const SizedBox(width: VeloraSpacing.md),
@@ -112,10 +112,3 @@ class AccountsScreen extends ConsumerWidget {
     );
   }
 }
-
-IconData _accountIcon(AccountType type) => switch (type) {
-      AccountType.bankCard => Icons.credit_card_outlined,
-      AccountType.cash => Icons.payments_outlined,
-      AccountType.savings => Icons.savings_outlined,
-      AccountType.other => Icons.account_balance_wallet_outlined,
-    };
