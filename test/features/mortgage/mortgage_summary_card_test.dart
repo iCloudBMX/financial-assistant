@@ -2,9 +2,10 @@ import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:financial_assistant/core/mortgage/mortgage_engine.dart';
+import 'package:financial_assistant/core/money/currency.dart';
+import 'package:financial_assistant/core/money/money.dart';
 import 'package:financial_assistant/data/db/app_database.dart';
-import 'package:financial_assistant/data/mortgage/mortgage_model.dart';
+import 'package:financial_assistant/features/home/dashboard_data.dart';
 import 'package:financial_assistant/features/mortgage/mortgage_dashboard_screen.dart';
 import 'package:financial_assistant/features/mortgage/mortgage_summary_card.dart';
 import 'package:financial_assistant/providers/app_providers.dart';
@@ -13,15 +14,17 @@ void main() {
   testWidgets(
       'empty summary card shows an add-mortgage CTA that opens the dashboard',
       (t) async {
+    // The card is pure, but the CTA navigates into MortgageDashboardScreen,
+    // which reads providers — so a ProviderScope with an in-memory DB is
+    // needed for the navigation target to build.
     final db = AppDatabase(NativeDatabase.memory());
     addTearDown(db.close);
-    final container = ProviderContainer(
-        overrides: [databaseProvider.overrideWithValue(db)]);
-    addTearDown(container.dispose);
-
-    await t.pumpWidget(UncontrolledProviderScope(
-      container: container,
-      child: const MaterialApp(home: Scaffold(body: MortgageSummaryCard())),
+    // A null summary is how dashboardProvider represents "no mortgage yet".
+    await t.pumpWidget(ProviderScope(
+      overrides: [databaseProvider.overrideWithValue(db)],
+      child: const MaterialApp(
+        home: Scaffold(body: MortgageSummaryCard(summary: null)),
+      ),
     ));
     await t.pumpAndSettle();
 
@@ -37,27 +40,18 @@ void main() {
 
   testWidgets('populated summary card shows the mortgage and no CTA',
       (t) async {
-    final db = AppDatabase(NativeDatabase.memory());
-    addTearDown(db.close);
-    final container = ProviderContainer(
-        overrides: [databaseProvider.overrideWithValue(db)]);
-    addTearDown(container.dispose);
+    const uzs = CurrencyRegistry.uzs;
+    final summary = MortgageSummaryView(
+      id: 1,
+      name: 'Uy',
+      currentPrincipal: const Money(100000000, uzs),
+      nextPaymentAmount: const Money(5000000, uzs),
+      nextPaymentDate: DateTime(2026, 7, 10),
+      completionBp: 1667,
+    );
 
-    await container.read(mortgageRepositoryProvider).create(MortgageDraft(
-          name: 'Uy',
-          initialLoanMinor: 120000000,
-          openingPrincipalMinor: 100000000,
-          annualRateBp: 1800,
-          startDate: DateTime(2025, 1, 1),
-          mandatoryPaymentMinor: 5000000,
-          nextPaymentDate: DateTime(2026, 7, 10),
-          paymentType: PaymentType.annuity,
-        ));
-    container.read(ledgerRevisionProvider.notifier).update((n) => n + 1);
-
-    await t.pumpWidget(UncontrolledProviderScope(
-      container: container,
-      child: const MaterialApp(home: Scaffold(body: MortgageSummaryCard())),
+    await t.pumpWidget(MaterialApp(
+      home: Scaffold(body: MortgageSummaryCard(summary: summary)),
     ));
     await t.pumpAndSettle();
 

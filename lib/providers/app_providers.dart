@@ -87,10 +87,13 @@ final dashboardProvider = FutureProvider<DashboardData>((ref) async {
   final accounts =
       await ref.watch(accountRepositoryProvider).list(includeArchived: false);
   final entries = await ref.watch(ledgerRepositoryProvider).allEntries();
-  // Reuses the existing goal/mortgage providers (not raw repositories) so
-  // this stays the single place Home-related repository reads are wired,
-  // per the Velora presentation-architecture boundary: widgets only ever
-  // consume the resulting DashboardData.
+  // Reuses the existing safe-limit/goal/mortgage/budget providers (not raw
+  // repositories) so this stays the single place Home-related repository
+  // reads are wired, per the Velora presentation-architecture boundary:
+  // widgets only ever consume the resulting DashboardData.
+  final safeLimit = await ref.watch(safeLimitProvider.future);
+  final weeklyLimit = await ref.watch(weeklySafeLimitProvider.future);
+  final budgets = await ref.watch(categoryBudgetsProvider.future);
   final goals = await ref.watch(goalsProvider.future);
   final mortgages = await ref.watch(mortgagesProvider.future);
   return buildDashboard(
@@ -99,10 +102,21 @@ final dashboardProvider = FutureProvider<DashboardData>((ref) async {
     primaryCurrency: settings.primaryCurrency,
     periodStartDay: settings.periodStartDay,
     now: DateTime.now(),
+    safeLimit: safeLimit,
+    weeklyLimit: weeklyLimit,
+    overspendCategories: _overspendCategories(budgets),
     primaryGoal: _selectPrimaryGoal(goals),
     mortgageSummary: _selectMortgageSummary(mortgages),
   );
 });
+
+/// The names of categories whose month spend is over their limit (§11.5),
+/// used to explain which category caused an overspend under the safe-limit
+/// hero. Pure; folded into `DashboardData` by `dashboardProvider`.
+List<String> _overspendCategories(List<CategoryBudgetView> views) => views
+    .where((v) => v.monthStatus == CategoryLimitStatus.over)
+    .map((v) => v.category.name)
+    .toList();
 
 /// Picks the Home "primary goal": the active goal with the highest priority
 /// (critical > high > medium > low), tie-broken by the earliest target date

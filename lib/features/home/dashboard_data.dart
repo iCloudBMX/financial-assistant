@@ -1,6 +1,7 @@
 import '../../core/ledger/account.dart';
 import '../../core/ledger/ledger_entry.dart';
 import '../../core/ledger/summary_engine.dart';
+import '../../core/limit/safe_limit_engine.dart';
 import '../../core/money/currency.dart';
 import '../../core/money/money.dart';
 import '../../core/time/financial_period.dart';
@@ -62,6 +63,17 @@ class DashboardData {
   final int? unallocatedEntryId;
   final Money? unallocatedEntryAmount;
 
+  /// Safe-limit view models, resolved by `dashboardProvider` so the Home
+  /// cards consume immutable values instead of watching providers directly.
+  /// Nullable on the pure [buildDashboard] path (which does not compute the
+  /// safe-limit engine); always populated when assembled by the provider.
+  final SafeLimit? safeLimit;
+  final WeeklySafeLimit? weeklyLimit;
+
+  /// Names of variable categories over their monthly limit — the offenders
+  /// line under the safe-limit hero when it is over.
+  final List<String> overspendCategories;
+
   final PrimaryGoalSummary? primaryGoal;
   final MortgageSummaryView? mortgageSummary;
 
@@ -74,6 +86,9 @@ class DashboardData {
     required this.primaryCurrency,
     this.unallocatedEntryId,
     this.unallocatedEntryAmount,
+    this.safeLimit,
+    this.weeklyLimit,
+    this.overspendCategories = const [],
     this.primaryGoal,
     this.mortgageSummary,
   });
@@ -85,6 +100,9 @@ DashboardData buildDashboard({
   required Currency primaryCurrency,
   required int periodStartDay,
   required DateTime now,
+  SafeLimit? safeLimit,
+  WeeklySafeLimit? weeklyLimit,
+  List<String> overspendCategories = const [],
   PrimaryGoalSummary? primaryGoal,
   MortgageSummaryView? mortgageSummary,
 }) {
@@ -97,8 +115,19 @@ DashboardData buildDashboard({
     todaySpent: spentOn(now, entries, primaryCurrency),
     undistributedFunds: undistributed(entries, primaryCurrency),
     primaryCurrency: primaryCurrency,
+    safeLimit: safeLimit,
+    weeklyLimit: weeklyLimit,
+    overspendCategories: overspendCategories,
     unallocatedEntryId: latest?.id,
-    unallocatedEntryAmount: latest?.amount,
+    // The remaining unallocated amount (amount − allocated), NOT the gross
+    // entry amount: this flows into showAllocationChoice →
+    // AllocationRepository.allocateIncome, which rebuilds the entry's
+    // allocation against this base. Passing the gross amount for an already
+    // partially-allocated entry would discard the prior partial allocation.
+    unallocatedEntryAmount: latest == null
+        ? null
+        : Money(latest.amount.minorUnits - latest.allocated.minorUnits,
+            latest.amount.currency),
     primaryGoal: primaryGoal,
     mortgageSummary: mortgageSummary,
   );

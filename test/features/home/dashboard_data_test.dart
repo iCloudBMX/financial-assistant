@@ -65,6 +65,29 @@ void main() {
         const Money(800000 + 2000000, uzs)); // (1,000,000-200,000) + 2,000,000
   });
 
+  test(
+      'unallocatedEntryAmount is the remainder (amount − allocated), not the '
+      'gross amount, when the winning entry is partially allocated', () {
+    final now = DateTime(2026, 7, 18, 12);
+    const acc = Account(id: 1, name: 'A', type: AccountType.cash,
+        openingBalance: Money(0, uzs), icon: 'w', archived: false);
+    final entries = [
+      // The most recent unallocated entry is itself PARTIALLY allocated:
+      // gross 5,000,000 with 2,000,000 already allocated → remainder
+      // 3,000,000. Home must allocate against the remainder, and the alert
+      // must show the remainder, otherwise the prior partial allocation is
+      // silently discarded.
+      LedgerEntry(id: 9, accountId: 1, type: LedgerEntryType.income,
+          amount: const Money(5000000, uzs), allocated: const Money(2000000, uzs),
+          occurredAt: DateTime(2026, 7, 15), incomeType: IncomeType.salary),
+    ];
+    final d = buildDashboard(
+        accounts: [acc], entries: entries, primaryCurrency: uzs,
+        periodStartDay: 1, now: now);
+    expect(d.unallocatedEntryId, 9);
+    expect(d.unallocatedEntryAmount, const Money(3000000, uzs)); // NOT 5,000,000
+  });
+
   test('buildDashboard passes through a provided primary goal and mortgage '
       'summary unchanged', () {
     final now = DateTime(2026, 7, 18, 12);

@@ -103,7 +103,11 @@ class _HomeBody extends ConsumerWidget {
               ref.read(balanceVisibilityProvider.notifier).update((v) => !v),
         ),
         const SizedBox(height: VeloraSpacing.md),
-        const SafeLimitCard(),
+        if (d.safeLimit != null)
+          SafeLimitCard(
+            limit: d.safeLimit!,
+            overspendCategories: d.overspendCategories,
+          ),
         const SizedBox(height: VeloraSpacing.md),
         QuickActionsRow(
           key: const Key('quick-actions-row'),
@@ -146,7 +150,8 @@ class _HomeBody extends ConsumerWidget {
           ),
         ],
         const SizedBox(height: VeloraSpacing.md),
-        const WeeklySafeLimitCard(),
+        if (d.weeklyLimit != null && d.safeLimit != null)
+          WeeklySafeLimitCard(weekly: d.weeklyLimit!, monthly: d.safeLimit!),
         const SizedBox(height: VeloraSpacing.md),
         PrimaryGoalSummaryCard(
           key: const Key('goal-summary-card'),
@@ -161,7 +166,7 @@ class _HomeBody extends ConsumerWidget {
           onCreate: () => showGoalEditSheet(context, ref),
         ),
         const SizedBox(height: VeloraSpacing.md),
-        const MortgageSummaryCard(),
+        MortgageSummaryCard(summary: d.mortgageSummary),
         const SizedBox(height: VeloraSpacing.xl),
         Row(
           children: [
