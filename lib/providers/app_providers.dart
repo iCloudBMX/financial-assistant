@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import '../core/allocation/allocation_models.dart';
 import '../core/budget/category_budget_engine.dart';
+import '../core/goal/goal_engine.dart';
 import '../core/ledger/summary_engine.dart';
 import '../core/limit/safe_limit_engine.dart';
 import '../core/money/money.dart';
@@ -13,6 +14,8 @@ import '../data/budget/budget_repository.dart';
 import '../data/categories/category_model.dart';
 import '../data/categories/category_repository.dart';
 import '../data/db/app_database.dart';
+import '../data/goals/goal_model.dart';
+import '../data/goals/goal_repository.dart';
 import '../data/ledger/ledger_repository.dart';
 import '../data/meta/meta_model.dart';
 import '../data/meta/meta_repository.dart';
@@ -102,6 +105,46 @@ final allocationTemplateProvider = FutureProvider<AllocationTemplate>((ref) {
   return ref.watch(allocationRepositoryProvider).template();
 });
 
+final goalRepositoryProvider = Provider<GoalRepository>(
+  (ref) => DriftGoalRepository(ref.watch(databaseProvider)),
+);
+
+/// A goal paired with its computed progress in the primary currency.
+class GoalWithProgress {
+  final Goal goal;
+  final GoalProgress progress;
+  const GoalWithProgress({required this.goal, required this.progress});
+}
+
+final goalsProvider = FutureProvider<List<GoalWithProgress>>((ref) async {
+  ref.watch(ledgerRevisionProvider);
+  final settings = await ref.watch(settingsProvider.future);
+  final currency = settings.primaryCurrency;
+  final repo = ref.watch(goalRepositoryProvider);
+  final goals = await repo.list();
+  final now = DateTime.now();
+  final out = <GoalWithProgress>[];
+  for (final g in goals) {
+    // TODO(multi-currency): goals in a non-primary currency are out of MVP scope.
+    final savedMinor = await repo.savedFor(g.id);
+    final progress = computeGoalProgress(GoalProgressInputs(
+      saved: Money(savedMinor, currency),
+      target: Money(g.targetAmountMinor, currency),
+      startDate: g.startDate,
+      targetDate: g.targetDate,
+      asOf: now,
+    ));
+    out.add(GoalWithProgress(goal: g, progress: progress));
+  }
+  return out;
+});
+
+final goalContributionsProvider =
+    FutureProvider.family<List<GoalContribution>, int>((ref, goalId) async {
+  ref.watch(ledgerRevisionProvider);
+  return ref.watch(goalRepositoryProvider).contributions(goalId);
+});
+
 /// A category with its spend and status for the month and the week.
 class CategoryBudgetView {
   final Category category;
@@ -178,6 +221,8 @@ final safeLimitProvider = FutureProvider<SafeLimit>((ref) async {
 
   final totals = totalsByCurrency(accounts, entries);
   final totalAvailable = totals[currency] ?? Money.zero(currency);
+  final goalReserveMinor =
+      await ref.watch(goalRepositoryProvider).activeReserveMinor();
 
   final inputs = SafeLimitInputs(
     variableBudget: settings.variableBudget,
@@ -187,7 +232,7 @@ final safeLimitProvider = FutureProvider<SafeLimit>((ref) async {
     minReserve: settings.minReserve.currency == currency
         ? settings.minReserve
         : Money.zero(currency),
-    goalReserves: Money.zero(currency), // SP3 supplies real values
+    goalReserves: Money(goalReserveMinor, currency),
     unpaidMandatory: Money.zero(currency), // SP4 supplies real values
     todaySpent: spentOn(now, entries, currency),
     period: period,
