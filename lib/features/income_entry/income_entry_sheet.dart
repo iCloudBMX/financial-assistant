@@ -8,6 +8,7 @@ import '../../core/theme/velora_tokens.dart';
 import '../../data/recurring/recurring_model.dart';
 import '../../providers/app_providers.dart';
 import '../../ui/components/account_card_picker.dart';
+import '../../ui/components/entry_details_section.dart';
 import '../../ui/components/velora_button.dart';
 import '../../ui/components/velora_money_field.dart';
 import '../../ui/components/velora_sheet.dart';
@@ -100,6 +101,16 @@ class _IncomeEntrySheetBodyState extends ConsumerState<_IncomeEntrySheetBody> {
   bool get _canSave =>
       !_saving && _amount != null && _amount!.minorUnits > 0 && _accountId != null;
 
+  Future<void> _pickDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _occurredAt,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+    );
+    if (picked != null) setState(() => _occurredAt = picked);
+  }
+
   Future<void> _save() async {
     setState(() => _saving = true);
     final controller = ref.read(incomeEntryControllerProvider.notifier);
@@ -178,23 +189,34 @@ class _IncomeEntrySheetBodyState extends ConsumerState<_IncomeEntrySheetBody> {
                 'Har oy/hafta rejaga qo\'shiladi; tasdiqlash so\'ralganda yozib olinadi'),
           ),
           const SizedBox(height: VeloraSpacing.sm),
-          _IncomeDetailsSection(
+          EntryDetailsSection(
             open: _detailsOpen,
             onToggle: () => setState(() => _detailsOpen = !_detailsOpen),
             occurredAt: _occurredAt,
-            onPickDate: () async {
-              final picked = await showDatePicker(
-                context: context,
-                initialDate: _occurredAt,
-                firstDate: DateTime(2000),
-                lastDate: DateTime(2100),
-              );
-              if (picked != null) setState(() => _occurredAt = picked);
-            },
+            onPickDate: _pickDate,
             noteController: _noteCtrl,
-            recurring: _recurring,
-            intervalKind: _intervalKind,
-            onIntervalKindChanged: (v) => setState(() => _intervalKind = v),
+            noteFieldKey: const Key('income-note-field'),
+            extraChildren: [
+              if (_recurring) ...[
+                const SizedBox(height: VeloraSpacing.sm),
+                SegmentedButton<IntervalKind>(
+                  key: const Key('income-interval-kind'),
+                  segments: const [
+                    ButtonSegment(
+                      value: IntervalKind.monthly,
+                      label: Text('Oylik'),
+                    ),
+                    ButtonSegment(
+                      value: IntervalKind.weekly,
+                      label: Text('Haftalik'),
+                    ),
+                  ],
+                  selected: {_intervalKind},
+                  onSelectionChanged: (s) =>
+                      setState(() => _intervalKind = s.first),
+                ),
+              ],
+            ],
           ),
         ],
       ),
@@ -207,84 +229,3 @@ class _IncomeEntrySheetBodyState extends ConsumerState<_IncomeEntrySheetBody> {
   }
 }
 
-/// Date/time, note, and (when recurring) interval settings collapsed behind
-/// "Batafsil", matching the quick-expense optional-detail pattern.
-class _IncomeDetailsSection extends StatelessWidget {
-  const _IncomeDetailsSection({
-    required this.open,
-    required this.onToggle,
-    required this.occurredAt,
-    required this.onPickDate,
-    required this.noteController,
-    required this.recurring,
-    required this.intervalKind,
-    required this.onIntervalKindChanged,
-  });
-
-  final bool open;
-  final VoidCallback onToggle;
-  final DateTime occurredAt;
-  final VoidCallback onPickDate;
-  final TextEditingController noteController;
-  final bool recurring;
-  final IntervalKind intervalKind;
-  final ValueChanged<IntervalKind> onIntervalKindChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        TextButton.icon(
-          onPressed: onToggle,
-          icon: Icon(open ? Icons.expand_less : Icons.expand_more),
-          label: const Text('Batafsil'),
-        ),
-        AnimatedSize(
-          duration: VeloraMotion.standard,
-          curve: Curves.easeOut,
-          alignment: Alignment.topCenter,
-          child: !open
-              ? const SizedBox.shrink()
-              : Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    OutlinedButton.icon(
-                      onPressed: onPickDate,
-                      icon: const Icon(Icons.event_outlined),
-                      label: Text(
-                        '${occurredAt.year}-${occurredAt.month.toString().padLeft(2, '0')}-${occurredAt.day.toString().padLeft(2, '0')}',
-                      ),
-                    ),
-                    const SizedBox(height: VeloraSpacing.sm),
-                    TextField(
-                      key: const Key('income-note-field'),
-                      controller: noteController,
-                      decoration: const InputDecoration(labelText: 'Izoh'),
-                    ),
-                    if (recurring) ...[
-                      const SizedBox(height: VeloraSpacing.sm),
-                      SegmentedButton<IntervalKind>(
-                        key: const Key('income-interval-kind'),
-                        segments: const [
-                          ButtonSegment(
-                            value: IntervalKind.monthly,
-                            label: Text('Oylik'),
-                          ),
-                          ButtonSegment(
-                            value: IntervalKind.weekly,
-                            label: Text('Haftalik'),
-                          ),
-                        ],
-                        selected: {intervalKind},
-                        onSelectionChanged: (s) =>
-                            onIntervalKindChanged(s.first),
-                      ),
-                    ],
-                  ],
-                ),
-        ),
-      ],
-    );
-  }
-}

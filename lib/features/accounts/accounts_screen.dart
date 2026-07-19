@@ -5,6 +5,7 @@ import '../../core/theme/velora_tokens.dart';
 import '../../ui/components/velora_async_state.dart';
 import '../../ui/components/velora_card.dart';
 import 'account_edit_sheet.dart';
+import 'account_labels.dart';
 import 'accounts_controller.dart';
 import 'balance_adjust_sheet.dart';
 import 'transfer_sheet.dart';
@@ -74,7 +75,7 @@ class AccountsScreen extends ConsumerWidget {
                                 style: Theme.of(context).textTheme.titleMedium,
                               ),
                               Text(
-                                _accountTypeLabel(it.account.type),
+                                accountTypeLabel(it.account.type),
                                 style: Theme.of(context).textTheme.bodySmall,
                               ),
                             ],
@@ -101,13 +102,6 @@ class AccountsScreen extends ConsumerWidget {
     );
   }
 }
-
-String _accountTypeLabel(AccountType type) => switch (type) {
-      AccountType.bankCard => 'Bank kartasi',
-      AccountType.cash => 'Naqd pul',
-      AccountType.savings => 'Jamg\'arma',
-      AccountType.other => 'Boshqa hisob',
-    };
 
 IconData _accountIcon(AccountType type) => switch (type) {
       AccountType.bankCard => Icons.credit_card_outlined,

@@ -11,6 +11,23 @@ import '../../ui/components/velora_money_field.dart';
 import '../../ui/components/velora_sheet.dart';
 import 'accounts_controller.dart';
 
+/// Resolves the (from, to) account pair after the user picks [id] for one
+/// side. When the pick collides with the other side, the two live selections
+/// swap so source and destination always stay distinct — correct for any
+/// number of accounts, because it compares the current live [from]/[to], not
+/// the sheet's initial snapshot.
+({int from, int to}) resolveTransferSelection({
+  required bool selectingFrom,
+  required int id,
+  required int from,
+  required int to,
+}) {
+  if (selectingFrom) {
+    return id == to ? (from: id, to: from) : (from: id, to: to);
+  }
+  return id == from ? (from: to, to: id) : (from: from, to: id);
+}
+
 Future<void> showTransferSheet(BuildContext context, WidgetRef ref) async {
   final settings = await ref.read(settingsProvider.future);
   final currency = settings.primaryCurrency;
@@ -72,21 +89,20 @@ class _TransferSheetBodyState extends ConsumerState<_TransferSheetBody> {
   }
 
   void _selectFrom(int id) {
+    final next = resolveTransferSelection(
+        selectingFrom: true, id: id, from: _fromId, to: _toId);
     setState(() {
-      _fromId = id;
-      if (_toId == id) {
-        // Keep source and destination distinct.
-        _toId = _fromId == widget.toId ? widget.fromId : widget.toId;
-      }
+      _fromId = next.from;
+      _toId = next.to;
     });
   }
 
   void _selectTo(int id) {
+    final next = resolveTransferSelection(
+        selectingFrom: false, id: id, from: _fromId, to: _toId);
     setState(() {
-      _toId = id;
-      if (_fromId == id) {
-        _fromId = _toId == widget.fromId ? widget.toId : widget.fromId;
-      }
+      _fromId = next.from;
+      _toId = next.to;
     });
   }
 

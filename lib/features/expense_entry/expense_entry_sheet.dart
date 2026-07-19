@@ -8,6 +8,7 @@ import '../../data/categories/category_model.dart';
 import '../../providers/app_providers.dart';
 import '../../ui/components/account_card_picker.dart';
 import '../../ui/components/category_picker.dart';
+import '../../ui/components/entry_details_section.dart';
 import '../../ui/components/velora_button.dart';
 import '../../ui/components/velora_money_field.dart';
 import '../../ui/components/velora_sheet.dart';
@@ -99,6 +100,16 @@ class _ExpenseEntrySheetBodyState
       !_saving && _amount != null && _amount!.minorUnits > 0 &&
       _categoryId != null && _accountId != null;
 
+  Future<void> _pickDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _occurredAt,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+    );
+    if (picked != null) setState(() => _occurredAt = picked);
+  }
+
   Future<void> _save() async {
     setState(() => _saving = true);
     // Captured before the sheet pops (and this State disposes) so the undo
@@ -165,22 +176,23 @@ class _ExpenseEntrySheetBodyState
             onSelected: (id) => setState(() => _categoryId = id),
           ),
           const SizedBox(height: VeloraSpacing.sm),
-          _DetailsSection(
+          EntryDetailsSection(
             open: _detailsOpen,
             onToggle: () => setState(() => _detailsOpen = !_detailsOpen),
             occurredAt: _occurredAt,
-            onPickDate: () async {
-              final picked = await showDatePicker(
-                context: context,
-                initialDate: _occurredAt,
-                firstDate: DateTime(2000),
-                lastDate: DateTime(2100),
-              );
-              if (picked != null) setState(() => _occurredAt = picked);
-            },
+            onPickDate: _pickDate,
             noteController: _noteCtrl,
-            planned: _planned,
-            onPlannedChanged: (v) => setState(() => _planned = v),
+            noteFieldKey: const Key('expense-note-field'),
+            extraChildren: [
+              const SizedBox(height: VeloraSpacing.sm),
+              SwitchListTile(
+                key: const Key('expense-planned-switch'),
+                contentPadding: EdgeInsets.zero,
+                value: _planned,
+                onChanged: (v) => setState(() => _planned = v),
+                title: const Text('Rejalashtirilgan xarajat'),
+              ),
+            ],
           ),
         ],
       ),
@@ -189,75 +201,6 @@ class _ExpenseEntrySheetBodyState
         loading: _saving,
         onPressed: _canSave ? _save : null,
       ),
-    );
-  }
-}
-
-/// Optional fields (date/time, note, planned flag) collapsed behind
-/// "Batafsil" so quick expense stays fast by default (design spec §6.3).
-class _DetailsSection extends StatelessWidget {
-  const _DetailsSection({
-    required this.open,
-    required this.onToggle,
-    required this.occurredAt,
-    required this.onPickDate,
-    required this.noteController,
-    required this.planned,
-    required this.onPlannedChanged,
-  });
-
-  final bool open;
-  final VoidCallback onToggle;
-  final DateTime occurredAt;
-  final VoidCallback onPickDate;
-  final TextEditingController noteController;
-  final bool planned;
-  final ValueChanged<bool> onPlannedChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        TextButton.icon(
-          onPressed: onToggle,
-          icon: Icon(open ? Icons.expand_less : Icons.expand_more),
-          label: const Text('Batafsil'),
-        ),
-        AnimatedSize(
-          duration: VeloraMotion.standard,
-          curve: Curves.easeOut,
-          alignment: Alignment.topCenter,
-          child: !open
-              ? const SizedBox.shrink()
-              : Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    OutlinedButton.icon(
-                      onPressed: onPickDate,
-                      icon: const Icon(Icons.event_outlined),
-                      label: Text(
-                        '${occurredAt.year}-${occurredAt.month.toString().padLeft(2, '0')}-${occurredAt.day.toString().padLeft(2, '0')}',
-                      ),
-                    ),
-                    const SizedBox(height: VeloraSpacing.sm),
-                    TextField(
-                      key: const Key('expense-note-field'),
-                      controller: noteController,
-                      decoration: const InputDecoration(labelText: 'Izoh'),
-                    ),
-                    const SizedBox(height: VeloraSpacing.sm),
-                    SwitchListTile(
-                      key: const Key('expense-planned-switch'),
-                      contentPadding: EdgeInsets.zero,
-                      value: planned,
-                      onChanged: onPlannedChanged,
-                      title: const Text('Rejalashtirilgan xarajat'),
-                    ),
-                  ],
-                ),
-        ),
-      ],
     );
   }
 }

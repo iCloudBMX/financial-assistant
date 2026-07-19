@@ -8,14 +8,8 @@ import '../../providers/app_providers.dart';
 import '../../ui/components/velora_button.dart';
 import '../../ui/components/velora_money_field.dart';
 import '../../ui/components/velora_sheet.dart';
+import 'account_labels.dart';
 import 'accounts_controller.dart';
-
-const _accountTypeLabels = {
-  AccountType.cash: 'Naqd pul',
-  AccountType.bankCard: 'Bank kartasi',
-  AccountType.savings: 'Jamg\'arma',
-  AccountType.other: 'Boshqa',
-};
 
 Future<void> showAccountEditSheet(BuildContext context, WidgetRef ref) async {
   final settings = await ref.read(settingsProvider.future);
@@ -93,12 +87,12 @@ class _AccountEditSheetBodyState extends ConsumerState<_AccountEditSheetBody> {
             spacing: VeloraSpacing.sm,
             runSpacing: VeloraSpacing.sm,
             children: [
-              for (final entry in _accountTypeLabels.entries)
+              for (final type in accountTypesInDisplayOrder)
                 ChoiceChip(
-                  key: Key('account-type-${entry.key.name}'),
-                  label: Text(entry.value),
-                  selected: _type == entry.key,
-                  onSelected: (_) => setState(() => _type = entry.key),
+                  key: Key('account-type-${type.name}'),
+                  label: Text(accountTypeLabel(type)),
+                  selected: _type == type,
+                  onSelected: (_) => setState(() => _type = type),
                 ),
             ],
           ),

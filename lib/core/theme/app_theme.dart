@@ -20,6 +20,9 @@ ThemeData buildLightTheme() {
     colorScheme: scheme,
     scaffoldBackgroundColor: VeloraColors.blush,
     textTheme: buildTextTheme(scheme),
+    materialTapTargetSize: MaterialTapTargetSize.padded,
+    chipTheme: _veloraChipTheme,
+    segmentedButtonTheme: _veloraSegmentedButtonTheme,
   );
 }
 
@@ -33,5 +36,28 @@ ThemeData buildDarkTheme() {
     colorScheme: scheme,
     scaffoldBackgroundColor: scheme.surface,
     textTheme: buildTextTheme(scheme),
+    materialTapTargetSize: MaterialTapTargetSize.padded,
+    chipTheme: _veloraChipTheme,
+    segmentedButtonTheme: _veloraSegmentedButtonTheme,
   );
 }
+
+/// Chips (income-type, account-type selectors) default to a ~32dp visual
+/// height; combined with the theme-level `MaterialTapTargetSize.padded`, this
+/// padding keeps them comfortably within the 48×48 accessibility minimum.
+const ChipThemeData _veloraChipTheme = ChipThemeData(
+  padding: EdgeInsets.symmetric(
+    horizontal: VeloraSpacing.md,
+    vertical: VeloraSpacing.sm,
+  ),
+);
+
+/// Segmented buttons (income interval kind) are pinned to a 48dp minimum
+/// height so every segment is comfortably tappable.
+const SegmentedButtonThemeData _veloraSegmentedButtonTheme =
+    SegmentedButtonThemeData(
+  style: ButtonStyle(
+    tapTargetSize: MaterialTapTargetSize.padded,
+    minimumSize: WidgetStatePropertyAll(Size(0, 48)),
+  ),
+);

@@ -75,15 +75,20 @@ void main() {
     expect(find.text('Hozir taqsimlash'), findsOneWidget);
   });
 
-  testWidgets('a currency-mismatched account keeps the sheet open and shows an error',
+  testWidgets('Saqlash stays disabled until a positive amount is entered',
       (tester) async {
-    // Only a UZS account exists; forcing a USD amount through the field is
-    // not possible via the formatter (it locks to the account currency), so
-    // this exercises the controller-level guard indirectly by asserting the
-    // save button stays disabled for an empty/invalid amount instead —
-    // real currency-mismatch coverage lives in the controller test.
+    // The money field is bound to the account's currency, so a currency
+    // mismatch is not reachable from this sheet — that guard is covered by
+    // the controller test. What the sheet is responsible for is the
+    // save-enablement gate, asserted honestly here.
     await pumpSheet(tester);
     final saveButton = find.widgetWithText(FilledButton, 'Saqlash');
-    expect(tester.widget<FilledButton>(saveButton).onPressed, isNull);
+    expect(tester.widget<FilledButton>(saveButton).onPressed, isNull,
+        reason: 'disabled with an empty amount');
+
+    await tester.enterText(find.byType(VeloraMoneyField), '5000000');
+    await tester.pumpAndSettle();
+    expect(tester.widget<FilledButton>(saveButton).onPressed, isNotNull,
+        reason: 'enabled once a positive amount is entered');
   });
 }

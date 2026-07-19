@@ -7,9 +7,37 @@ import 'package:financial_assistant/core/ledger/account.dart';
 import 'package:financial_assistant/data/db/app_database.dart';
 import 'package:financial_assistant/providers/app_providers.dart';
 import 'package:financial_assistant/features/accounts/accounts_controller.dart';
+import 'package:financial_assistant/features/accounts/transfer_sheet.dart';
 
 void main() {
   const uzs = CurrencyRegistry.uzs;
+
+  group('resolveTransferSelection', () {
+    test('picking a non-colliding source leaves the destination unchanged', () {
+      final r = resolveTransferSelection(
+          selectingFrom: true, id: 3, from: 1, to: 2);
+      expect(r, (from: 3, to: 2));
+    });
+
+    test('picking the current destination as source swaps the two (3 accounts)',
+        () {
+      // from=A(1), to=B(2); user picks B(2) as the source. Naive "reset to
+      // the initial snapshot" logic could re-collide with a third account;
+      // the live-state swap must move the destination to the previous source.
+      final r = resolveTransferSelection(
+          selectingFrom: true, id: 2, from: 1, to: 2);
+      expect(r, (from: 2, to: 1));
+    });
+
+    test('picking the current source as destination swaps the two (3 accounts)',
+        () {
+      // from=B(2), to=C(3); user picks B(2) as the destination.
+      final r = resolveTransferSelection(
+          selectingFrom: false, id: 2, from: 2, to: 3);
+      expect(r, (from: 3, to: 2));
+      expect(r.from == r.to, isFalse);
+    });
+  });
 
   ProviderContainer makeContainer() {
     final db = AppDatabase(NativeDatabase.memory());
