@@ -2,6 +2,7 @@ import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:financial_assistant/core/mortgage/mortgage_engine.dart';
 import 'package:financial_assistant/data/db/app_database.dart';
 import 'package:financial_assistant/features/mortgage/mortgage_edit_sheet.dart';
 import 'package:financial_assistant/providers/app_providers.dart';
@@ -31,6 +32,18 @@ void main() {
     ));
 
     await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+
+    // Differential is not user-selectable until the endDate picker lands
+    // (SP5); the payment-type dropdown defaults to Annuitet and Individual
+    // remains available.
+    expect(find.text('Differensial'), findsNothing);
+    expect(find.text('Annuitet'), findsOneWidget);
+    await tester.tap(find.byType(DropdownButtonFormField<PaymentType>));
+    await tester.pumpAndSettle();
+    expect(find.text('Differensial'), findsNothing);
+    expect(find.text('Individual'), findsOneWidget);
+    await tester.tapAt(const Offset(1, 1)); // close dropdown overlay
     await tester.pumpAndSettle();
 
     await tester.enterText(find.byKey(const Key('mortgage-name')), 'Uy');

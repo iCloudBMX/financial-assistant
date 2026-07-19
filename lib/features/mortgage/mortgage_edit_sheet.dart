@@ -114,6 +114,7 @@ class _MortgageEditSheetState extends ConsumerState<_MortgageEditSheet> {
     final res = e == null
         ? await ctrl.create(draft)
         : await ctrl.update(e.id, draft);
+    if (!mounted) return;
     if (!res.isOk) {
       setState(() => _error = 'Saqlashda xatolik');
       return;
@@ -165,8 +166,6 @@ class _MortgageEditSheetState extends ConsumerState<_MortgageEditSheet> {
             items: const [
               DropdownMenuItem(
                   value: PaymentType.annuity, child: Text('Annuitet')),
-              DropdownMenuItem(
-                  value: PaymentType.differential, child: Text('Differensial')),
               DropdownMenuItem(
                   value: PaymentType.custom, child: Text('Individual')),
             ],

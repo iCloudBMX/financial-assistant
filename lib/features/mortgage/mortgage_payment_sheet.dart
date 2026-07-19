@@ -59,6 +59,7 @@ class _PaymentSheetState extends ConsumerState<_PaymentSheet> {
           split: split,
           accountId: accId,
         );
+    if (!mounted) return;
     if (!res.isOk) {
       setState(() => _error = 'Qismlar umumiy summaga teng bo\'lishi kerak');
       return;

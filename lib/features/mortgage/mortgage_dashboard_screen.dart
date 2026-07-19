@@ -49,7 +49,7 @@ class MortgageDashboardScreen extends ConsumerWidget {
                   style: Theme.of(context).textTheme.headlineSmall),
               const SizedBox(height: 8),
               _row('Joriy qarz qoldig\'i', money(m.currentPrincipalMinor).format()),
-              _row('Yillik foiz', '${(m.mortgage.annualRateBp / 100).toStringAsFixed(2)}%'),
+              _row('Yillik foiz', '${m.mortgage.annualRateBp ~/ 100}.${(m.mortgage.annualRateBp % 100).toString().padLeft(2, '0')}%'),
               _row('Navbatdagi to\'lov', money(m.mortgage.mandatoryPaymentMinor).format()),
               _row('Navbatdagi sana',
                   m.mortgage.nextPaymentDate.toString().split(' ').first),
