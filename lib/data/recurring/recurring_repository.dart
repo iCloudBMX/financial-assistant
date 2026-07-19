@@ -18,6 +18,11 @@ abstract class RecurringIncomeRepository {
   Future<List<RecurringIncomePlan>> listActive();
   Future<List<RecurringIncomePlan>> duePlans(DateTime asOf);
   Future<void> markConfirmed(int id);
+
+  /// Moves this plan's due date to an explicit [newDueAt] without advancing a
+  /// whole period (postpone this occurrence, distinct from skip). The anchor
+  /// day is untouched, so the following occurrence still derives from it.
+  Future<void> postponeTo(int id, DateTime newDueAt);
   Future<void> deactivate(int id);
 }
 
@@ -92,6 +97,13 @@ class DriftRecurringIncomeRepository implements RecurringIncomeRepository {
     await (db.update(db.recurringIncomePlansTable)
           ..where((t) => t.id.equals(id)))
         .write(RecurringIncomePlansTableCompanion(nextDueAt: Value(next)));
+  }
+
+  @override
+  Future<void> postponeTo(int id, DateTime newDueAt) async {
+    await (db.update(db.recurringIncomePlansTable)
+          ..where((t) => t.id.equals(id)))
+        .write(RecurringIncomePlansTableCompanion(nextDueAt: Value(newDueAt)));
   }
 
   @override

@@ -43,6 +43,10 @@ class _ThrowingRecurringIncomeRepository implements RecurringIncomeRepository {
   Future<void> markConfirmed(int id) => _delegate.markConfirmed(id);
 
   @override
+  Future<void> postponeTo(int id, DateTime newDueAt) =>
+      _delegate.postponeTo(id, newDueAt);
+
+  @override
   Future<void> deactivate(int id) => _delegate.deactivate(id);
 }
 

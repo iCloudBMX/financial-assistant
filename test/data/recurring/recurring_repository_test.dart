@@ -62,5 +62,14 @@ void main() {
       final active = await repo.listActive();
       expect(active.single.nextDueAt, DateTime(2026, 8, 5));
     });
+
+    test('postponeTo sets nextDueAt to the given date without advancing a period',
+        () async {
+      final id = await repo.create(accountId: accountId, amount: const Money(5000000, uzs), incomeType: IncomeType.salary, intervalKind: IntervalKind.monthly, anchorDay: 5, nextDueAt: DateTime(2026, 7, 5));
+      await repo.postponeTo(id, DateTime(2026, 7, 20));
+      final active = await repo.listActive();
+      expect(active.single.nextDueAt, DateTime(2026, 7, 20)); // exact chosen date
+      expect(active.single.anchorDay, 5); // anchor untouched
+    });
   });
 }
