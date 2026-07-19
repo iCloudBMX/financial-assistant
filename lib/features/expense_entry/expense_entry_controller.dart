@@ -59,7 +59,10 @@ class ExpenseEntryController extends AsyncNotifier<ExpenseEntryState> {
     );
   }
 
-  Future<void> save({
+  /// Persists an expense and returns the new entry id, or `null` when nothing
+  /// was written (non-positive amount, or no account to book it against). The
+  /// caller MUST treat a `null` return as "not saved" and never report success.
+  Future<int?> save({
     required Money amount,
     required int categoryId,
     int? accountId,
@@ -67,9 +70,9 @@ class ExpenseEntryController extends AsyncNotifier<ExpenseEntryState> {
     String? note,
     bool? planned,
   }) async {
-    if (amount.minorUnits <= 0) return;
+    if (amount.minorUnits <= 0) return null;
     final accId = accountId ?? state.value?.defaultAccountId;
-    if (accId == null) return;
+    if (accId == null) return null;
     final id = await ref.read(ledgerRepositoryProvider).addExpense(
         accountId: accId, amount: amount, categoryId: categoryId,
         occurredAt: occurredAt ?? DateTime.now(), note: note, planned: planned);
@@ -77,6 +80,7 @@ class ExpenseEntryController extends AsyncNotifier<ExpenseEntryState> {
     await future; // rebuild default/quick-pick
     state = AsyncData(
         (state.value ?? const ExpenseEntryState()).copyWith(lastSavedEntryId: id));
+    return id;
   }
 
   Future<void> undo() async {

@@ -47,6 +47,38 @@ void main() {
     expect(after.totals[uzs], const Money(1000000, uzs));
   });
 
+  test('save no-ops and returns null when there is no account', () async {
+    final db = AppDatabase(NativeDatabase.memory());
+    addTearDown(db.close);
+    final c = ProviderContainer(overrides: [databaseProvider.overrideWithValue(db)]);
+    addTearDown(c.dispose);
+
+    // No account created — a fresh user straight after onboarding.
+    final st = await c.read(expenseEntryControllerProvider.future);
+    expect(st.defaultAccountId, isNull);
+
+    final id = await c.read(expenseEntryControllerProvider.notifier)
+        .save(amount: const Money(250000, uzs), categoryId: 1);
+    expect(id, isNull, reason: 'no account => nothing persisted, no false success');
+    expect(await c.read(ledgerRepositoryProvider).allEntries(), isEmpty);
+  });
+
+  test('save returns the new entry id on success', () async {
+    final db = AppDatabase(NativeDatabase.memory());
+    addTearDown(db.close);
+    final c = ProviderContainer(overrides: [databaseProvider.overrideWithValue(db)]);
+    addTearDown(c.dispose);
+
+    await c.read(accountRepositoryProvider).create(
+        name: 'Naqd', type: AccountType.cash,
+        openingBalance: const Money(1000000, uzs), icon: 'w');
+    await c.read(expenseEntryControllerProvider.future);
+
+    final id = await c.read(expenseEntryControllerProvider.notifier)
+        .save(amount: const Money(250000, uzs), categoryId: 1);
+    expect(id, isNotNull);
+  });
+
   test('save rejects a non-positive amount and leaves the balance unchanged',
       () async {
     final db = AppDatabase(NativeDatabase.memory());
