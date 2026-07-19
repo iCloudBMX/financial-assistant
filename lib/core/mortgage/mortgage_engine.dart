@@ -200,7 +200,7 @@ ScenarioResult computeScenario({
   );
 
   final requiredMonthly = type == PaymentType.differential
-      ? monthlyPrincipalMinor + extra
+      ? monthlyPrincipalMinor + extra + monthlyInterestMinor(startBalance, annualRateBp)
       : monthlyPaymentMinor + extra;
 
   return ScenarioResult(
@@ -285,7 +285,8 @@ MortgageProjection applyExtraPayment({
     monthlyPaymentMinor: monthlyPaymentMinor,
     monthlyPrincipalMinor: monthlyPrincipalMinor,
     asOf: asOf,
-    isApproximate: strategy == PayoffStrategy.unclear,
+    isApproximate: strategy == PayoffStrategy.unclear
+        || (strategy == PayoffStrategy.lowerPayment && type == PaymentType.differential),
   );
 }
 

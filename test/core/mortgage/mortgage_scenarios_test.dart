@@ -102,4 +102,46 @@ void main() {
     expect(p.neverCloses, isFalse);
     expect(p.monthsRemaining, lessThanOrEqualTo(12));
   });
+
+  test('differential requiredMonthly includes first-month interest', () {
+    final res = computeScenario(
+      kind: ScenarioKind.mandatoryOnly,
+      currentPrincipalMinor: 1000000,
+      annualRateBp: 1200,
+      type: PaymentType.differential,
+      monthlyPaymentMinor: 0,
+      monthlyPrincipalMinor: 100000,
+      asOf: asOf,
+    );
+    // first-month interest on 1_000_000 at 1200bp = 10_000
+    // requiredMonthly = 100_000 principal + 0 extra + 10_000 interest = 110_000
+    expect(res.requiredMonthlyMinor, 110000);
+    expect(res.requiredMonthlyMinor, greaterThan(100000));
+  });
+
+  test('differential lowerPayment is approximate; shortenTerm is not', () {
+    final lower = applyExtraPayment(
+      currentPrincipalMinor: 1000000,
+      extraMinor: 300000,
+      annualRateBp: 1200,
+      type: PaymentType.differential,
+      monthlyPaymentMinor: 0,
+      monthlyPrincipalMinor: 100000,
+      strategy: PayoffStrategy.lowerPayment,
+      asOf: asOf,
+    );
+    expect(lower.isApproximate, isTrue);
+
+    final shorten = applyExtraPayment(
+      currentPrincipalMinor: 1000000,
+      extraMinor: 300000,
+      annualRateBp: 1200,
+      type: PaymentType.differential,
+      monthlyPaymentMinor: 0,
+      monthlyPrincipalMinor: 100000,
+      strategy: PayoffStrategy.shortenTerm,
+      asOf: asOf,
+    );
+    expect(shorten.isApproximate, isFalse);
+  });
 }
