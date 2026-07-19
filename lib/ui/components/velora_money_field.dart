@@ -38,7 +38,7 @@ class VeloraMoneyField extends StatelessWidget {
           excludeSemantics: true,
           child: Text(label),
         ),
-        suffixText: currency.symbol,
+        suffix: ExcludeSemantics(child: Text(currency.symbol)),
       ),
       onChanged: (value) {
         onChanged?.call(parseMoneyInput(value, currency));

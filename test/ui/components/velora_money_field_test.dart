@@ -52,7 +52,7 @@ void main() {
     );
 
     await tester.enterText(find.byType(TextField), '1250000');
-    await tester.pump();
+    await tester.pumpAndSettle();
 
     final node = tester.getSemantics(find.byType(EditableText));
     final data = node.getSemanticsData();
@@ -64,6 +64,25 @@ void main() {
     expect(data.hasAction(SemanticsAction.setSelection), isTrue);
     expect(find.bySemanticsLabel('Summa, UZS'), findsOneWidget);
     expect(find.bySemanticsLabel('Summa'), findsNothing);
+
+    final semanticsTraversal = tester.semantics
+        .simulatedAccessibilityTraversal()
+        .toList();
+    final currencyAnnouncements = semanticsTraversal
+        .map((node) => node.label)
+        .where(
+          (label) =>
+              label.contains(CurrencyRegistry.uzs.code) ||
+              label.contains(CurrencyRegistry.uzs.symbol),
+        )
+        .toList();
+    expect(currencyAnnouncements, <String>['Summa, UZS']);
+    expect(
+      semanticsTraversal.where(
+        (node) => node.label == CurrencyRegistry.uzs.symbol,
+      ),
+      isEmpty,
+    );
   });
 
   testWidgets('reports empty input as null and zero as money', (tester) async {
