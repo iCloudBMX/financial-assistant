@@ -43,6 +43,7 @@ class _ExtraSheetState extends ConsumerState<_ExtraSheet> {
   Future<void> _save() async {
     final amount = Money.tryParse(_amount.text, _uzs);
     final accounts = await ref.read(accountRepositoryProvider).list();
+    if (!mounted) return;
     if (amount == null || amount.minorUnits <= 0 || accounts.isEmpty) {
       setState(() => _error = 'Summani kiriting');
       return;
@@ -52,6 +53,7 @@ class _ExtraSheetState extends ConsumerState<_ExtraSheet> {
           amount: amount,
           accountId: accounts.first.id,
         );
+    if (!mounted) return;
     if (!res.isOk) {
       setState(() => _error = 'Xatolik');
       return;
@@ -79,6 +81,7 @@ class _ExtraSheetState extends ConsumerState<_ExtraSheet> {
         annualRateBp: item.mortgage.annualRateBp,
         type: item.mortgage.paymentType,
         monthlyPaymentMinor: item.mortgage.mandatoryPaymentMinor,
+        monthlyPrincipalMinor: item.monthlyPrincipalMinor,
         strategy: item.mortgage.payoffStrategy,
         asOf: DateTime.now(),
       );

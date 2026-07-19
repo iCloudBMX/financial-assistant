@@ -162,12 +162,14 @@ class MortgageWithProjection {
   final MortgageTotals totals;
   final MortgageProjection projection;
   final int completionBp; // 0..10000 vs initialLoan
+  final int monthlyPrincipalMinor; // fixed differential principal (0 otherwise)
   const MortgageWithProjection({
     required this.mortgage,
     required this.currentPrincipalMinor,
     required this.totals,
     required this.projection,
     required this.completionBp,
+    required this.monthlyPrincipalMinor,
   });
 }
 
@@ -182,13 +184,16 @@ final mortgagesProvider =
     // TODO(multi-currency): mortgages in a non-primary currency are out of MVP scope.
     final balance = await repo.currentPrincipalMinor(m.id);
     final totals = await repo.totals(m.id);
+    // differential fixed principal ≈ opening / calendar-months of the term.
+    // Captured once so the baseline projection AND any later recalc preview
+    // (via MortgageWithProjection.monthlyPrincipalMinor) use identical inputs.
+    final diffPrincipal = _differentialPrincipal(m);
     final projection = projectPayoff(
       currentPrincipalMinor: balance,
       annualRateBp: m.annualRateBp,
       type: m.paymentType,
       monthlyPaymentMinor: m.mandatoryPaymentMinor,
-      // differential fixed principal ≈ opening / calendar-months of the term
-      monthlyPrincipalMinor: _differentialPrincipal(m),
+      monthlyPrincipalMinor: diffPrincipal,
       asOf: now,
       isApproximate: m.paymentType == PaymentType.custom,
     );
@@ -202,6 +207,7 @@ final mortgagesProvider =
       totals: totals,
       projection: projection,
       completionBp: completionBp,
+      monthlyPrincipalMinor: diffPrincipal,
     ));
   }
   return out;
