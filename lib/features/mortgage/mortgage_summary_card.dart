@@ -23,7 +23,10 @@ class MortgageSummaryCard extends ConsumerWidget {
           child: ListTile(
             title: const Text('Ipoteka'),
             subtitle: Text(
-                '${m.mortgage.name} • ${Money(m.currentPrincipalMinor, cur).format()}'),
+                '${m.mortgage.name} • ${Money(m.currentPrincipalMinor, cur).format()}\n'
+                'Navbatdagi to\'lov: ${Money(m.mortgage.mandatoryPaymentMinor, cur).format()}'
+                ' (${m.mortgage.nextPaymentDate.toString().split(' ').first})'),
+            isThreeLine: true,
             trailing: Text('${(m.completionBp / 100).toStringAsFixed(0)}%'),
             onTap: open,
           ),
