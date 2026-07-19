@@ -33,8 +33,14 @@ int monthlyInterestMinor(int balanceMinor, int annualRateBp) {
   return (balanceMinor * annualRateBp + 60000) ~/ 120000;
 }
 
-DateTime _addMonths(DateTime from, int months) =>
-    DateTime(from.year, from.month + months, from.day);
+DateTime _addMonths(DateTime from, int months) {
+  final totalMonths = from.month - 1 + months;
+  final year = from.year + totalMonths ~/ 12;
+  final month = totalMonths % 12 + 1;
+  final lastDay = DateTime(year, month + 1, 0).day; // day 0 of next month = last day of this month
+  final day = from.day < lastDay ? from.day : lastDay;
+  return DateTime(year, month, day);
+}
 
 /// Amortize [currentPrincipalMinor] forward to zero. For [PaymentType.annuity]
 /// and [PaymentType.custom] the fixed total is [monthlyPaymentMinor] (custom is

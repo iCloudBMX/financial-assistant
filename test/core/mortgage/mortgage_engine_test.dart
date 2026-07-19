@@ -66,4 +66,23 @@ void main() {
     expect(p.payoffDate, DateTime(2026, 11, 1));
     expect(p.neverCloses, isFalse);
   });
+
+  test('payoffDate clamps to last day of month when asOf is a month-end', () {
+    // asOf Jan 31 + 10 months (differential, 100_000/mo on 1_000_000).
+    // Target month is November (30 days); day 31 must clamp to 30, NOT
+    // overflow into December. payoffDate must stay in the projected month
+    // consistent with monthsRemaining = 10.
+    final p = projectPayoff(
+      currentPrincipalMinor: 1000000,
+      annualRateBp: 1800,
+      type: PaymentType.differential,
+      monthlyPaymentMinor: 0,
+      monthlyPrincipalMinor: 100000,
+      asOf: DateTime(2026, 1, 31),
+    );
+    expect(p.monthsRemaining, 10);
+    expect(p.payoffDate, DateTime(2026, 11, 30));
+    expect(p.payoffDate!.month, 11); // did not overflow into December
+    expect(p.neverCloses, isFalse);
+  });
 }
