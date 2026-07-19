@@ -16,7 +16,17 @@ class MortgageSummaryCard extends ConsumerWidget {
       data: (list) {
         void open() => Navigator.of(context).push(MaterialPageRoute(
             builder: (_) => const MortgageDashboardScreen()));
-        if (list.isEmpty) return const SizedBox.shrink();
+        if (list.isEmpty) {
+          return Card(
+            child: ListTile(
+              leading: const Icon(Icons.account_balance),
+              title: const Text('Ipoteka'),
+              subtitle: const Text('Ipoteka qo\'shish'),
+              trailing: const Icon(Icons.add),
+              onTap: open,
+            ),
+          );
+        }
         final m = list.first;
         final cur = CurrencyRegistry.byCode(m.mortgage.currencyCode);
         return Card(
