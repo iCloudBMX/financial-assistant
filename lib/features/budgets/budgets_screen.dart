@@ -8,6 +8,11 @@ import '../../providers/app_providers.dart';
 import '../allocation/allocation_template_screen.dart';
 import 'budgets_controller.dart';
 
+String categoryKindLabel(CategoryKind k) => switch (k) {
+      CategoryKind.mandatory => 'majburiy',
+      CategoryKind.variable => 'o‘zgaruvchan',
+    };
+
 String budgetStatusLabel(CategoryLimitStatus s) => switch (s) {
       CategoryLimitStatus.noLimit => 'limitsiz',
       CategoryLimitStatus.safe => 'xavfsiz',
@@ -108,20 +113,42 @@ class _CategoryBudgetTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = view.category;
+    final cs = Theme.of(context).colorScheme;
+    final weekColor = budgetStatusColor(view.weekStatus, cs);
     return ListTile(
       leading: Icon(budgetStatusIcon(view.monthStatus), color: color),
       title: Text(c.name),
-      subtitle: Text(
-        '${budgetStatusLabel(view.monthStatus)} · '
-        'sarflangan ${view.monthSpent.format()}'
-        '${c.monthlyLimitMinor == null ? '' : ' / ${Money(c.monthlyLimitMinor!, view.monthSpent.currency).format()}'}',
-        style: TextStyle(color: color),
+      subtitle: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '${budgetStatusLabel(view.monthStatus)} · '
+            'sarflangan ${view.monthSpent.format()}'
+            '${c.monthlyLimitMinor == null ? '' : ' / ${Money(c.monthlyLimitMinor!, view.monthSpent.currency).format()}'}',
+            style: TextStyle(color: color),
+          ),
+          if (c.weeklyLimitMinor != null)
+            Text(
+              '${budgetStatusLabel(view.weekStatus)} (hafta) · '
+              'sarflangan ${view.weekSpent.format()} / '
+              '${Money(c.weeklyLimitMinor!, view.weekSpent.currency).format()}',
+              style: TextStyle(color: weekColor),
+            ),
+        ],
       ),
       trailing: Wrap(
+        crossAxisAlignment: WrapCrossAlignment.center,
         spacing: 4,
         children: [
-          if (c.kind == CategoryKind.mandatory)
-            const Chip(label: Text('majburiy')),
+          ActionChip(
+            label: Text(categoryKindLabel(c.kind)),
+            onPressed: () => controller.setKind(
+              c.id,
+              c.kind == CategoryKind.mandatory
+                  ? CategoryKind.variable
+                  : CategoryKind.mandatory,
+            ),
+          ),
           IconButton(
             icon: const Icon(Icons.edit_outlined),
             onPressed: () => _editLimit(context),
@@ -133,7 +160,7 @@ class _CategoryBudgetTile extends StatelessWidget {
 
   Future<void> _editLimit(BuildContext context) async {
     final currency = view.monthSpent.currency;
-    final result = await showModalBottomSheet<Money?>(
+    final result = await showModalBottomSheet<_LimitEditResult>(
       context: context,
       isScrollControlled: true,
       builder: (_) => _LimitEditSheet(
@@ -141,12 +168,47 @@ class _CategoryBudgetTile extends StatelessWidget {
         currency: currency,
       ),
     );
-    if (result != null) {
-      // A sentinel of Money(-1) means "clear"; see _LimitEditSheet.
-      await controller.setMonthlyLimit(
-          view.category.id, result.minorUnits < 0 ? null : result);
-    }
+    if (result == null) return;
+    await _applyLimitEdit(
+        result.monthly, (m) => controller.setMonthlyLimit(view.category.id, m));
+    await _applyLimitEdit(
+        result.weekly, (m) => controller.setWeeklyLimit(view.category.id, m));
   }
+
+  Future<void> _applyLimitEdit(
+      _LimitEdit edit, Future<void> Function(Money?) setter) {
+    return switch (edit) {
+      _LimitSet(:final value) => setter(value),
+      _LimitClear() => setter(null),
+      _LimitKeep() => Future.value(),
+    };
+  }
+}
+
+/// What to do with one limit field on save: keep the current value
+/// (unparseable/garbage input — never silently corrupt data), clear it
+/// (field left empty), or set it to a new parsed [Money].
+sealed class _LimitEdit {
+  const _LimitEdit();
+}
+
+class _LimitKeep extends _LimitEdit {
+  const _LimitKeep();
+}
+
+class _LimitClear extends _LimitEdit {
+  const _LimitClear();
+}
+
+class _LimitSet extends _LimitEdit {
+  final Money value;
+  const _LimitSet(this.value);
+}
+
+class _LimitEditResult {
+  final _LimitEdit monthly;
+  final _LimitEdit weekly;
+  const _LimitEditResult({required this.monthly, required this.weekly});
 }
 
 class _LimitEditSheet extends StatefulWidget {
@@ -158,16 +220,45 @@ class _LimitEditSheet extends StatefulWidget {
 }
 
 class _LimitEditSheetState extends State<_LimitEditSheet> {
-  late final TextEditingController _ctrl = TextEditingController(
-    // Symbol-less numeric form so an unchanged field re-parses to the same
-    // limit; format() would embed the currency symbol, which tryParse
-    // rejects → "Saqlash" unedited would fall back to the clear sentinel and
-    // silently wipe an existing limit (data loss).
+  // Symbol-less numeric form so an unchanged field re-parses to the same
+  // limit; format() would embed the currency symbol, which tryParse
+  // rejects → "Saqlash" unedited would otherwise silently wipe an existing
+  // limit (data loss) — seed with formatNumber(), never format().
+  late final TextEditingController _monthlyCtrl = TextEditingController(
     text: widget.category.monthlyLimitMinor == null
         ? ''
         : Money(widget.category.monthlyLimitMinor!, widget.currency)
             .formatNumber(),
   );
+  late final TextEditingController _weeklyCtrl = TextEditingController(
+    text: widget.category.weeklyLimitMinor == null
+        ? ''
+        : Money(widget.category.weeklyLimitMinor!, widget.currency)
+            .formatNumber(),
+  );
+
+  @override
+  void dispose() {
+    _monthlyCtrl.dispose();
+    _weeklyCtrl.dispose();
+    super.dispose();
+  }
+
+  _LimitEdit _resolve(String text) {
+    if (text.trim().isEmpty) return const _LimitClear();
+    final m = Money.tryParse(text, widget.currency);
+    return m == null ? const _LimitKeep() : _LimitSet(m);
+  }
+
+  void _save() {
+    Navigator.pop(
+      context,
+      _LimitEditResult(
+        monthly: _resolve(_monthlyCtrl.text),
+        weekly: _resolve(_weeklyCtrl.text),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -182,36 +273,30 @@ class _LimitEditSheetState extends State<_LimitEditSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('${widget.category.name} — oylik limit',
+          Text('${widget.category.name} — limitlar',
               style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 12),
           TextField(
-            controller: _ctrl,
+            controller: _monthlyCtrl,
             keyboardType: TextInputType.number,
-            decoration:
-                const InputDecoration(labelText: 'Summa (bo‘sh = limitsiz)'),
+            decoration: const InputDecoration(
+              labelText: 'Oylik limit',
+              helperText: 'Bo‘sh = limitsiz',
+            ),
           ),
           const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () =>
-                      Navigator.pop(context, Money(-1, widget.currency)),
-                  child: const Text('Limitni olib tashlash'),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: FilledButton(
-                  onPressed: () {
-                    final m = Money.tryParse(_ctrl.text, widget.currency);
-                    Navigator.pop(context, m ?? Money(-1, widget.currency));
-                  },
-                  child: const Text('Saqlash'),
-                ),
-              ),
-            ],
+          TextField(
+            controller: _weeklyCtrl,
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(
+              labelText: 'Haftalik limit',
+              helperText: 'Bo‘sh = limitsiz',
+            ),
+          ),
+          const SizedBox(height: 12),
+          FilledButton(
+            onPressed: _save,
+            child: const Text('Saqlash'),
           ),
         ],
       ),

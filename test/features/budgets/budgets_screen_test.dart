@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:financial_assistant/core/money/currency.dart';
 import 'package:financial_assistant/core/money/money.dart';
+import 'package:financial_assistant/data/categories/category_model.dart';
 import 'package:financial_assistant/data/db/app_database.dart';
 import 'package:financial_assistant/providers/app_providers.dart';
 import 'package:financial_assistant/features/budgets/budgets_controller.dart';
@@ -49,5 +50,66 @@ void main() {
     expect(
         views.firstWhere((v) => v.category.id == 1).category.monthlyLimitMinor,
         500000);
+  });
+
+  testWidgets(
+      'tapping the kind chip toggles mandatory/o‘zgaruvchan and is reflected '
+      'via categoryBudgetsProvider', (tester) async {
+    final db = AppDatabase(NativeDatabase.memory());
+    addTearDown(db.close);
+    final container = ProviderContainer(
+        overrides: [databaseProvider.overrideWithValue(db)]);
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(UncontrolledProviderScope(
+      container: container,
+      child: const MaterialApp(home: BudgetsScreen()),
+    ));
+    await tester.pumpAndSettle();
+
+    // Category 1 (Oziq-ovqat) is `variable` by default.
+    expect(find.text('o‘zgaruvchan'), findsWidgets);
+
+    await tester.tap(find.text('o‘zgaruvchan').first);
+    await tester.pumpAndSettle();
+
+    final views = await container.read(categoryBudgetsProvider.future);
+    expect(views.firstWhere((v) => v.category.id == 1).category.kind,
+        CategoryKind.mandatory);
+    expect(find.text('majburiy'), findsWidgets);
+  });
+
+  testWidgets(
+      'setting a weekly limit via the sheet persists it and leaves the '
+      'unedited monthly limit untouched', (tester) async {
+    final db = AppDatabase(NativeDatabase.memory());
+    addTearDown(db.close);
+    final container = ProviderContainer(
+        overrides: [databaseProvider.overrideWithValue(db)]);
+    addTearDown(container.dispose);
+
+    await container
+        .read(budgetsControllerProvider)
+        .setMonthlyLimit(1, const Money(500000, uzs));
+
+    await tester.pumpWidget(UncontrolledProviderScope(
+      container: container,
+      child: const MaterialApp(home: BudgetsScreen()),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byIcon(Icons.edit_outlined).first);
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+        find.widgetWithText(TextField, 'Haftalik limit'), '20 000');
+    await tester.tap(find.text('Saqlash'));
+    await tester.pumpAndSettle();
+
+    final views =
+        await container.read(categoryBudgetsProvider.future);
+    final cat1 = views.firstWhere((v) => v.category.id == 1).category;
+    expect(cat1.monthlyLimitMinor, 500000, reason: 'unedited, preserved');
+    expect(cat1.weeklyLimitMinor, 20000);
   });
 }
