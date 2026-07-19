@@ -104,3 +104,215 @@ MortgageProjection projectPayoff({
     isApproximate: isApproximate,
   );
 }
+
+/// The §13.6 scenarios.
+enum ScenarioKind { mandatoryOnly, fixedExtraMonthly, oneTimeExtra, allRemainingIncome }
+
+/// One §13.6 scenario row, measured against the mandatory-only baseline.
+class ScenarioResult {
+  final ScenarioKind kind;
+  final DateTime? payoffDate;
+  final int monthsRemaining;
+  final int totalInterestMinor;
+  final int interestSavedMinor; // baseline interest − this interest (>=0)
+  final int monthsSaved; // baseline months − this months (>=0)
+  final int requiredMonthlyMinor; // total monthly outlay for this scenario
+  final bool neverCloses;
+  final bool isApproximate;
+  const ScenarioResult({
+    required this.kind,
+    required this.payoffDate,
+    required this.monthsRemaining,
+    required this.totalInterestMinor,
+    required this.interestSavedMinor,
+    required this.monthsSaved,
+    required this.requiredMonthlyMinor,
+    required this.neverCloses,
+    required this.isApproximate,
+  });
+}
+
+int _max0(int v) => v < 0 ? 0 : v;
+
+/// Project with an optional recurring [extraMonthlyMinor] added to the annuity
+/// principal each month (differential just adds it to the fixed principal).
+MortgageProjection _projectWithExtra({
+  required int principalMinor,
+  required int annualRateBp,
+  required PaymentType type,
+  required int monthlyPaymentMinor,
+  required int monthlyPrincipalMinor,
+  required int extraMonthlyMinor,
+  required DateTime asOf,
+}) =>
+    projectPayoff(
+      currentPrincipalMinor: principalMinor,
+      annualRateBp: annualRateBp,
+      type: type,
+      monthlyPaymentMinor: monthlyPaymentMinor + extraMonthlyMinor,
+      monthlyPrincipalMinor: monthlyPrincipalMinor + extraMonthlyMinor,
+      asOf: asOf,
+    );
+
+ScenarioResult computeScenario({
+  required ScenarioKind kind,
+  required int currentPrincipalMinor,
+  required int annualRateBp,
+  required PaymentType type,
+  required int monthlyPaymentMinor,
+  int monthlyPrincipalMinor = 0,
+  int extraMonthlyMinor = 0,
+  int oneTimeExtraMinor = 0,
+  int remainingIncomeMinor = 0,
+  required DateTime asOf,
+}) {
+  final baseline = _projectWithExtra(
+    principalMinor: currentPrincipalMinor,
+    annualRateBp: annualRateBp,
+    type: type,
+    monthlyPaymentMinor: monthlyPaymentMinor,
+    monthlyPrincipalMinor: monthlyPrincipalMinor,
+    extraMonthlyMinor: 0,
+    asOf: asOf,
+  );
+
+  int startBalance = currentPrincipalMinor;
+  int extra = 0;
+  switch (kind) {
+    case ScenarioKind.mandatoryOnly:
+      break;
+    case ScenarioKind.fixedExtraMonthly:
+      extra = extraMonthlyMinor;
+    case ScenarioKind.oneTimeExtra:
+      startBalance = _max0(currentPrincipalMinor - oneTimeExtraMinor);
+    case ScenarioKind.allRemainingIncome:
+      extra = remainingIncomeMinor;
+  }
+
+  final p = _projectWithExtra(
+    principalMinor: startBalance,
+    annualRateBp: annualRateBp,
+    type: type,
+    monthlyPaymentMinor: monthlyPaymentMinor,
+    monthlyPrincipalMinor: monthlyPrincipalMinor,
+    extraMonthlyMinor: extra,
+    asOf: asOf,
+  );
+
+  final requiredMonthly = type == PaymentType.differential
+      ? monthlyPrincipalMinor + extra
+      : monthlyPaymentMinor + extra;
+
+  return ScenarioResult(
+    kind: kind,
+    payoffDate: p.payoffDate,
+    monthsRemaining: p.monthsRemaining,
+    totalInterestMinor: p.totalRemainingInterestMinor,
+    interestSavedMinor:
+        _max0(baseline.totalRemainingInterestMinor - p.totalRemainingInterestMinor),
+    monthsSaved: _max0(baseline.monthsRemaining - p.monthsRemaining),
+    requiredMonthlyMinor: requiredMonthly,
+    neverCloses: p.neverCloses,
+    isApproximate: p.isApproximate,
+  );
+}
+
+List<ScenarioResult> compareScenarios({
+  required int currentPrincipalMinor,
+  required int annualRateBp,
+  required PaymentType type,
+  required int monthlyPaymentMinor,
+  int monthlyPrincipalMinor = 0,
+  int extraMonthlyMinor = 0,
+  int oneTimeExtraMinor = 0,
+  int remainingIncomeMinor = 0,
+  required DateTime asOf,
+}) =>
+    [
+      for (final kind in ScenarioKind.values)
+        computeScenario(
+          kind: kind,
+          currentPrincipalMinor: currentPrincipalMinor,
+          annualRateBp: annualRateBp,
+          type: type,
+          monthlyPaymentMinor: monthlyPaymentMinor,
+          monthlyPrincipalMinor: monthlyPrincipalMinor,
+          extraMonthlyMinor: extraMonthlyMinor,
+          oneTimeExtraMinor: oneTimeExtraMinor,
+          remainingIncomeMinor: remainingIncomeMinor,
+          asOf: asOf,
+        ),
+    ];
+
+/// §13.4/§13.5: apply a one-off [extraMinor] to the principal then reproject.
+/// `shortenTerm` keeps the payment (fewer months); `lowerPayment` keeps the
+/// baseline remaining term and solves a smaller payment; `unclear` computes
+/// `shortenTerm` but flags the result approximate.
+MortgageProjection applyExtraPayment({
+  required int currentPrincipalMinor,
+  required int extraMinor,
+  required int annualRateBp,
+  required PaymentType type,
+  required int monthlyPaymentMinor,
+  int monthlyPrincipalMinor = 0,
+  required PayoffStrategy strategy,
+  required DateTime asOf,
+}) {
+  final newBalance = _max0(currentPrincipalMinor - extraMinor);
+  if (strategy == PayoffStrategy.lowerPayment && type != PaymentType.differential) {
+    final baseline = projectPayoff(
+      currentPrincipalMinor: currentPrincipalMinor,
+      annualRateBp: annualRateBp,
+      type: type,
+      monthlyPaymentMinor: monthlyPaymentMinor,
+      asOf: asOf,
+    );
+    final months = baseline.neverCloses ? _monthCap : baseline.monthsRemaining;
+    final pay = solvePaymentForTerm(
+        principalMinor: newBalance, annualRateBp: annualRateBp, months: months);
+    return projectPayoff(
+      currentPrincipalMinor: newBalance,
+      annualRateBp: annualRateBp,
+      type: type,
+      monthlyPaymentMinor: pay,
+      asOf: asOf,
+    );
+  }
+  return projectPayoff(
+    currentPrincipalMinor: newBalance,
+    annualRateBp: annualRateBp,
+    type: type,
+    monthlyPaymentMinor: monthlyPaymentMinor,
+    monthlyPrincipalMinor: monthlyPrincipalMinor,
+    asOf: asOf,
+    isApproximate: strategy == PayoffStrategy.unclear,
+  );
+}
+
+/// Smallest integer monthly annuity payment that amortizes [principalMinor]
+/// within [months]. Binary search over the payment — integer-only, no `pow`.
+int solvePaymentForTerm({
+  required int principalMinor,
+  required int annualRateBp,
+  required int months,
+}) {
+  if (principalMinor <= 0 || months <= 0) return 0;
+  var lo = 1;
+  var hi = principalMinor + monthlyInterestMinor(principalMinor, annualRateBp) + 1;
+  while (lo < hi) {
+    final mid = lo + (hi - lo) ~/ 2;
+    final p = projectPayoff(
+      currentPrincipalMinor: principalMinor,
+      annualRateBp: annualRateBp,
+      type: PaymentType.annuity,
+      monthlyPaymentMinor: mid,
+      asOf: DateTime(2000),
+    );
+    if (!p.neverCloses && p.monthsRemaining <= months) {
+      hi = mid;
+    } else {
+      lo = mid + 1;
+    }
+  }
+  return lo;
+}
