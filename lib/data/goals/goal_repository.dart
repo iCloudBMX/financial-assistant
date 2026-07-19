@@ -120,8 +120,9 @@ class DriftGoalRepository implements GoalRepository {
     await (db.update(db.goalsTable)..where((t) => t.id.equals(id))).write(
       GoalsTableCompanion(
         targetAmountMinor: Value(targetAmountMinor),
-        targetDate:
-            clearTargetDate ? const Value(null) : Value(targetDate),
+        targetDate: clearTargetDate
+            ? const Value(null)
+            : (targetDate != null ? Value(targetDate) : const Value.absent()),
       ),
     );
   }
