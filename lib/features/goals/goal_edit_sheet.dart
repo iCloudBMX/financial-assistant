@@ -72,10 +72,17 @@ class _GoalEditSheetState extends ConsumerState<_GoalEditSheet> {
     setState(() => _error = null);
     final draft = GoalDraft(
       name: name,
+      // type/icon/currencyCode/linkedAccountId have no UI controls yet
+      // (picker is deferred) — carry them through from the existing goal
+      // so an edit doesn't silently reset them to GoalDraft's defaults.
+      type: widget.existing?.type ?? 'other',
+      icon: widget.existing?.icon ?? 'flag',
       targetAmountMinor: target.minorUnits,
+      currencyCode: widget.existing?.currencyCode ?? 'UZS',
       startDate: _start,
       targetDate: _targetDate,
       priority: _priority,
+      linkedAccountId: widget.existing?.linkedAccountId,
       note: _note.text.trim().isEmpty ? null : _note.text.trim(),
     );
     final repo = ref.read(goalRepositoryProvider);
