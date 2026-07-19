@@ -117,16 +117,40 @@ void main() {
   });
 
   testWidgets(
-      'authenticateBiometric is called exactly once automatically on lock '
-      'entry when biometricEnabled is true', (tester) async {
+      'authenticateBiometric is called exactly once on lock entry, and '
+      'GENUINE rebuilds of the still-locked screen do not call it again',
+      (tester) async {
     await pumpGate(tester, biometricEnabled: true);
-    await tester.pump();
+    await tester.pumpAndSettle(); // let the post-frame biometric call settle
 
     expect(controller.biometricCalls, 1);
 
-    // Further, unrelated rebuilds must not re-trigger it.
+    // Drive a REAL rebuild of _LockScreen while still locked: tapping a
+    // keypad digit calls setState (one digit -> no auto-submit yet), so
+    // _LockScreen.build() actually re-runs. If someone regressed the
+    // once-guard by moving authenticateBiometric() into build(), the count
+    // would climb past 1 here.
+    await tester.tap(find.byKey(const Key('app_lock_key_1')));
     await tester.pump();
+    await tester.tap(find.byKey(const Key('app_lock_key_2')));
     await tester.pump();
+    expect(find.text('Unlocked home'), findsNothing); // still locked
+    expect(controller.biometricCalls, 1);
+
+    // A second genuine rebuild path: rebuild AppLockGate itself with a
+    // changed prop while it stays locked. This too must not re-trigger the
+    // native prompt.
+    await tester.pumpWidget(MaterialApp(
+      home: AppLockGate(
+        controller: controller,
+        enabled: true,
+        biometricEnabled: true,
+        lockTimeout: const Duration(seconds: 99), // changed prop
+        child: const Scaffold(body: Text('Unlocked home')),
+      ),
+    ));
+    await tester.pump();
+    expect(find.text('Unlocked home'), findsNothing);
     expect(controller.biometricCalls, 1);
   });
 

@@ -115,6 +115,60 @@ void main() {
   });
 
   testWidgets(
+      'creating an account, then navigating back and forward to the account '
+      'step, does NOT create a duplicate (the created state survives the '
+      'step remount)', (tester) async {
+    final db = AppDatabase(NativeDatabase.memory());
+    addTearDown(db.close);
+    final container = ProviderContainer(
+      overrides: [databaseProvider.overrideWithValue(db)],
+    );
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(UncontrolledProviderScope(
+      container: container,
+      child: const MaterialApp(home: OnboardingScreen()),
+    ));
+    await tester.pumpAndSettle();
+
+    // Navigate to the account step: welcome -> currency -> period -> account.
+    for (var i = 0; i < 3; i++) {
+      await tester.tap(find.byKey(const Key('onboarding_skip_button')));
+      await tester.pumpAndSettle();
+    }
+    expect(find.text('Birinchi hisobingiz'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('onboarding_account_create_button')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('onboarding_account_created_badge')),
+        findsOneWidget);
+    expect(await container.read(accountRepositoryProvider).list(),
+        hasLength(1));
+
+    // Back to the period step, then forward to the account step again --
+    // OnboardingScreen keys each step by step.id, so this REMOUNTS a fresh
+    // AccountStep widget. If "already created" lived in that widget's local
+    // state it would reset here.
+    await tester.tap(find.byKey(const Key('onboarding_back_button')));
+    await tester.pumpAndSettle();
+    expect(find.text('Birinchi hisobingiz'), findsNothing);
+    await tester.tap(find.byKey(const Key('onboarding_next_button')));
+    await tester.pumpAndSettle();
+    expect(find.text('Birinchi hisobingiz'), findsOneWidget);
+
+    // The remounted step must reflect that an account already exists: the
+    // badge is shown and the create button is gone, so there is no way to
+    // (and it does not) create a duplicate.
+    expect(find.byKey(const Key('onboarding_account_created_badge')),
+        findsOneWidget);
+    expect(find.byKey(const Key('onboarding_account_create_button')),
+        findsNothing);
+    expect(await container.read(accountRepositoryProvider).list(),
+        hasLength(1),
+        reason: 'no duplicate account after back/forward navigation');
+  });
+
+  testWidgets(
       'the financial-baseline step writes the variable budget and minimal '
       'reserve into the committed settings', (tester) async {
     final db = AppDatabase(NativeDatabase.memory());

@@ -21,6 +21,14 @@ import '../onboarding_step.dart';
 /// account immediately. That also makes the step's skippability literal --
 /// the shared "Keyingi"/"O'tkazib yuborish" controls in [OnboardingScreen]
 /// simply move on without ever creating anything.
+///
+/// The "already created this session" flag lives on the onboarding
+/// controller's draft ([OnboardingDraft.createdAccountId]), NOT in this
+/// widget's local state: `OnboardingScreen` keys each step by `step.id`, so
+/// navigating back off this step and returning remounts a fresh widget. If
+/// the flag were local, that remount would reset it and re-tapping create
+/// would silently make a DUPLICATE account. Reading it from the draft makes
+/// the created state survive back/forward navigation.
 class AccountStep extends OnboardingStep {
   @override
   String get id => 'account';
@@ -48,7 +56,11 @@ class _AccountStepBodyState extends ConsumerState<_AccountStepBody> {
   Money? _opening;
   AccountType _type = AccountType.cash;
   bool _saving = false;
-  bool _created = false;
+
+  /// Whether an account was already created this onboarding session. Sourced
+  /// from the controller's draft (survives back/forward remounts), never
+  /// from local widget state.
+  bool get _created => widget.controller.state.createdAccountId != null;
 
   @override
   void dispose() {
@@ -58,19 +70,23 @@ class _AccountStepBodyState extends ConsumerState<_AccountStepBody> {
   }
 
   Future<void> _createAccount() async {
+    // Guard against a double-create even if a rebuild races the button: if an
+    // account already exists for this session, do nothing.
+    if (_created || _saving) return;
     final currency = widget.controller.state.settings.primaryCurrency;
     setState(() => _saving = true);
-    await ref.read(accountsControllerProvider.notifier).createAccount(
-          name: _nameCtrl.text.trim().isEmpty ? 'Hisob' : _nameCtrl.text.trim(),
-          type: _type,
-          openingBalance: _opening ?? Money.zero(currency),
-          icon: 'wallet',
-        );
+    final id =
+        await ref.read(accountsControllerProvider.notifier).createAccount(
+              name: _nameCtrl.text.trim().isEmpty
+                  ? 'Hisob'
+                  : _nameCtrl.text.trim(),
+              type: _type,
+              openingBalance: _opening ?? Money.zero(currency),
+              icon: 'wallet',
+            );
     if (!mounted) return;
-    setState(() {
-      _saving = false;
-      _created = true;
-    });
+    widget.controller.markAccountCreated(id);
+    setState(() => _saving = false);
   }
 
   @override

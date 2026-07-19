@@ -28,15 +28,21 @@ class AccountsController extends AsyncNotifier<List<AccountWithBalance>> {
     await future;
   }
 
-  Future<void> createAccount({
+  /// Creates the account and returns its new id. Returning the id (rather
+  /// than `void`) lets callers that need to reference the just-created
+  /// account — e.g. onboarding's Account step, which records it to avoid
+  /// creating a duplicate on back/forward navigation — do so without a
+  /// follow-up list read. Existing `await`-only callers are unaffected.
+  Future<int> createAccount({
     required String name,
     required AccountType type,
     required Money openingBalance,
     required String icon,
   }) async {
-    await ref.read(accountRepositoryProvider).create(
+    final id = await ref.read(accountRepositoryProvider).create(
         name: name, type: type, openingBalance: openingBalance, icon: icon);
     await _invalidate();
+    return id;
   }
 
   Future<void> rename(int id, String name) async {
