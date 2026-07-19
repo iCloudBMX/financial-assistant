@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/ledger/account.dart';
+import '../../core/money/money.dart';
 import '../../core/theme/velora_tokens.dart';
 import 'velora_card.dart';
 
@@ -10,11 +11,13 @@ class AccountCardPicker extends StatefulWidget {
   const AccountCardPicker({
     super.key,
     required this.accounts,
+    required this.availableBalances,
     required this.selectedId,
     required this.onSelected,
   });
 
   final List<Account> accounts;
+  final Map<int, Money> availableBalances;
   final int? selectedId;
   final ValueChanged<int> onSelected;
 
@@ -24,6 +27,9 @@ class AccountCardPicker extends StatefulWidget {
 
 class _AccountCardPickerState extends State<AccountCardPicker> {
   late final PageController _controller;
+  int _suppressedPageMovements = 0;
+  int _syncGeneration = 0;
+  int? _visibleAccountId;
 
   List<Account> get _activeAccounts => widget.accounts
       .where((account) => !account.archived)
@@ -36,35 +42,124 @@ class _AccountCardPickerState extends State<AccountCardPicker> {
     final selectedIndex = activeAccounts.indexWhere(
       (account) => account.id == widget.selectedId,
     );
+    final initialIndex = selectedIndex < 0 ? 0 : selectedIndex;
+    if (activeAccounts.isNotEmpty) {
+      _visibleAccountId = activeAccounts[initialIndex].id;
+    }
     _controller = PageController(
-      initialPage: selectedIndex < 0 ? 0 : selectedIndex,
+      initialPage: initialIndex,
       viewportFraction: 0.88,
     );
   }
 
   @override
+  void didUpdateWidget(covariant AccountCardPicker oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final oldActive = _activeFrom(oldWidget.accounts);
+    final newActive = _activeAccounts;
+    if (oldWidget.selectedId == widget.selectedId &&
+        _sameAccountOrder(oldActive, newActive)) {
+      return;
+    }
+
+    if (newActive.isEmpty) {
+      _syncGeneration++;
+      _visibleAccountId = null;
+      return;
+    }
+
+    final oldPage = _controller.hasClients
+        ? (_controller.page ?? _controller.initialPage.toDouble()).round()
+        : _controller.initialPage;
+    final selectedIndex = newActive.indexWhere(
+      (account) => account.id == widget.selectedId,
+    );
+    final retainedIndex = newActive.indexWhere(
+      (account) => account.id == _visibleAccountId,
+    );
+    final targetIndex = selectedIndex >= 0
+        ? selectedIndex
+        : retainedIndex >= 0
+        ? retainedIndex
+        : oldPage.clamp(0, newActive.length - 1);
+
+    _visibleAccountId = newActive[targetIndex].id;
+    _scheduleControlledSync(targetIndex);
+  }
+
+  @override
   void dispose() {
+    _syncGeneration++;
     _controller.dispose();
     super.dispose();
+  }
+
+  void _scheduleControlledSync(int targetIndex) {
+    final generation = ++_syncGeneration;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || generation != _syncGeneration) return;
+      final activeAccounts = _activeAccounts;
+      if (!_controller.hasClients || targetIndex >= activeAccounts.length) {
+        return;
+      }
+      _moveToPage(targetIndex, animate: false);
+    });
+  }
+
+  void _moveToPage(int index, {required bool animate}) {
+    if (!_controller.hasClients) return;
+    final currentPage = _controller.page ?? _controller.initialPage.toDouble();
+    if ((currentPage - index).abs() < 0.001) return;
+
+    _suppressedPageMovements++;
+    if (!animate) {
+      try {
+        _controller.jumpToPage(index);
+      } finally {
+        _suppressedPageMovements--;
+      }
+      return;
+    }
+
+    _controller
+        .animateToPage(
+          index,
+          duration: VeloraMotion.standard,
+          curve: Curves.easeOutCubic,
+        )
+        .whenComplete(() => _suppressedPageMovements--);
+  }
+
+  void _selectFromUser(Account account, int index) {
+    _visibleAccountId = account.id;
+    widget.onSelected(account.id);
+    _moveToPage(index, animate: true);
   }
 
   @override
   Widget build(BuildContext context) {
     final activeAccounts = _activeAccounts;
     if (activeAccounts.isEmpty) return const SizedBox.shrink();
+    final availableBalances = _validatedAvailableBalances(activeAccounts);
 
     final textScale = MediaQuery.textScalerOf(context).scale(1);
-    final height = 116.0 + ((textScale - 1).clamp(0.0, 1.0) * 150.0);
+    final height = 116.0 + ((textScale - 1).clamp(0.0, 1.0) * 156.0);
 
     return SizedBox(
       height: height,
       child: PageView.builder(
         controller: _controller,
-        padEnds: false,
         itemCount: activeAccounts.length,
-        onPageChanged: (index) => widget.onSelected(activeAccounts[index].id),
+        onPageChanged: (index) {
+          final account = activeAccounts[index];
+          _visibleAccountId = account.id;
+          if (_suppressedPageMovements == 0) {
+            widget.onSelected(account.id);
+          }
+        },
         itemBuilder: (context, index) {
           final account = activeAccounts[index];
+          final availableBalance = availableBalances[account.id]!;
           return Padding(
             padding: EdgeInsetsDirectional.only(
               end: index == activeAccounts.length - 1 ? 0 : VeloraSpacing.md,
@@ -73,11 +168,13 @@ class _AccountCardPickerState extends State<AccountCardPicker> {
               key: Key('account-card-${account.id}'),
               button: true,
               selected: account.id == widget.selectedId,
-              label: _accountSemanticLabel(account),
+              label: _accountSemanticLabel(account, availableBalance),
+              onTap: () => _selectFromUser(account, index),
               child: ExcludeSemantics(
                 child: VeloraAccountCard(
                   account: account,
-                  onTap: () => widget.onSelected(account.id),
+                  availableBalance: availableBalance,
+                  onTap: () => _selectFromUser(account, index),
                 ),
               ),
             ),
@@ -86,16 +183,49 @@ class _AccountCardPickerState extends State<AccountCardPicker> {
       ),
     );
   }
+
+  Map<int, Money> _validatedAvailableBalances(List<Account> activeAccounts) {
+    final validated = <int, Money>{};
+    for (final account in activeAccounts) {
+      final balance = widget.availableBalances[account.id];
+      if (balance == null) {
+        throw FlutterError(
+          'Missing available balance for active account ${account.id}.',
+        );
+      }
+      if (balance.currency != account.currency) {
+        throw FlutterError(
+          'Available balance currency ${balance.currency.code} does not match '
+          'account ${account.id} ${account.currency.code}.',
+        );
+      }
+      validated[account.id] = balance;
+    }
+    return validated;
+  }
+}
+
+List<Account> _activeFrom(List<Account> accounts) =>
+    accounts.where((account) => !account.archived).toList(growable: false);
+
+bool _sameAccountOrder(List<Account> a, List<Account> b) {
+  if (a.length != b.length) return false;
+  for (var index = 0; index < a.length; index++) {
+    if (a[index].id != b[index].id) return false;
+  }
+  return true;
 }
 
 class VeloraAccountCard extends StatelessWidget {
   const VeloraAccountCard({
     super.key,
     required this.account,
+    required this.availableBalance,
     required this.onTap,
   });
 
   final Account account;
+  final Money availableBalance;
   final VoidCallback onTap;
 
   @override
@@ -104,7 +234,12 @@ class VeloraAccountCard extends StatelessWidget {
     return SizedBox.expand(
       child: VeloraCard(
         onTap: onTap,
-        padding: const EdgeInsets.all(VeloraSpacing.lg),
+        padding: const EdgeInsetsDirectional.fromSTEB(
+          VeloraSpacing.sm,
+          VeloraSpacing.lg,
+          VeloraSpacing.lg,
+          VeloraSpacing.lg,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -112,11 +247,6 @@ class VeloraAccountCard extends StatelessWidget {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(
-                  _accountIcon(account.icon, account.type),
-                  color: theme.colorScheme.primary,
-                ),
-                const SizedBox(width: VeloraSpacing.sm),
                 Flexible(
                   fit: FlexFit.loose,
                   child: Text(
@@ -125,6 +255,12 @@ class VeloraAccountCard extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.titleMedium,
                   ),
+                ),
+                const Spacer(),
+                const SizedBox(width: VeloraSpacing.sm),
+                Icon(
+                  _accountIcon(account.icon, account.type),
+                  color: theme.colorScheme.primary,
                 ),
               ],
             ),
@@ -146,7 +282,7 @@ class VeloraAccountCard extends StatelessWidget {
               child: FittedBox(
                 fit: BoxFit.scaleDown,
                 child: Text(
-                  account.openingBalance.format(),
+                  availableBalance.format(),
                   style: theme.textTheme.titleLarge,
                 ),
               ),
@@ -158,9 +294,9 @@ class VeloraAccountCard extends StatelessWidget {
   }
 }
 
-String _accountSemanticLabel(Account account) =>
+String _accountSemanticLabel(Account account, Money availableBalance) =>
     '${account.name}, ${_accountTypeLabel(account.type)}, '
-    '${account.currency.code}, ${account.openingBalance.format()}';
+    '${account.currency.code}, ${availableBalance.format()}';
 
 String _accountTypeLabel(AccountType type) => switch (type) {
   AccountType.bankCard => 'Bank kartasi',

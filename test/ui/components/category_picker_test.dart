@@ -1,4 +1,4 @@
-import 'dart:ui' show Tristate;
+import 'dart:ui' show SemanticsAction, Tristate;
 
 import 'package:financial_assistant/data/categories/category_model.dart';
 import 'package:financial_assistant/ui/components/category_picker.dart';
@@ -107,6 +107,29 @@ void main() {
     );
   });
 
+  testWidgets('screen-reader tap activates a quick category', (tester) async {
+    final selected = <int>[];
+    await tester.pumpWidget(
+      _testApp(
+        CategoryPicker(
+          categories: categories,
+          quickIds: const [1, 2, 3, 4],
+          selectedId: 1,
+          onSelected: selected.add,
+        ),
+      ),
+    );
+
+    final category = find.byKey(const Key('quick-category-option-2'));
+    final node = tester.getSemantics(category);
+    expect(node.getSemanticsData().hasAction(SemanticsAction.tap), isTrue);
+
+    node.owner!.performAction(node.id, SemanticsAction.tap);
+    await tester.pump();
+
+    expect(selected, <int>[2]);
+  });
+
   testWidgets('quick list excludes archived ids and fills from active items', (
     tester,
   ) async {
@@ -193,6 +216,34 @@ void main() {
     );
 
     await tester.tap(find.byKey(const Key('category-option-2')));
+    await tester.pumpAndSettle();
+
+    expect(selected, <int>[2]);
+    expect(find.byType(SearchBar), findsNothing);
+  });
+
+  testWidgets('screen-reader tap selects a sheet row and dismisses', (
+    tester,
+  ) async {
+    final selected = <int>[];
+    await tester.pumpWidget(
+      _testApp(
+        CategoryPicker(
+          categories: categories,
+          quickIds: const [1, 2, 3, 4],
+          selectedId: 1,
+          onSelected: selected.add,
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Kategoriya tanlash'));
+    await tester.pumpAndSettle();
+    final category = find.byKey(const Key('category-option-2'));
+    final node = tester.getSemantics(category);
+    expect(node.getSemanticsData().hasAction(SemanticsAction.tap), isTrue);
+
+    node.owner!.performAction(node.id, SemanticsAction.tap);
     await tester.pumpAndSettle();
 
     expect(selected, <int>[2]);

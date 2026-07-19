@@ -143,6 +143,7 @@ class _CategoryOption extends StatelessWidget {
       button: true,
       selected: selected,
       label: category.name,
+      onTap: onTap,
       child: ExcludeSemantics(
         child: ConstrainedBox(
           key: optionKey,
@@ -314,6 +315,7 @@ class _SheetCategoryOption extends StatelessWidget {
     button: true,
     selected: selected,
     label: category.name,
+    onTap: onTap,
     child: ExcludeSemantics(
       child: ListTile(
         minTileHeight: 48,
