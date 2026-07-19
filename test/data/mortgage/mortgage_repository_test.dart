@@ -128,6 +128,25 @@ void main() {
     );
   });
 
+  test('an extra payment does NOT release the mandatory reserve', () async {
+    final id = await repo.create(draft(mandatory: 5000000)); // nextPaymentDate 2026-07-10
+    final periodStart = DateTime(2026, 7, 1);
+    final periodEnd = DateTime(2026, 8, 1);
+    // record an EXTRA payment inside the period -> reserve must NOT release
+    final acc = await anAccount();
+    await repo.recordPayment(
+      mortgageId: id, accountId: acc, isExtra: true,
+      occurredAt: DateTime(2026, 7, 11),
+      split: const MortgagePaymentSplit(
+          totalMinor: 5000000, principalMinor: 5000000),
+    );
+    expect(
+      await repo.unpaidMandatoryMinor(
+          periodStart: periodStart, periodEndExclusive: periodEnd),
+      5000000,
+    );
+  });
+
   test('archive hides from the default list; delete removes payments only', () async {
     final acc = await anAccount();
     final id = await repo.create(draft());
