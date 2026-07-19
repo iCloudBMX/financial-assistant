@@ -10,6 +10,43 @@ import 'package:financial_assistant/data/ledger/ledger_repository.dart';
 import 'package:financial_assistant/data/mortgage/mortgage_model.dart';
 import 'package:financial_assistant/data/mortgage/mortgage_repository.dart';
 
+/// A [LedgerRepository] that performs the real expense write (so a row is
+/// genuinely inserted inside the ambient `db.transaction` that
+/// `recordPayment` opens) and THEN throws — simulating a fault that occurs
+/// after the first write of the two-write atomic operation but before the
+/// payment insert. Every other member delegates to [inner].
+class _FaultAfterLedgerWrite implements LedgerRepository {
+  final LedgerRepository inner;
+  _FaultAfterLedgerWrite(this.inner);
+
+  @override
+  Future<int> addExpense({
+    required int accountId,
+    required Money amount,
+    int? categoryId,
+    required DateTime occurredAt,
+    String? note,
+    bool? planned,
+  }) async {
+    // Real write — this row lives inside the ambient transaction.
+    await inner.addExpense(
+      accountId: accountId,
+      amount: amount,
+      categoryId: categoryId,
+      occurredAt: occurredAt,
+      note: note,
+      planned: planned,
+    );
+    // ...then fail, before recordPayment can insert the payment row.
+    throw StateError('injected failure after the ledger write');
+  }
+
+  // Only addExpense is exercised by recordPayment; nothing else on this
+  // decorator is called, so the catch-all just satisfies the interface.
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
 void main() {
   late AppDatabase db;
   late DriftMortgageRepository repo;
@@ -181,6 +218,36 @@ void main() {
     );
     expect(await repo.payments(id), isEmpty);
     expect(await ledger.entriesForAccount(acc), isEmpty);
+  });
+
+  test(
+      'a fault AFTER the ledger write (balanced split) rolls the ledger '
+      'entry back — the two writes commit together or not at all', () async {
+    final acc = await anAccount();
+    final id = await repo.create(draft());
+
+    // A mortgage repo whose ledger writes the real expense row inside the
+    // transaction and THEN throws, so the failure lands between the two
+    // writes — the split IS balanced, so it passes the pre-transaction
+    // guard and genuinely enters `db.transaction`.
+    final faultyRepo =
+        DriftMortgageRepository(db, _FaultAfterLedgerWrite(ledger));
+
+    await expectLater(
+      faultyRepo.recordPayment(
+        mortgageId: id,
+        accountId: acc,
+        split: const MortgagePaymentSplit(
+            totalMinor: 5000000, principalMinor: 3500000, interestMinor: 1500000),
+      ),
+      throwsStateError,
+    );
+
+    // The ledger expense that WAS written inside the transaction must have
+    // been rolled back along with the (never-inserted) payment row.
+    expect(await ledger.entriesForAccount(acc), isEmpty,
+        reason: 'the in-transaction ledger write was not rolled back');
+    expect(await repo.payments(id), isEmpty);
   });
 
   test('archive hides from the default list; delete removes payments only', () async {

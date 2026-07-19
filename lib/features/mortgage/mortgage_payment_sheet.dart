@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/money/currency.dart';
 import '../../core/money/money.dart';
 import '../../core/mortgage/mortgage_engine.dart';
+import '../../core/result/failure_messages.dart';
 import '../../core/theme/velora_tokens.dart';
 import '../../data/mortgage/mortgage_model.dart';
 import '../../providers/app_providers.dart';
@@ -83,34 +84,45 @@ class _MortgagePaymentSheetState extends ConsumerState<MortgagePaymentSheet> {
   }
 
   Future<void> _save(MortgagePaymentSplitState split) async {
-    setState(() => _saving = true);
-    final accounts = await ref.read(accountRepositoryProvider).list();
-    if (!mounted) return;
-    if (accounts.isEmpty) {
-      setState(() {
-        _saving = false;
-        _error = 'Avval hisob qo\'shing';
-      });
-      return;
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
+    // A `finally` always clears `_saving` so a throwing repository call can
+    // never leave Save permanently disabled; typed failures map through
+    // `userMessageFor`, raw exceptions get a plain-language fallback.
+    var popped = false;
+    try {
+      final accounts = await ref.read(accountRepositoryProvider).list();
+      if (!mounted) return;
+      if (accounts.isEmpty) {
+        setState(() => _error = 'Avval hisob qo\'shing');
+        return;
+      }
+      final res = await ref.read(mortgageControllerProvider).recordPayment(
+            mortgageId: widget.mortgageId,
+            split: MortgagePaymentSplit(
+              totalMinor: split.total.minorUnits,
+              principalMinor: split.principal.minorUnits,
+              interestMinor: split.interest.minorUnits,
+            ),
+            accountId: accounts.first.id,
+          );
+      if (!mounted) return;
+      res.when(
+        ok: (_) => popped = true,
+        err: (f) => setState(() => _error = userMessageFor(f)),
+      );
+    } catch (_) {
+      if (mounted) {
+        setState(() => _error = 'Saqlashda kutilmagan xatolik yuz berdi.');
+      }
+    } finally {
+      // Skip the setState when we're about to pop — the widget is on its way
+      // out and there is no field left to re-enable.
+      if (mounted && !popped) setState(() => _saving = false);
     }
-    final res = await ref.read(mortgageControllerProvider).recordPayment(
-          mortgageId: widget.mortgageId,
-          split: MortgagePaymentSplit(
-            totalMinor: split.total.minorUnits,
-            principalMinor: split.principal.minorUnits,
-            interestMinor: split.interest.minorUnits,
-          ),
-          accountId: accounts.first.id,
-        );
-    if (!mounted) return;
-    if (!res.isOk) {
-      setState(() {
-        _saving = false;
-        _error = 'Saqlashda xatolik yuz berdi';
-      });
-      return;
-    }
-    Navigator.of(context).pop();
+    if (popped && mounted) Navigator.of(context).pop();
   }
 
   @override
@@ -119,6 +131,11 @@ class _MortgagePaymentSheetState extends ConsumerState<MortgagePaymentSheet> {
     final item = _findItem(ref.watch(mortgagesProvider).value);
     final split = _computeSplit(item);
     final balanced = split.difference.minorUnits == 0;
+    // In Auto mode an entered total beyond payoff can't be saved (the engine
+    // clamps principal to the outstanding balance) — explain why Save is off.
+    final autoOverPayoff = _mode == MortgageSplitMode.auto &&
+        split.total.minorUnits > 0 &&
+        !split.canSave;
 
     return VeloraSheetScaffold(
       title: 'To\'lov kiritish',
@@ -166,6 +183,15 @@ class _MortgagePaymentSheetState extends ConsumerState<MortgagePaymentSheet> {
               'hisoblandi.',
               style: theme.textTheme.bodySmall,
             ),
+            if (autoOverPayoff) ...[
+              const SizedBox(height: VeloraSpacing.sm),
+              VeloraStatusBadge(
+                color: VeloraColors.critical,
+                icon: Icons.error_outline,
+                label: 'To\'lov qarz qoldig\'idan oshib ketdi '
+                    '(ortiqcha: ${split.difference.format()})',
+              ),
+            ],
           ] else ...[
             VeloraMoneyField(
               key: const Key('payment-principal'),

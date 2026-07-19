@@ -25,7 +25,9 @@ void main() {
       expect(split.canSave, isTrue);
     });
 
-    test('principal + interest always equals total', () {
+    test(
+        'a savable split always balances (principal + interest == total) and '
+        'principal never exceeds the outstanding balance', () {
       for (final rateBp in [0, 100, 1800, 3600]) {
         for (final balance in [0, 1, 999999, 250000000]) {
           final split = deriveAutoSplit(
@@ -33,9 +35,20 @@ void main() {
             currentPrincipalMinor: balance,
             annualRateBp: rateBp,
           );
-          expect(split.principal.minorUnits + split.interest.minorUnits,
-              split.total.minorUnits,
-              reason: 'rate=$rateBp balance=$balance');
+          // Principal is bounded by the outstanding balance in every case,
+          // so the write can never drive currentPrincipal negative.
+          expect(split.principal.minorUnits, lessThanOrEqualTo(balance < 0 ? 0 : balance),
+              reason: 'rate=$rateBp balance=$balance principal exceeds outstanding');
+          // A savable split balances exactly; an over-payoff is instead
+          // surfaced as a positive difference with canSave == false.
+          if (split.canSave) {
+            expect(split.principal.minorUnits + split.interest.minorUnits,
+                split.total.minorUnits,
+                reason: 'rate=$rateBp balance=$balance savable but unbalanced');
+          } else {
+            expect(split.difference.minorUnits, greaterThan(0),
+                reason: 'rate=$rateBp balance=$balance over-payoff not surfaced');
+          }
         }
       }
     });
@@ -73,6 +86,67 @@ void main() {
         currentPrincipalMinor: 100000000,
         annualRateBp: 1800,
       );
+      expect(split.canSave, isFalse);
+    });
+
+    test(
+        'the exact final payment pays principal to zero and is savable '
+        '(principal == outstanding, balances)', () {
+      // Outstanding 3,000,000 at 0% → the whole payment is principal.
+      final split = deriveAutoSplit(
+        total: m(3000000),
+        currentPrincipalMinor: 3000000,
+        annualRateBp: 0,
+      );
+      expect(split.interest, m(0));
+      expect(split.principal, m(3000000)); // exactly the outstanding balance
+      expect(split.difference, m(0));
+      expect(split.canSave, isTrue);
+    });
+
+    test(
+        'an over-payoff clamps principal to the outstanding balance, never '
+        'exceeds it, and disables save (option b)', () {
+      // Outstanding 3,000,000 at 0%, but the user tries to pay 5,000,000.
+      final split = deriveAutoSplit(
+        total: m(5000000),
+        currentPrincipalMinor: 3000000,
+        annualRateBp: 0,
+      );
+      // Principal is clamped to the outstanding balance — NEVER above it, so
+      // currentPrincipal (balance − principal) cannot go negative.
+      expect(split.principal, m(3000000));
+      expect(split.principal.minorUnits,
+          lessThanOrEqualTo(3000000)); // never exceeds outstanding
+      // The 2,000,000 excess surfaces as a positive difference...
+      expect(split.difference, m(2000000));
+      // ...and the over-payoff is not writable.
+      expect(split.canSave, isFalse);
+    });
+
+    test('over-payoff with interest still bounds principal to outstanding',
+        () {
+      // Outstanding 1,000,000 at 1800bp → interest 15,000; a 5,000,000
+      // payment would otherwise book 4,985,000 principal against a
+      // 1,000,000 balance.
+      final split = deriveAutoSplit(
+        total: m(5000000),
+        currentPrincipalMinor: 1000000,
+        annualRateBp: 1800,
+      );
+      expect(split.interest, m(15000));
+      expect(split.principal, m(1000000)); // clamped to outstanding
+      expect(split.principal.minorUnits, lessThanOrEqualTo(1000000));
+      expect(split.canSave, isFalse);
+    });
+
+    test('paying an already-paid-off mortgage (balance 0) cannot save', () {
+      final split = deriveAutoSplit(
+        total: m(1000000),
+        currentPrincipalMinor: 0,
+        annualRateBp: 1800,
+      );
+      expect(split.principal, m(0));
       expect(split.canSave, isFalse);
     });
   });

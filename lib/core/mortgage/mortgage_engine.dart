@@ -326,37 +326,50 @@ class MortgagePaymentSplitState {
 /// [monthlyInterestMinor] — and principal absorbs whatever is left of
 /// [total]. This ordering is the correctness invariant: principal is never
 /// computed on its own and then reduced by interest a second time, so
-/// `principal + interest == total` always holds and interest can never act
-/// as a reduction applied to the principal figure.
+/// interest can never act as a reduction applied to the principal figure.
+///
+/// Principal is additionally bounded by the outstanding balance: a payment
+/// larger than `balance + interest` would drive `currentPrincipal` negative
+/// after the write. Such an over-payoff is NOT writable — §6.9 keeps save
+/// disabled when the split "exceeds" — so the principal is clamped to the
+/// outstanding balance and the leftover surfaces as a positive [difference]
+/// with `canSave == false` (mirroring the Manual unbalanced state). When the
+/// payment is at or below payoff, `principal + interest == total` exactly.
 MortgagePaymentSplitState deriveAutoSplit({
   required Money total,
   required int currentPrincipalMinor,
   required int annualRateBp,
 }) {
+  final c = total.currency;
   final totalMinor = total.minorUnits;
   if (totalMinor <= 0) {
     return MortgagePaymentSplitState(
       mode: MortgageSplitMode.auto,
       total: total,
-      principal: Money.zero(total.currency),
-      interest: Money.zero(total.currency),
-      difference: Money.zero(total.currency),
+      principal: Money.zero(c),
+      interest: Money.zero(c),
+      difference: Money.zero(c),
       canSave: false,
     );
   }
   final rawInterest = monthlyInterestMinor(currentPrincipalMinor, annualRateBp);
   // The mandatory payment can, in principle, undershoot a month's interest
-  // (a "neverCloses" plan) — clamp so principal never goes negative and the
-  // total/principal/interest equation still balances exactly.
+  // (a "neverCloses" plan) — clamp so principal never goes negative.
   final interestMinor = rawInterest > totalMinor ? totalMinor : rawInterest;
-  final principalMinor = totalMinor - interestMinor;
+  final rawPrincipalMinor = totalMinor - interestMinor;
+  // Principal can never exceed the outstanding balance (the final payment
+  // pays it to exactly zero). Anything beyond that is an over-payoff.
+  final maxPrincipalMinor = currentPrincipalMinor < 0 ? 0 : currentPrincipalMinor;
+  final overPayoff = rawPrincipalMinor > maxPrincipalMinor;
+  final principalMinor = overPayoff ? maxPrincipalMinor : rawPrincipalMinor;
+  final diffMinor = totalMinor - principalMinor - interestMinor;
   return MortgagePaymentSplitState(
     mode: MortgageSplitMode.auto,
     total: total,
-    principal: Money(principalMinor, total.currency),
-    interest: Money(interestMinor, total.currency),
-    difference: Money.zero(total.currency),
-    canSave: true,
+    principal: Money(principalMinor, c),
+    interest: Money(interestMinor, c),
+    difference: Money(diffMinor, c),
+    canSave: !overPayoff,
   );
 }
 

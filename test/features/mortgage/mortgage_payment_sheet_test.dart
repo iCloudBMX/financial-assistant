@@ -87,6 +87,32 @@ void main() {
   });
 
   testWidgets(
+      'Auto mode disables save when the total exceeds payoff (over-payment '
+      'cannot drive the balance negative)', (t) async {
+    final db = AppDatabase(NativeDatabase.memory());
+    addTearDown(db.close);
+    final container =
+        ProviderContainer(overrides: [databaseProvider.overrideWithValue(db)]);
+    addTearDown(container.dispose);
+    final id = await openMortgage(t, container);
+    container.read(ledgerRevisionProvider.notifier).update((n) => n + 1);
+    await container.read(mortgagesProvider.future);
+
+    await openSheet(t, container, id);
+
+    // Outstanding is 100,000,000; a 200,000,000 total is a gross over-payoff.
+    await t.enterText(find.byKey(const Key('payment-total')), '200000000');
+    await t.pumpAndSettle();
+
+    expect(
+        t.widget<FilledButton>(find.byKey(const Key('payment-save'))).onPressed,
+        isNull);
+    expect(find.textContaining('oshib ketdi'), findsOneWidget);
+    expect(
+        await container.read(mortgageRepositoryProvider).payments(id), isEmpty);
+  });
+
+  testWidgets(
       'Manual mode shows both explicit portions and an unbalanced split '
       'disables save', (t) async {
     final db = AppDatabase(NativeDatabase.memory());
