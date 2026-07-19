@@ -16,6 +16,11 @@ class AppShell extends ConsumerStatefulWidget {
 class _AppShellState extends ConsumerState<AppShell> {
   int _index = 0;
 
+  // The Goals tab provides its own FAB (add goal). The global quick-expense
+  // FAB would otherwise paint on top of it and swallow the tap, so it is
+  // hidden on that tab.
+  static const _goalsTabIndex = 3;
+
   static const _tabs = [
     HomeScreen(),
     TransactionsScreen(),
@@ -27,10 +32,12 @@ class _AppShellState extends ConsumerState<AppShell> {
   @override
   Widget build(BuildContext context) => Scaffold(
         body: SafeArea(child: _tabs[_index]),
-        floatingActionButton: FloatingActionButton(
-          onPressed: () => showExpenseEntrySheet(context, ref),
-          child: const Icon(Icons.add),
-        ),
+        floatingActionButton: _index == _goalsTabIndex
+            ? null
+            : FloatingActionButton(
+                onPressed: () => showExpenseEntrySheet(context, ref),
+                child: const Icon(Icons.add),
+              ),
         bottomNavigationBar: NavigationBar(
           selectedIndex: _index,
           onDestinationSelected: (i) => setState(() => _index = i),
