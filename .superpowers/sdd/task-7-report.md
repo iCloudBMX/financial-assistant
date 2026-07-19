@@ -9,9 +9,12 @@ picker in approved light and dark themes.
 
 The harness exports `pumpVelora`, `phone320`, `phone390`, and `textScale200`.
 It loads the bundled Onest, Noto Sans, IBM Plex Mono, and Material Icons fonts,
-freezes tickers, disables theme-transition duration, keys each configured test
-app so consecutive light/dark pumps cannot retain transition colors, and resets
-the test view's physical size and device-pixel ratio in teardown.
+requests reduced motion through `MediaQuery.disableAnimations`, disables
+theme-transition duration, keys each configured test app so consecutive
+light/dark pumps cannot retain transition colors, and resets the test view's
+physical size and device-pixel ratio in teardown. Under reduced motion, the
+loading button renders a fixed 75% progress arc instead of relying on an
+indeterminate ticker frame.
 
 ## TDD evidence
 
@@ -25,7 +28,19 @@ the test view's physical size and device-pixel ratio in teardown.
 3. Ordinary comparison:
    `flutter test test/goldens/velora_foundation_golden_test.dart` passed 2/2.
 4. The helper contract test confirms the requested logical size,
-   device-pixel ratio 1, and 200% text scaling reach descendants.
+   device-pixel ratio 1, 200% text scaling, and reduced-motion signal reach
+   descendants.
+
+### Review follow-up
+
+1. RED: the reduced-motion button test observed a null progress value, proving
+   the indicator was still indeterminate; the harness contract separately
+   observed `disableAnimations == false`.
+2. GREEN: `VeloraPrimaryButton` now uses a nonzero determinate progress value
+   only when reduced motion is requested. The harness explicitly requests that
+   signal and no longer disables tickers globally.
+3. The reduced-motion component tests confirm the static indicator is nonzero,
+   button taps remain disabled, and semantics still announce `Yuklanmoqda`.
 
 ## Visual inspection
 
@@ -34,14 +49,20 @@ local image viewer:
 
 | File | Dimensions | Finding |
 | --- | ---: | --- |
-| `test/goldens/baselines/foundation-light.png` | 390 x 1100 | Light brand colors, bundled typography/icons, amounts, field, status roles, buttons, async states, card peek, and category controls are readable; no clipping, overflow, broken text, or excess canvas remains. |
-| `test/goldens/baselines/foundation-dark-320-scale200.png` | 320 x 1800 | Dark contrast and 200% reflow are readable; narrow controls remain contained, the partial second account is the picker's intentional next-card peek, and no clipping or overflow is present. |
+| `test/goldens/baselines/foundation-light.png` | 390 x 1100 | Light brand colors, bundled typography/icons, amounts, field, status roles, buttons, async states, card peek, and category controls are readable; the loading pill has a clear static arc and there is no clipping, overflow, broken text, or excess canvas. |
+| `test/goldens/baselines/foundation-dark-320-scale200.png` | 320 x 1800 | Dark contrast and 200% reflow are readable; the loading pill has a clear static arc, narrow controls remain contained, the partial second account is the picker's intentional next-card peek, and no clipping or overflow is present. |
 
 The first visual pass revealed stale light-theme body colors in the consecutive
 dark pump because frozen tickers also froze `AnimatedTheme`. The harness was
 corrected with a configuration key plus zero theme-animation duration, both
 baselines were regenerated, ordinary comparisons rerun, and both final images
 were reinspected.
+
+The review follow-up identified that globally frozen tickers left the
+indeterminate loading spinner at a blank/tiny initial frame. The final harness
+uses the product's reduced-motion contract instead, and the final regenerated
+PNGs were both reinspected at original detail to confirm the fixed arcs are
+recognizable.
 
 ## Verification
 
@@ -53,6 +74,8 @@ were reinspected.
   - PASS; 338/338 tests.
 - Focused update-goldens and ordinary golden commands
   - PASS; 2/2 tests each.
+- Combined component and golden regression command
+  - PASS; 15/15 tests.
 
 ## Deviations and risks
 

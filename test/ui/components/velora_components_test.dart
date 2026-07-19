@@ -28,31 +28,48 @@ void main() {
     );
   });
 
-  testWidgets('loading primary button disables presses and shows progress', (
-    tester,
-  ) async {
-    var presses = 0;
-    await tester.pumpWidget(
-      MaterialApp(
-        home: VeloraPrimaryButton(
-          label: 'Saqlash',
-          loading: true,
-          onPressed: () => presses++,
+  testWidgets(
+    'reduced-motion loading button disables presses and shows static progress',
+    (tester) async {
+      var presses = 0;
+      await tester.pumpWidget(
+        MaterialApp(
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(context).copyWith(disableAnimations: true),
+            child: child!,
+          ),
+          home: VeloraPrimaryButton(
+            label: 'Saqlash',
+            loading: true,
+            onPressed: () => presses++,
+          ),
         ),
-      ),
-    );
+      );
 
-    await tester.tap(find.byType(FilledButton));
+      await tester.tap(find.byType(FilledButton));
 
-    expect(presses, 0);
-    expect(find.byType(CircularProgressIndicator), findsOneWidget);
-  });
+      expect(presses, 0);
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      expect(
+        tester
+            .widget<CircularProgressIndicator>(
+              find.byType(CircularProgressIndicator),
+            )
+            .value,
+        allOf(isNotNull, greaterThan(0)),
+      );
+    },
+  );
 
   testWidgets('loading primary button preserves its accessible action state', (
     tester,
   ) async {
     await tester.pumpWidget(
       MaterialApp(
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(context).copyWith(disableAnimations: true),
+          child: child!,
+        ),
         home: VeloraPrimaryButton(
           label: 'Saqlash',
           loading: true,

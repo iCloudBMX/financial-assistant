@@ -14,15 +14,19 @@ class VeloraPrimaryButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final reduceMotion = MediaQuery.of(context).disableAnimations;
     final button = SizedBox(
       width: double.infinity,
       height: 52,
       child: FilledButton(
         onPressed: loading ? null : onPressed,
         child: loading
-            ? const SizedBox.square(
+            ? SizedBox.square(
                 dimension: 20,
-                child: CircularProgressIndicator(strokeWidth: 2),
+                child: CircularProgressIndicator(
+                  value: reduceMotion ? 0.75 : null,
+                  strokeWidth: 2,
+                ),
               )
             : Text(label),
       ),

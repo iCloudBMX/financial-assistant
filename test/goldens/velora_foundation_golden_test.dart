@@ -68,6 +68,7 @@ void main() {
     expect(tester.view.devicePixelRatio, 1);
     expect(MediaQuery.sizeOf(context), phone320);
     expect(MediaQuery.textScalerOf(context).scale(10), 20);
+    expect(MediaQuery.of(context).disableAnimations, isTrue);
   });
 }
 

@@ -32,10 +32,11 @@ Future<void> pumpVelora(
           ? ThemeMode.dark
           : ThemeMode.light,
       builder: (context, appChild) => MediaQuery(
-        data: MediaQuery.of(
-          context,
-        ).copyWith(textScaler: TextScaler.linear(textScale)),
-        child: TickerMode(enabled: false, child: appChild!),
+        data: MediaQuery.of(context).copyWith(
+          disableAnimations: true,
+          textScaler: TextScaler.linear(textScale),
+        ),
+        child: appChild!,
       ),
       home: child,
     ),
