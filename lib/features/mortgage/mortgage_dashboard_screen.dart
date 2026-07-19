@@ -107,13 +107,21 @@ class MortgageDashboardScreen extends ConsumerWidget {
     );
   }
 
+  // `Expanded`, not a bare `Text`, for the label: at 320px/200% text scale
+  // an unwrapped label (e.g. "Taxminiy yopilish sanasi") plus its value can
+  // exceed the Row's width on its own -- a plain `Text` can't shrink below
+  // its natural single-line width, so only a flexible label lets the Row
+  // wrap instead of overflowing (golden-revealed via the existing-flow
+  // gallery's 320/dark/200% variant).
   Widget _row(String label, String value) => Padding(
         padding: const EdgeInsets.symmetric(vertical: VeloraSpacing.xs),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(label),
-            Flexible(
+            Expanded(flex: 2, child: Text(label)),
+            const SizedBox(width: VeloraSpacing.sm),
+            Expanded(
+              flex: 3,
               child: Text(
                 value,
                 textAlign: TextAlign.end,

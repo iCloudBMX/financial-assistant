@@ -171,7 +171,19 @@ class _TransactionRow extends ConsumerWidget {
                 ],
               ),
             ),
-            Text(entry.amount.format(), style: theme.textTheme.titleMedium),
+            // `Flexible`, not a bare `Text`: at 320px/200% text scale the
+            // formatted amount alone can exceed the space left after the
+            // icon and the type/note column, overflowing the Row. Wrapping
+            // lets it shrink/ellipsize instead (golden-revealed via the
+            // existing-flow gallery's 320/dark/200% variant).
+            Flexible(
+              child: Text(
+                entry.amount.format(),
+                style: theme.textTheme.titleMedium,
+                textAlign: TextAlign.end,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
           ],
         ),
       ),

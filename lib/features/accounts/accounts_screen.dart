@@ -81,9 +81,19 @@ class AccountsScreen extends ConsumerWidget {
                             ],
                           ),
                         ),
-                        Text(
-                          it.balance.format(),
-                          style: Theme.of(context).textTheme.titleMedium,
+                        // `Flexible`, not a bare `Text`: at 320px/200% text
+                        // scale the formatted balance alone can exceed the
+                        // space left after the icon, name/type column, and
+                        // archive button, overflowing the Row. Wrapping lets
+                        // it shrink/ellipsize instead (golden-revealed via
+                        // the existing-flow gallery's 320/dark/200% variant).
+                        Flexible(
+                          child: Text(
+                            it.balance.format(),
+                            style: Theme.of(context).textTheme.titleMedium,
+                            textAlign: TextAlign.end,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
                         IconButton(
                           key: Key('account-archive-${it.account.id}'),
