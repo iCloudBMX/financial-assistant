@@ -100,3 +100,74 @@ flutter analyze
   for compatibility with existing foundation and recovery paths; new
   repository/persistence flows can use the more explicit type without a broad,
   unrelated migration in this task.
+
+## Review follow-up: failure taxonomy and production reachability
+
+Review found that the first implementation defined new failure types without
+enough separation or representative production translation. The follow-up
+establishes these contracts:
+
+- `StorageFailure`: filesystem/artifact I/O outside the live database, including
+  backup, import, export, snapshot, and restore-file access.
+- `MigrationFailure`: database open, schema migration, and recovery failures.
+- `PersistenceFailure`: live repository/database read, write, or transaction
+  failures where an in-app change was not saved.
+- `CurrencyFailure`: a known incompatible-currency conflict translated at a
+  `Result` intent or repository boundary. Low-level `Money` arithmetic retains
+  `CurrencyMismatchError` as its invariant error.
+
+The storage message now directs the user to choose another artifact location
+and check file access. The migration message directs an app restart and backup
+recovery. The persistence message remains specific to an unsaved live change
+and retry. Tests require all three messages to be distinct and keep diagnostic
+details out of presentation text.
+
+Production reachability changes:
+
+- `buildTransfer` returns `CurrencyFailure` when accounts or the amount use
+  incompatible currencies; a non-positive amount remains `ValidationFailure`.
+- `DriftLedgerRepository.editEntry` returns `CurrencyFailure` for a currency
+  change while transfer-leg editing remains `ValidationFailure`.
+- The transfer database transaction and edit update translate executor errors
+  to `Err(PersistenceFailure(debugDetail))`. Lookup, not-found, and typed
+  validation paths remain outside those catches.
+
+### Follow-up RED
+
+```text
+flutter test --concurrency=1 test/core/result/result_test.dart test/core/ledger/balance_engine_test.dart test/data/ledger/ledger_repository_test.dart
+```
+
+Exit code: 1, with six expected failures:
+
+- storage message lacked file/location recovery guidance;
+- transfer construction and both ledger currency paths returned
+  `ValidationFailure` instead of `CurrencyFailure`;
+- a SQLite trigger aborting the second transfer insert escaped as a raw
+  `SqliteException`;
+- a SQLite trigger aborting an entry update escaped as a raw
+  `SqliteException`.
+
+### Follow-up GREEN and final verification
+
+Focused command:
+
+```text
+flutter test --concurrency=1 test/core/result/result_test.dart test/core/ledger/balance_engine_test.dart test/data/ledger/ledger_repository_test.dart test/core/limit/safe_limit_engine_test.dart test/providers/safe_limit_providers_test.dart test/providers/mortgage_providers_test.dart
+```
+
+Result: exit 0, 35/35 passed. The transfer failure test also verifies the first
+insert rolls back, and the edit failure test verifies the original row remains
+unchanged.
+
+Full verification:
+
+```text
+flutter test --concurrency=1
+flutter analyze
+```
+
+- Full suite: exit 0, 343/343 tests passed.
+- Analyzer: exit 0, `No issues found!`.
+- The same pre-existing multiple-database Drift warning appeared in
+  `settings_repository_test.dart`; it remains unrelated and non-failing.

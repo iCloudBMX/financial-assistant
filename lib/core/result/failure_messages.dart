@@ -3,9 +3,9 @@ import 'failure.dart';
 /// Maps a [Failure] to non-technical, next-step-oriented text (PRD §26).
 String userMessageFor(Failure failure) => switch (failure) {
       StorageFailure() =>
-        'Ma\'lumotni saqlab bo\'lmadi. Iltimos, qayta urinib ko\'ring.',
+        'Tanlangan faylni o\'qib yoki saqlab bo\'lmadi. Boshqa joylashuvni tanlang va fayl ruxsatlarini tekshiring.',
       MigrationFailure() =>
-        'Ma\'lumotlarni yangilashda muammo yuz berdi. Eski ma\'lumotlaringiz saqlab qolindi.',
+        'Ma\'lumotlar bazasini yangilashda muammo yuz berdi. Ilovani qayta ishga tushiring; muammo davom etsa, zaxira nusxasini tiklang.',
       ValidationFailure() =>
         'Kiritilgan ma\'lumot noto\'g\'ri. Iltimos, tekshirib qayta kiriting.',
       PersistenceFailure() =>

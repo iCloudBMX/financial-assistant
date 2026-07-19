@@ -147,11 +147,17 @@ class DriftLedgerRepository implements LedgerRepository {
     return draft.when(
       err: (f) async => Err<void>(f),
       ok: (d) async {
-        await db.transaction(() async {
-          await _insertDraft(d.outEntry);
-          await _insertDraft(d.inEntry);
-        });
-        return const Ok(null);
+        try {
+          await db.transaction(() async {
+            await _insertDraft(d.outEntry);
+            await _insertDraft(d.inEntry);
+          });
+          return const Ok(null);
+        } catch (error) {
+          // Diagnostic detail stays inside Failure; userMessageFor never
+          // interpolates it into presentation text.
+          return Err(PersistenceFailure(error.toString()));
+        }
       },
     );
   }
@@ -215,7 +221,7 @@ class DriftLedgerRepository implements LedgerRepository {
           ValidationFailure('edit a transfer by deleting and re-creating it'));
     }
     if (amount != null && amount.currency != entry.amount.currency) {
-      return const Err(ValidationFailure(
+      return const Err(CurrencyFailure(
           'cannot change an entry to a different currency; delete and re-create it instead'));
     }
     int? newMinor;
@@ -224,15 +230,20 @@ class DriftLedgerRepository implements LedgerRepository {
           ? -amount.minorUnits
           : amount.minorUnits;
     }
-    await (db.update(db.transactionsTable)..where((t) => t.id.equals(id)))
-        .write(TransactionsTableCompanion(
-      amountMinor: newMinor == null ? const Value.absent() : Value(newMinor),
-      categoryId: categoryId == null ? const Value.absent() : Value(categoryId),
-      occurredAt:
-          occurredAt == null ? const Value.absent() : Value(occurredAt),
-      note: note == null ? const Value.absent() : Value(note),
-    ));
-    return const Ok(null);
+    try {
+      await (db.update(db.transactionsTable)..where((t) => t.id.equals(id)))
+          .write(TransactionsTableCompanion(
+        amountMinor: newMinor == null ? const Value.absent() : Value(newMinor),
+        categoryId:
+            categoryId == null ? const Value.absent() : Value(categoryId),
+        occurredAt:
+            occurredAt == null ? const Value.absent() : Value(occurredAt),
+        note: note == null ? const Value.absent() : Value(note),
+      ));
+      return const Ok(null);
+    } catch (error) {
+      return Err(PersistenceFailure(error.toString()));
+    }
   }
 
   @override

@@ -41,4 +41,18 @@ void main() {
       expect(message, isNot(contains(failure.debugDetail)));
     }
   });
+
+  test('storage, migration, and persistence messages explain distinct recovery',
+      () {
+    final storage = userMessageFor(const StorageFailure('access denied'));
+    final migration = userMessageFor(const MigrationFailure('schema failed'));
+    final persistence =
+        userMessageFor(const PersistenceFailure('update failed'));
+
+    expect(storage, contains('fayl'));
+    expect(storage, contains('joylashuv'));
+    expect(migration, contains('qayta ishga tushiring'));
+    expect(persistence, contains('O\'zgarish'));
+    expect({storage, migration, persistence}, hasLength(3));
+  });
 }

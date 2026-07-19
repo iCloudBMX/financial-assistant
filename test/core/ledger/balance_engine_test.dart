@@ -72,7 +72,7 @@ void main() {
       transferId: 'tr-2',
     );
     expect(r.isOk, isFalse);
-    r.when(ok: (_) => fail('expected failure'), err: (f) => expect(f, isA<ValidationFailure>()));
+    r.when(ok: (_) => fail('expected failure'), err: (f) => expect(f, isA<CurrencyFailure>()));
   });
 
   test('buildTransfer rejects a non-positive amount', () {
@@ -84,5 +84,6 @@ void main() {
       transferId: 'tr-3',
     );
     expect(r.isOk, isFalse);
+    r.when(ok: (_) => fail('expected failure'), err: (f) => expect(f, isA<ValidationFailure>()));
   });
 }

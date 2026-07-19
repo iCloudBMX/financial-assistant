@@ -5,6 +5,7 @@ import 'package:financial_assistant/core/money/money.dart';
 import 'package:financial_assistant/core/ledger/account.dart';
 import 'package:financial_assistant/core/ledger/ledger_entry.dart';
 import 'package:financial_assistant/core/ledger/balance_engine.dart';
+import 'package:financial_assistant/core/result/failure.dart';
 import 'package:financial_assistant/data/db/app_database.dart';
 import 'package:financial_assistant/data/accounts/account_repository.dart';
 import 'package:financial_assistant/data/ledger/ledger_repository.dart';
@@ -66,6 +67,34 @@ void main() {
     final b = await accounts.create(name: 'USD', type: AccountType.bankCard, openingBalance: const Money(0, CurrencyRegistry.usd), icon: 'c');
     final r = await ledger.transfer(fromId: a, toId: b, amount: const Money(300000, uzs), occurredAt: when);
     expect(r.isOk, isFalse);
+    r.when(ok: (_) => fail('expected failure'), err: (f) => expect(f, isA<CurrencyFailure>()));
+    expect(await ledger.allEntries(), isEmpty);
+  });
+
+  test('transfer transaction failure returns PersistenceFailure and rolls back',
+      () async {
+    final a = await newAccount(opening: 1000000);
+    final b = await newAccount();
+    await db.customStatement('''
+      CREATE TRIGGER fail_transfer_in
+      BEFORE INSERT ON transactions_table
+      WHEN NEW.type = 'transferIn'
+      BEGIN
+        SELECT RAISE(ABORT, 'forced transfer write failure');
+      END;
+    ''');
+
+    final r = await ledger.transfer(
+      fromId: a,
+      toId: b,
+      amount: const Money(300000, uzs),
+      occurredAt: when,
+    );
+
+    r.when(ok: (_) => fail('expected failure'), err: (f) {
+      expect(f, isA<PersistenceFailure>());
+      expect(f.debugDetail, contains('forced transfer write failure'));
+    });
     expect(await ledger.allEntries(), isEmpty);
   });
 
@@ -95,6 +124,31 @@ void main() {
     expect(await balanceOf(a), const Money(900000, uzs));
   });
 
+  test('edit update failure returns PersistenceFailure and preserves the row',
+      () async {
+    final a = await newAccount(opening: 1000000);
+    final id = await ledger.addExpense(accountId: a, amount: const Money(250000, uzs), categoryId: 1, occurredAt: when);
+    await db.customStatement('''
+      CREATE TRIGGER fail_entry_update
+      BEFORE UPDATE ON transactions_table
+      BEGIN
+        SELECT RAISE(ABORT, 'forced entry update failure');
+      END;
+    ''');
+
+    final r = await ledger.editEntry(
+      id: id,
+      amount: const Money(100000, uzs),
+    );
+
+    r.when(ok: (_) => fail('expected failure'), err: (f) {
+      expect(f, isA<PersistenceFailure>());
+      expect(f.debugDetail, contains('forced entry update failure'));
+    });
+    expect((await ledger.entriesForAccount(a)).single.amount,
+        const Money(-250000, uzs));
+  });
+
   test('editing a transfer leg is rejected', () async {
     final a = await newAccount(opening: 1000000);
     final b = await newAccount();
@@ -109,6 +163,7 @@ void main() {
     final id = await ledger.addExpense(accountId: a, amount: const Money(250000, uzs), categoryId: 1, occurredAt: when);
     final r = await ledger.editEntry(id: id, amount: const Money(5000, CurrencyRegistry.usd));
     expect(r.isOk, isFalse);
+    r.when(ok: (_) => fail('expected failure'), err: (f) => expect(f, isA<CurrencyFailure>()));
     final e = (await ledger.entriesForAccount(a)).single;
     expect(e.amount, const Money(-250000, uzs));
   });

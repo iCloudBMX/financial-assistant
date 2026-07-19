@@ -31,7 +31,9 @@ Result<TransferDraft> buildTransfer({
   String? note,
 }) {
   if (from.currency != to.currency || amount.currency != from.currency) {
-    return const Err(ValidationFailure('transfer currencies must match'));
+    // Translate the known intent-level conflict here. Money arithmetic keeps
+    // throwing CurrencyMismatchError for unexpected low-level invariant use.
+    return const Err(CurrencyFailure('transfer currencies must match'));
   }
   if (amount.minorUnits <= 0) {
     return const Err(ValidationFailure('transfer amount must be positive'));
