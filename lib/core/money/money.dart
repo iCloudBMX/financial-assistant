@@ -44,8 +44,7 @@ class Money {
   // Integer-only parsing — no double/num is used for the amount, per the
   // project's "No floating-point money, ever" constraint.
   static Money? tryParse(String text, Currency currency) {
-    final cleaned =
-        text.replaceAll(RegExp(r'\s'), '').replaceAll(',', '.');
+    final cleaned = text.replaceAll(RegExp(r'\s'), '').replaceAll(',', '.');
     if (cleaned.isEmpty) return null;
     final negative = cleaned.startsWith('-');
     final unsigned = negative ? cleaned.substring(1) : cleaned;
@@ -55,18 +54,21 @@ class Money {
 
     // Validate major part: must be pure digits only
     if (!RegExp(r'^\d+$').hasMatch(majorText)) return null;
-    final major = int.parse(majorText);
 
-    var minor = 0;
+    var fractionalText = '';
     if (parts.length == 2 && parts[1].isNotEmpty) {
       // Validate fractional part: must be pure digits only
       if (!RegExp(r'^\d+$').hasMatch(parts[1])) return null;
       final frac = parts[1].padRight(currency.decimalDigits, '0');
       final take = currency.decimalDigits;
-      minor = take == 0 ? 0 : int.parse(frac.substring(0, take));
+      fractionalText = take == 0 ? '' : frac.substring(0, take);
+    } else if (currency.decimalDigits > 0) {
+      fractionalText = '0' * currency.decimalDigits;
     }
-    final total = major * _pow10(currency.decimalDigits) + minor;
-    return Money(negative ? -total : total, currency);
+
+    final sign = negative ? '-' : '';
+    final total = int.tryParse('$sign$majorText$fractionalText');
+    return total == null ? null : Money(total, currency);
   }
 
   /// The unsigned, grouped numeric body WITHOUT sign or currency symbol,
@@ -76,9 +78,10 @@ class Money {
     final major = (minorUnits.abs() ~/ scale);
     final grouped = _group(major.toString());
     if (currency.decimalDigits > 0) {
-      final frac = (minorUnits.abs() % scale)
-          .toString()
-          .padLeft(currency.decimalDigits, '0');
+      final frac = (minorUnits.abs() % scale).toString().padLeft(
+        currency.decimalDigits,
+        '0',
+      );
       return '$grouped.$frac';
     }
     return grouped;

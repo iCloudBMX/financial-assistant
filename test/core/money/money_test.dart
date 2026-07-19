@@ -17,8 +17,10 @@ void main() {
   });
 
   test('add throws on currency mismatch', () {
-    expect(() => Money(1, uzs).add(Money(1, usd)),
-        throwsA(isA<CurrencyMismatchError>()));
+    expect(
+      () => Money(1, uzs).add(Money(1, usd)),
+      throwsA(isA<CurrencyMismatchError>()),
+    );
   });
 
   test('tryParse reads grouped UZS input', () {
@@ -31,6 +33,11 @@ void main() {
 
   test('tryParse returns null on garbage', () {
     expect(Money.tryParse('abc', uzs), isNull);
+  });
+
+  test('tryParse returns null instead of throwing on integer overflow', () {
+    const overflow = '99999999999999999999999999999999999999999999999999';
+    expect(Money.tryParse(overflow, uzs), isNull);
   });
 
   test('format groups thousands and places symbol after for UZS', () {
@@ -65,10 +72,16 @@ void main() {
       Money(0, uzs), // zero
     ];
     for (final m in samples) {
-      expect(Money.tryParse(m.formatNumber(), m.currency), m,
-          reason: 'round-trip failed for ${m.format()}');
-      expect(m.formatNumber().contains(m.currency.symbol), isFalse,
-          reason: 'formatNumber must not contain the currency symbol');
+      expect(
+        Money.tryParse(m.formatNumber(), m.currency),
+        m,
+        reason: 'round-trip failed for ${m.format()}',
+      );
+      expect(
+        m.formatNumber().contains(m.currency.symbol),
+        isFalse,
+        reason: 'formatNumber must not contain the currency symbol',
+      );
     }
   });
 }
