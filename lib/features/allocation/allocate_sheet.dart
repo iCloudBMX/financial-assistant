@@ -104,8 +104,7 @@ class _AllocateSheetState extends ConsumerState<AllocateSheet> {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('Jami kirim: ${widget.income.format()}',
-              style: Theme.of(context).textTheme.bodyLarge),
+          _IncomeHeaderCard(income: widget.income),
           const SizedBox(height: VeloraSpacing.lg),
           for (final d in initial.directions) ...[
             // The bucket + rule-type description lives in its own free-
@@ -159,17 +158,17 @@ class _AllocateSheetState extends ConsumerState<AllocateSheet> {
             ),
             const SizedBox(height: VeloraSpacing.md),
           ],
-          const Divider(),
-          Text('Taqsimlangan: ${live.allocatedTotal.format()}'),
-          Text('Taqsimlanmagan: ${live.unallocated.format()}',
-              style: TextStyle(
-                  color: live.unallocated.isNegative
-                      ? Theme.of(context).colorScheme.error
-                      : null)),
-          Text('Taqsimlashdan keyin erkin: ${live.freeAfter.format()}'),
+          _AllocationSummaryCard(
+            directions: initial.directions,
+            current: current,
+            allocatedTotal: live.allocatedTotal,
+            unallocated: live.unallocated,
+            freeAfter: live.freeAfter,
+          ),
         ],
       ),
-      primaryAction: VeloraPrimaryButton(
+      primaryAction: _CoralPrimaryAction(
+        child: VeloraPrimaryButton(
         key: const Key('allocate-confirm'),
         label: 'Tasdiqlash',
         onPressed: !canConfirm
@@ -193,7 +192,177 @@ class _AllocateSheetState extends ConsumerState<AllocateSheet> {
                 }
                 if (context.mounted) Navigator.pop(context, true);
               },
+        ),
       ),
+    );
+  }
+}
+
+/// The plum "total income" banner from the money-flow mockups: the amount the
+/// user is about to distribute, shown as the sheet's anchor before the
+/// editable directions.
+class _IncomeHeaderCard extends StatelessWidget {
+  const _IncomeHeaderCard({required this.income});
+
+  final Money income;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.all(VeloraSpacing.lg),
+      decoration: BoxDecoration(
+        color: VeloraColors.plum,
+        borderRadius: BorderRadius.circular(VeloraRadii.card),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'JAMI KIRIM',
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: Colors.white.withValues(alpha: 0.68),
+              fontWeight: FontWeight.w700,
+              letterSpacing: 1.2,
+            ),
+          ),
+          const SizedBox(height: VeloraSpacing.xs),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              income.format(),
+              maxLines: 1,
+              softWrap: false,
+              style: theme.textTheme.headlineSmall?.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The §8.4 balance readout, restyled as Home's distribution card: a single
+/// stacked bar over the currently-funded buckets, then the funded total, the
+/// unallocated remainder (red when over-allocated), and the free balance after
+/// this split commits. The three summary strings are preserved verbatim.
+class _AllocationSummaryCard extends StatelessWidget {
+  const _AllocationSummaryCard({
+    required this.directions,
+    required this.current,
+    required this.allocatedTotal,
+    required this.unallocated,
+    required this.freeAfter,
+  });
+
+  final List<AllocationDirection> directions;
+  final Map<String, Money> current;
+  final Money allocatedTotal;
+  final Money unallocated;
+  final Money freeAfter;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    // Bar segments follow the priority order of the directions, plus a
+    // trailing "free" segment for whatever stays unallocated (never negative).
+    final segments = <({Color color, int units})>[
+      for (final d in directions)
+        if ((current[d.bucketKey]?.minorUnits ?? 0) > 0)
+          (color: _bucketColor(d.bucketKey), units: current[d.bucketKey]!.minorUnits),
+      if (freeAfter.minorUnits > 0)
+        (color: VeloraColors.line, units: freeAfter.minorUnits),
+    ];
+    final total = segments.fold<int>(0, (sum, s) => sum + s.units);
+
+    return Container(
+      padding: const EdgeInsets.all(VeloraSpacing.lg),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(VeloraRadii.card),
+        border: Border.all(color: VeloraColors.line),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (total > 0) ...[
+            ClipRRect(
+              borderRadius: BorderRadius.circular(99),
+              child: Row(
+                children: [
+                  for (final s in segments)
+                    Expanded(
+                      flex: (s.units * 1000 ~/ total).clamp(1, 1000),
+                      child: Container(height: 9, color: s.color),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(height: VeloraSpacing.md),
+          ],
+          Text(
+            'Taqsimlangan: ${allocatedTotal.format()}',
+            style: theme.textTheme.bodyMedium
+                ?.copyWith(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: VeloraSpacing.xs),
+          Text(
+            'Taqsimlanmagan: ${unallocated.format()}',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: unallocated.isNegative ? theme.colorScheme.error : null,
+            ),
+          ),
+          const SizedBox(height: VeloraSpacing.xs),
+          Text(
+            'Taqsimlashdan keyin erkin: ${freeAfter.format()}',
+            style: theme.textTheme.bodyMedium
+                ?.copyWith(color: VeloraColors.muted),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Stable stacked-bar colour per system bucket; unknown keys (goal:{id},
+/// mortgage, …) cycle through the warm accent palette so every direction still
+/// reads as its own segment.
+Color _bucketColor(String bucketKey) => switch (bucketKey) {
+      'mandatoryExpenses' => VeloraColors.plum,
+      'variableBudget' => VeloraColors.coral,
+      'minReserve' => VeloraColors.apricot,
+      _ => _fallbackPalette[bucketKey.hashCode.abs() % _fallbackPalette.length],
+    };
+
+const _fallbackPalette = [
+  VeloraColors.success,
+  VeloraColors.plum,
+  VeloraColors.coral,
+  VeloraColors.apricot,
+];
+
+/// Recolors its subtree's primary to Velora coral so the pinned confirm CTA is
+/// the single coral primary action from the mockups.
+class _CoralPrimaryAction extends StatelessWidget {
+  const _CoralPrimaryAction({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Theme(
+      data: theme.copyWith(
+        colorScheme: theme.colorScheme.copyWith(
+          primary: VeloraColors.coral,
+          onPrimary: Colors.white,
+        ),
+      ),
+      child: child,
     );
   }
 }

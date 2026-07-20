@@ -144,6 +144,7 @@ class _IncomeEntrySheetBodyState extends ConsumerState<_IncomeEntrySheetBody> {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          const _AmountCaption('Qancha kirim oldingiz?'),
           VeloraMoneyField(
             controller: _amountCtrl,
             currency: widget.currency,
@@ -152,6 +153,8 @@ class _IncomeEntrySheetBodyState extends ConsumerState<_IncomeEntrySheetBody> {
             onChanged: (m) => setState(() => _amount = m),
           ),
           const SizedBox(height: VeloraSpacing.lg),
+          const _SheetSectionLabel('Qaysi hisobga?'),
+          const SizedBox(height: VeloraSpacing.sm),
           accountsAsync.when(
             data: (list) => AccountCardPicker(
               accounts: [for (final a in list) a.account],
@@ -165,6 +168,8 @@ class _IncomeEntrySheetBodyState extends ConsumerState<_IncomeEntrySheetBody> {
             error: (_, _) => const SizedBox.shrink(),
           ),
           const SizedBox(height: VeloraSpacing.lg),
+          const _SheetSectionLabel('Kirim turi'),
+          const SizedBox(height: VeloraSpacing.sm),
           Wrap(
             spacing: VeloraSpacing.sm,
             runSpacing: VeloraSpacing.sm,
@@ -220,11 +225,71 @@ class _IncomeEntrySheetBodyState extends ConsumerState<_IncomeEntrySheetBody> {
           ),
         ],
       ),
-      primaryAction: VeloraPrimaryButton(
-        label: 'Saqlash',
-        loading: _saving,
-        onPressed: _canSave ? _save : null,
+      primaryAction: _CoralPrimaryAction(
+        child: VeloraPrimaryButton(
+          label: 'Saqlash',
+          loading: _saving,
+          onPressed: _canSave ? _save : null,
+        ),
       ),
+    );
+  }
+}
+
+/// The muted caption the mockups place directly above the amount field.
+class _AmountCaption extends StatelessWidget {
+  const _AmountCaption(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.only(bottom: VeloraSpacing.sm),
+        child: Text(
+          text,
+          style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                color: VeloraColors.muted,
+                fontWeight: FontWeight.w600,
+              ),
+        ),
+      );
+}
+
+/// The small uppercase muted section header above each picker/section.
+class _SheetSectionLabel extends StatelessWidget {
+  const _SheetSectionLabel(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Text(
+        text.toUpperCase(),
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: VeloraColors.muted,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.6,
+            ),
+      );
+}
+
+/// Recolors its subtree's primary to Velora coral so the pinned save CTA is the
+/// single coral primary action from the mockups.
+class _CoralPrimaryAction extends StatelessWidget {
+  const _CoralPrimaryAction({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Theme(
+      data: theme.copyWith(
+        colorScheme: theme.colorScheme.copyWith(
+          primary: VeloraColors.coral,
+          onPrimary: Colors.white,
+        ),
+      ),
+      child: child,
     );
   }
 }

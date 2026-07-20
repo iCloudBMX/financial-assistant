@@ -9,6 +9,7 @@ import '../../ui/components/velora_button.dart';
 import '../../ui/components/velora_money_field.dart';
 import '../../ui/components/velora_sheet.dart';
 import 'goal_controller.dart';
+import 'goal_visuals.dart';
 
 /// Opens the goal create/edit sheet. Pass [existing] to edit; omit to
 /// create a new goal.
@@ -130,7 +131,8 @@ class _GoalEditSheetState extends ConsumerState<_GoalEditSheet> {
             initialValue: _priority,
             decoration: const InputDecoration(labelText: 'Prioritet'),
             items: GoalPriority.values
-                .map((p) => DropdownMenuItem(value: p, child: Text(p.name)))
+                .map((p) => DropdownMenuItem(
+                    value: p, child: Text(goalPriorityLabel(p))))
                 .toList(),
             onChanged: (v) => setState(() => _priority = v ?? _priority),
           ),

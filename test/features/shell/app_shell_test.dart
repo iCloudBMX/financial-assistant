@@ -27,9 +27,7 @@ void main() {
     expect(find.byKey(const PageStorageKey('home-tab')), findsOneWidget);
   });
 
-  testWidgets('announces selected tab and the global expense action', (
-    tester,
-  ) async {
+  testWidgets('announces the selected tab', (tester) async {
     await _pumpShell(tester);
 
     expect(
@@ -46,35 +44,9 @@ void main() {
         hasFocusAction: true,
       ),
     );
-    expect(
-      tester.getSemantics(find.byKey(const Key('global-expense-action'))),
-      matchesSemantics(
-        label: 'Chiqim',
-        isButton: true,
-        isFocusable: true,
-        hasEnabledState: true,
-        isEnabled: true,
-        hasTapAction: true,
-        hasFocusAction: true,
-      ),
-    );
   });
 
-  testWidgets('keeps the global expense action available on all five tabs', (
-    tester,
-  ) async {
-    await _pumpShell(tester);
-
-    for (final label in ['Bugun', 'Tarix', 'Reja', 'Maqsad', 'Tahlil']) {
-      await tester.tap(find.text(label));
-      await tester.pumpAndSettle();
-      expect(find.byKey(const Key('global-expense-action')), findsOneWidget);
-    }
-  });
-
-  testWidgets("Goals tab retains add-goal access beside the expense action", (
-    tester,
-  ) async {
+  testWidgets('Goals tab retains add-goal access', (tester) async {
     await _pumpShell(tester);
 
     await tester.tap(find.text('Maqsad'));
@@ -86,7 +58,6 @@ void main() {
       matching: find.byType(FloatingActionButton),
     );
     expect(goalAction, findsOneWidget);
-    expect(find.byKey(const Key('global-expense-action')), findsOneWidget);
     await tester.tap(goalAction);
     await tester.pumpAndSettle();
 
@@ -107,7 +78,6 @@ void main() {
 
     expect(tester.takeException(), isNull);
     expect(find.text('Tahlil'), findsOneWidget);
-    expect(find.byKey(const Key('global-expense-action')), findsOneWidget);
   });
 }
 

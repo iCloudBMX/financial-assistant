@@ -133,6 +133,8 @@ class _MortgageEditSheetState extends ConsumerState<_MortgageEditSheet> {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          const _SectionLabel('Kredit ma\'lumotlari'),
+          const SizedBox(height: VeloraSpacing.sm),
           TextField(
               key: const Key('mortgage-name'),
               controller: _name,
@@ -155,7 +157,9 @@ class _MortgageEditSheetState extends ConsumerState<_MortgageEditSheet> {
               controller: _rate,
               keyboardType: TextInputType.number,
               decoration: const InputDecoration(labelText: 'Yillik foiz (%)')),
-          const SizedBox(height: VeloraSpacing.md),
+          const SizedBox(height: VeloraSpacing.lg),
+          const _SectionLabel('To\'lov rejasi'),
+          const SizedBox(height: VeloraSpacing.sm),
           VeloraMoneyField(
               key: const Key('mortgage-mandatory'),
               controller: _mandatory,
@@ -186,6 +190,24 @@ class _MortgageEditSheetState extends ConsumerState<_MortgageEditSheet> {
         label: 'Saqlash',
         onPressed: _save,
       ),
+    );
+  }
+}
+
+/// A muted group heading used to break the form into "loan data" and "payment
+/// plan" sections (§6.9's two-step setup, presented as one scrollable sheet).
+class _SectionLabel extends StatelessWidget {
+  const _SectionLabel(this.text);
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      text,
+      style: Theme.of(context)
+          .textTheme
+          .labelLarge
+          ?.copyWith(color: VeloraColors.muted),
     );
   }
 }

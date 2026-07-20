@@ -5,11 +5,11 @@ import '../../core/money/money.dart';
 import '../../core/theme/velora_tokens.dart';
 import '../../providers/app_providers.dart';
 import '../../ui/components/velora_button.dart';
-import '../../ui/components/velora_card.dart';
 import '../../ui/components/velora_money_field.dart';
 import '../../ui/components/velora_sheet.dart';
 import 'goal_completed_dialog.dart';
 import 'goal_controller.dart';
+import 'goal_visuals.dart';
 
 Future<void> showGoalContributeSheet(BuildContext context, WidgetRef ref,
     {required int goalId, bool withdraw = false}) {
@@ -84,7 +84,8 @@ class _ContributeSheetState extends ConsumerState<_ContributeSheet> {
     final currency = item?.progress.saved.currency ?? CurrencyRegistry.uzs;
     final amount = Money.tryParse(_amount.text, currency);
 
-    // §6.8: contribution and withdrawal show their effect before commit.
+    // §6.8: contribution and withdrawal show their effect before commit — the
+    // mockup's apricot "Targetga ta'siri" impact card with the progress shift.
     Widget? preview;
     if (item != null && amount != null && amount.minorUnits > 0) {
       final saved = item.progress.saved.minorUnits;
@@ -95,19 +96,41 @@ class _ContributeSheetState extends ConsumerState<_ContributeSheet> {
       final after = Money(afterMinor < 0 ? 0 : afterMinor, currency);
       final remainingAfter =
           Money((target - after.minorUnits).clamp(0, target), currency);
-      preview = VeloraCard(
+      final beforePct = (item.progress.percentBp / 100).toStringAsFixed(0);
+      final afterBp = target <= 0
+          ? 10000
+          : (after.minorUnits * 10000 ~/ target).clamp(0, 10000);
+      final afterPct = (afterBp / 100).toStringAsFixed(0);
+      preview = Container(
+        padding: const EdgeInsets.all(VeloraSpacing.lg),
+        decoration: BoxDecoration(
+          color: VeloraColors.apricotTint,
+          borderRadius: BorderRadius.circular(VeloraRadii.card),
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              widget.withdraw
-                  ? "Yechishdan so'ng jamg'arma: ${after.format()}"
-                  : "Hissadan so'ng jamg'arma: ${after.format()}",
-              style: theme.textTheme.bodyMedium,
-            ),
+            Text("Targetga ta'siri",
+                style: theme.textTheme.labelMedium
+                    ?.copyWith(color: VeloraColors.muted)),
             const SizedBox(height: VeloraSpacing.xs),
-            Text('Maqsadgacha qoldi: ${remainingAfter.format()}',
-                style: theme.textTheme.bodySmall),
+            Text('Progress $beforePct% → $afterPct%',
+                style: theme.textTheme.titleMedium
+                    ?.copyWith(fontWeight: FontWeight.w700)),
+            const SizedBox(height: VeloraSpacing.md),
+            GoalProgressBar(value: afterBp / 10000),
+            const SizedBox(height: VeloraSpacing.md),
+            GoalMetaLine(
+              label: widget.withdraw
+                  ? "Yechishdan so'ng jamg'arma"
+                  : "Hissadan so'ng jamg'arma",
+              value: after.format(),
+              emphasize: true,
+            ),
+            GoalMetaLine(
+              label: 'Maqsadgacha qoldi',
+              value: remainingAfter.format(),
+            ),
           ],
         ),
       );

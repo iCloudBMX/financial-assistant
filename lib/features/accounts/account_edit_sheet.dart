@@ -92,6 +92,11 @@ class _AccountEditSheetBodyState extends ConsumerState<_AccountEditSheetBody> {
                   key: Key('account-type-${type.name}'),
                   label: Text(accountTypeLabel(type)),
                   selected: _type == type,
+                  // Selection is shown by the chip's fill, matching the
+                  // mockup. Suppress the leading checkmark: it would widen
+                  // the selected chip and reflow the Wrap, making chips jump
+                  // rows as the user switches types.
+                  showCheckmark: false,
                   onSelected: (_) => setState(() => _type = type),
                 ),
             ],

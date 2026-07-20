@@ -92,73 +92,79 @@ class _AccountStepBodyState extends ConsumerState<_AccountStepBody> {
   @override
   Widget build(BuildContext context) {
     final currency = widget.controller.state.settings.primaryCurrency;
-    return Padding(
-      padding: const EdgeInsets.all(VeloraSpacing.xl),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(widget.title, style: Theme.of(context).textTheme.headlineSmall),
-          const SizedBox(height: VeloraSpacing.sm),
-          Text(
-            "Bu bosqichni keyinroq ham to'ldirishingiz mumkin.",
-            style: Theme.of(context).textTheme.bodyMedium,
-          ),
-          const SizedBox(height: VeloraSpacing.lg),
-          TextField(
-            key: const Key('onboarding_account_name'),
-            controller: _nameCtrl,
-            enabled: !_created,
-            decoration: const InputDecoration(labelText: 'Hisob nomi'),
-          ),
-          const SizedBox(height: VeloraSpacing.lg),
-          VeloraMoneyField(
-            key: const Key('onboarding_account_balance'),
-            controller: _balanceCtrl,
-            currency: currency,
-            enabled: !_created,
-            label: "Boshlang'ich balans",
-            onChanged: (m) => setState(() => _opening = m),
-          ),
-          const SizedBox(height: VeloraSpacing.lg),
-          Wrap(
-            spacing: VeloraSpacing.sm,
-            runSpacing: VeloraSpacing.sm,
-            children: [
-              for (final type in accountTypesInDisplayOrder)
-                ChoiceChip(
-                  key: Key('onboarding-account-type-${type.name}'),
-                  label: Text(accountTypeLabel(type)),
-                  selected: _type == type,
-                  onSelected:
-                      _created ? null : (_) => setState(() => _type = type),
-                ),
-            ],
-          ),
-          const SizedBox(height: VeloraSpacing.lg),
-          if (_created)
-            const VeloraStatusBadge(
-              key: Key('onboarding_account_created_badge'),
-              color: VeloraColors.success,
-              icon: Icons.check_circle,
-              label: 'Hisob yaratildi',
-            )
-          else
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                key: const Key('onboarding_account_create_button'),
-                onPressed: _saving ? null : _createAccount,
-                child: _saving
-                    ? const SizedBox.square(
-                        dimension: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Text("Hisob qo'shish"),
-              ),
+    return OnboardingStepScaffold(
+      title: widget.title,
+      lead: "Karta yoki naqd hisob yarating. Bu bosqichni keyinroq ham "
+          "to'ldirishingiz mumkin.",
+      children: [
+        TextField(
+          key: const Key('onboarding_account_name'),
+          controller: _nameCtrl,
+          enabled: !_created,
+          decoration: const InputDecoration(
+            labelText: 'Hisob nomi',
+            filled: true,
+            border: OutlineInputBorder(
+              borderRadius:
+                  BorderRadius.all(Radius.circular(VeloraRadii.control)),
             ),
-        ],
-      ),
+          ),
+        ),
+        const SizedBox(height: VeloraSpacing.lg),
+        VeloraMoneyField(
+          key: const Key('onboarding_account_balance'),
+          controller: _balanceCtrl,
+          currency: currency,
+          enabled: !_created,
+          label: "Boshlang'ich balans",
+          onChanged: (m) => setState(() => _opening = m),
+        ),
+        const SizedBox(height: VeloraSpacing.lg),
+        Wrap(
+          spacing: VeloraSpacing.sm,
+          runSpacing: VeloraSpacing.sm,
+          children: [
+            for (final type in accountTypesInDisplayOrder)
+              ChoiceChip(
+                key: Key('onboarding-account-type-${type.name}'),
+                label: Text(accountTypeLabel(type)),
+                selected: _type == type,
+                onSelected:
+                    _created ? null : (_) => setState(() => _type = type),
+              ),
+          ],
+        ),
+        const SizedBox(height: VeloraSpacing.lg),
+        if (_created)
+          const VeloraStatusBadge(
+            key: Key('onboarding_account_created_badge'),
+            color: VeloraColors.success,
+            icon: Icons.check_circle,
+            label: 'Hisob yaratildi',
+          )
+        else
+          SizedBox(
+            width: double.infinity,
+            height: 52,
+            child: FilledButton(
+              key: const Key('onboarding_account_create_button'),
+              style: FilledButton.styleFrom(
+                backgroundColor: VeloraColors.plumTint,
+                foregroundColor: VeloraColors.plum,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(VeloraRadii.control),
+                ),
+              ),
+              onPressed: _saving ? null : _createAccount,
+              child: _saving
+                  ? const SizedBox.square(
+                      dimension: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Text("Hisob qo'shish"),
+            ),
+          ),
+      ],
     );
   }
 }

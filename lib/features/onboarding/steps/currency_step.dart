@@ -8,6 +8,9 @@ class CurrencyStep extends OnboardingStep {
   String get id => 'currency';
   @override
   String get title => 'Asosiy valyuta';
+  @override
+  String get lead =>
+      'Asosiy valyuta hisobot va xavfsiz limit hisoblash uchun ishlatiladi.';
 
   static const _currencies = [
     CurrencyRegistry.uzs,
@@ -17,15 +20,16 @@ class CurrencyStep extends OnboardingStep {
 
   @override
   Widget build(BuildContext context, OnboardingController controller) =>
-      Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(title, style: Theme.of(context).textTheme.headlineSmall),
-            const SizedBox(height: 16),
-            DropdownButton<String>(
+      OnboardingStepScaffold(
+        title: title,
+        lead: lead,
+        children: [
+          OnboardingFieldTile(
+            label: 'Valyuta',
+            child: DropdownButton<String>(
               value: controller.state.settings.primaryCurrency.code,
+              isExpanded: true,
+              underline: const SizedBox.shrink(),
               items: [
                 for (final c in _currencies)
                   DropdownMenuItem(value: c.code, child: Text(c.code)),
@@ -39,7 +43,7 @@ class CurrencyStep extends OnboardingStep {
                 );
               },
             ),
-          ],
-        ),
+          ),
+        ],
       );
 }

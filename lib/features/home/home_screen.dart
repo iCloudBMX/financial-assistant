@@ -17,7 +17,10 @@ import '../mortgage/mortgage_payment_sheet.dart';
 import '../mortgage/mortgage_summary_card.dart';
 import '../recurring/recurring_prompt.dart';
 import '../shell/routes.dart';
+import '../../core/limit/safe_limit_engine.dart';
+import '../../core/money/money.dart';
 import 'dashboard_data.dart';
+import 'home_hero.dart';
 import 'home_summary_cards.dart';
 import 'safe_limit_cards.dart';
 
@@ -33,22 +36,15 @@ class HomeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(dashboardProvider);
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Bosh sahifa'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.account_balance_wallet_outlined),
-            onPressed: () => context.pushNamed(RouteNames.accounts),
+      body: SafeArea(
+        child: async.when(
+          loading: () => const _HomeSkeleton(),
+          error: (e, _) => VeloraErrorState(
+            message: 'Bosh sahifani yuklab bo\'lmadi',
+            onRetry: () => ref.invalidate(dashboardProvider),
           ),
-        ],
-      ),
-      body: async.when(
-        loading: () => const _HomeSkeleton(),
-        error: (e, _) => VeloraErrorState(
-          message: 'Bosh sahifani yuklab bo\'lmadi',
-          onRetry: () => ref.invalidate(dashboardProvider),
+          data: (d) => _HomeBody(data: d),
         ),
-        data: (d) => _HomeBody(data: d),
       ),
     );
   }
@@ -84,9 +80,24 @@ class _HomeBody extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final d = data;
     final hidden = ref.watch(balanceVisibilityProvider);
+    final name = ref.watch(settingsProvider).asData?.value.name ?? '';
     final hasUnallocated =
         d.unallocatedEntryId != null &&
         (d.unallocatedEntryAmount?.minorUnits ?? 0) > 0;
+
+    final total =
+        d.totals[d.primaryCurrency] ?? Money(0, d.primaryCurrency);
+    // "Erkin" (free) is the month's spendable figure the safe-limit engine
+    // already resolved; "Rezerv" (reserved) is the honest remainder,
+    // total − free, floored at zero. Both stay null until a safe limit
+    // exists so the minis show an em dash rather than an invented split.
+    final free = d.safeLimit?.spendable;
+    final reserved = free == null
+        ? null
+        : Money(
+            (total.minorUnits - free.minorUnits).clamp(0, total.minorUnits),
+            d.primaryCurrency,
+          );
 
     // A ListView (not a SingleChildScrollView+Column) so Home participates
     // in PageStorage scroll-offset retention like the other shell tabs when
@@ -95,19 +106,28 @@ class _HomeBody extends ConsumerWidget {
       padding: const EdgeInsets.all(VeloraSpacing.lg),
       children: [
         const RecurringPromptBanner(),
-        TotalBalanceCard(
-          key: const Key('balance-card'),
-          totals: d.totals,
+        HomeHeader(
+          name: name,
+          title: _statusTitle(d.safeLimit),
           hidden: hidden,
           onToggleHidden: () =>
               ref.read(balanceVisibilityProvider.notifier).update((v) => !v),
+          onOpenAccounts: () => context.pushNamed(RouteNames.accounts),
         ),
-        const SizedBox(height: VeloraSpacing.md),
-        if (d.safeLimit != null)
+        const SizedBox(height: VeloraSpacing.lg),
+        if (d.safeLimit != null) ...[
           SafeLimitCard(
             limit: d.safeLimit!,
             overspendCategories: d.overspendCategories,
           ),
+          const SizedBox(height: VeloraSpacing.md),
+        ],
+        MiniBalanceRow(
+          total: total,
+          reserved: reserved,
+          free: free,
+          hidden: hidden,
+        ),
         const SizedBox(height: VeloraSpacing.md),
         QuickActionsRow(
           key: const Key('quick-actions-row'),
@@ -150,6 +170,18 @@ class _HomeBody extends ConsumerWidget {
           ),
         ],
         const SizedBox(height: VeloraSpacing.md),
+        DistributionCard(
+          segments: [
+            if (free != null)
+              DistributionSegment('Erkin xarajat', free, VeloraColors.coral),
+            DistributionSegment(
+                'Maqsadlar', d.goalsSavedTotal, VeloraColors.apricot),
+            if (d.mortgageSummary != null)
+              DistributionSegment('Ipoteka',
+                  d.mortgageSummary!.currentPrincipal, VeloraColors.plum),
+          ],
+        ),
+        const SizedBox(height: VeloraSpacing.md),
         if (d.weeklyLimit != null && d.safeLimit != null)
           WeeklySafeLimitCard(weekly: d.weeklyLimit!, monthly: d.safeLimit!),
         const SizedBox(height: VeloraSpacing.md),
@@ -182,4 +214,17 @@ class _HomeBody extends ConsumerWidget {
       ],
     );
   }
+}
+
+/// The warm status headline under the greeting, chosen from the day's safe
+/// limit: reassuring when on track, constructive (never accusatory, §3.1)
+/// when close to or past the limit.
+String _statusTitle(SafeLimit? limit) {
+  if (limit == null) return 'Pul rejangiz joyida';
+  if (limit.isOver) return 'Bugun ehtiyotkor bo\'ling';
+  if (limit.perDay.minorUnits > 0 &&
+      limit.todayRemaining.minorUnits <= limit.perDay.minorUnits ~/ 5) {
+    return 'Limitga yaqinlashdingiz';
+  }
+  return 'Pul rejangiz joyida';
 }

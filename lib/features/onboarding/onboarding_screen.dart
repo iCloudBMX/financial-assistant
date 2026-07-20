@@ -44,6 +44,7 @@ class OnboardingScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
     final steps = ref.watch(onboardingStepsProvider);
     final draft = ref.watch(onboardingControllerProvider);
     final controller = ref.read(onboardingControllerProvider.notifier);
@@ -65,28 +66,73 @@ class OnboardingScreen extends ConsumerWidget {
         child: Column(
           children: [
             Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: VeloraSpacing.xl,
-                vertical: VeloraSpacing.md,
+              padding: const EdgeInsets.fromLTRB(
+                VeloraSpacing.xl,
+                VeloraSpacing.lg,
+                VeloraSpacing.xl,
+                VeloraSpacing.sm,
               ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(VeloraRadii.control),
-                child: LinearProgressIndicator(
-                  key: const Key('onboarding_progress'),
-                  value: (draft.index + 1) / steps.length,
-                  minHeight: 6,
-                  color: VeloraColors.coral,
-                  backgroundColor: VeloraColors.coral.withValues(alpha: 0.15),
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // The `velora.` wordmark leads every step: brand first, so
+                  // setup reads as an invitation, not a form. Fixed size /
+                  // ellipsis so it never pushes the eyebrow off-screen at
+                  // large accessibility text scales.
+                  Text(
+                    'velora.',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textScaler: TextScaler.noScaling,
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      color: VeloraColors.plum,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.5,
+                    ),
+                  ),
+                  const SizedBox(height: VeloraSpacing.md),
+                  // A slim segmented progress indicator: position, not
+                  // pressure (design spec sec. 6.1). One filled plum segment
+                  // per reached step.
+                  Row(
+                    key: const Key('onboarding_progress'),
+                    children: [
+                      for (var i = 0; i < steps.length; i++)
+                        Expanded(
+                          child: Container(
+                            height: 5,
+                            margin: EdgeInsets.only(
+                              right: i == steps.length - 1
+                                  ? 0
+                                  : VeloraSpacing.xs,
+                            ),
+                            decoration: BoxDecoration(
+                              color: i <= draft.index
+                                  ? VeloraColors.plum
+                                  : VeloraColors.line,
+                              borderRadius: BorderRadius.circular(99),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: VeloraSpacing.md),
+                  Text(
+                    '${draft.index + 1} / ${steps.length}',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: VeloraColors.coral,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.8,
+                    ),
+                  ),
+                ],
               ),
             ),
             Expanded(
-              child: Center(
-                child: SingleChildScrollView(
-                  child: KeyedSubtree(
-                    key: ValueKey(step.id),
-                    child: step.build(context, controller),
-                  ),
+              child: SingleChildScrollView(
+                child: KeyedSubtree(
+                  key: ValueKey(step.id),
+                  child: step.build(context, controller),
                 ),
               ),
             ),
@@ -95,31 +141,56 @@ class OnboardingScreen extends ConsumerWidget {
                 horizontal: VeloraSpacing.xl,
                 vertical: VeloraSpacing.lg,
               ),
-              // `Wrap` (not `Row`) so at 200% text scale / 320px width the
-              // three controls fall onto their own line instead of
-              // overflowing -- "Orqaga"/"O'tkazib yuborish"/"Keyingi" never
-              // all fit on one line together at that scale.
-              child: Wrap(
-                alignment: WrapAlignment.spaceBetween,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                spacing: VeloraSpacing.sm,
-                runSpacing: VeloraSpacing.xs,
+              child: Column(
                 children: [
-                  TextButton(
-                    key: const Key('onboarding_back_button'),
-                    onPressed: draft.index > 0 ? controller.back : null,
-                    child: const Text('Orqaga'),
-                  ),
-                  if (!controller.isLast)
-                    TextButton(
-                      key: const Key('onboarding_skip_button'),
-                      onPressed: controller.next,
-                      child: const Text("O'tkazib yuborish"),
+                  // The single coral primary CTA from the mockup -- full
+                  // width, so "Davom etish" / "Yakunlash" is always the one
+                  // obvious next move.
+                  SizedBox(
+                    width: double.infinity,
+                    height: 52,
+                    child: FilledButton(
+                      key: const Key('onboarding_next_button'),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: VeloraColors.coral,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius:
+                              BorderRadius.circular(VeloraRadii.control),
+                        ),
+                      ),
+                      onPressed: finishOrAdvance,
+                      child: Text(controller.isLast ? 'Yakunlash' : 'Keyingi'),
                     ),
-                  FilledButton(
-                    key: const Key('onboarding_next_button'),
-                    onPressed: finishOrAdvance,
-                    child: Text(controller.isLast ? 'Yakunlash' : 'Keyingi'),
+                  ),
+                  const SizedBox(height: VeloraSpacing.sm),
+                  // Back / skip stay quiet and secondary. `Wrap` (not `Row`)
+                  // so at 200% text scale / 320px width they fall onto their
+                  // own lines instead of overflowing.
+                  Wrap(
+                    alignment: WrapAlignment.spaceBetween,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: VeloraSpacing.sm,
+                    runSpacing: VeloraSpacing.xs,
+                    children: [
+                      TextButton(
+                        key: const Key('onboarding_back_button'),
+                        onPressed: draft.index > 0 ? controller.back : null,
+                        style: TextButton.styleFrom(
+                          foregroundColor: VeloraColors.plum,
+                        ),
+                        child: const Text('Orqaga'),
+                      ),
+                      if (!controller.isLast)
+                        TextButton(
+                          key: const Key('onboarding_skip_button'),
+                          onPressed: controller.next,
+                          style: TextButton.styleFrom(
+                            foregroundColor: VeloraColors.muted,
+                          ),
+                          child: const Text("O'tkazib yuborish"),
+                        ),
+                    ],
                   ),
                 ],
               ),

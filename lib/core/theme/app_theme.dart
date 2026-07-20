@@ -23,6 +23,7 @@ ThemeData buildLightTheme() {
     materialTapTargetSize: MaterialTapTargetSize.padded,
     chipTheme: _veloraChipTheme,
     segmentedButtonTheme: _veloraSegmentedButtonTheme,
+    navigationBarTheme: _veloraNavBarTheme(VeloraColors.plumTint),
   );
 }
 
@@ -39,6 +40,41 @@ ThemeData buildDarkTheme() {
     materialTapTargetSize: MaterialTapTargetSize.padded,
     chipTheme: _veloraChipTheme,
     segmentedButtonTheme: _veloraSegmentedButtonTheme,
+    navigationBarTheme:
+        _veloraNavBarTheme(scheme.surfaceContainerHigh),
+  );
+}
+
+/// The bottom navigation, styled to the approved mockup: a soft tinted bar
+/// with a plum "pill" indicator behind the selected destination's icon,
+/// white-on-plum when active and muted when not. Kept as a themed Material
+/// `NavigationBar` (not a bespoke widget) so the shell's navigation and
+/// lock-state contracts that assert on `NavigationBar` keep holding.
+NavigationBarThemeData _veloraNavBarTheme(Color background) {
+  return NavigationBarThemeData(
+    backgroundColor: background,
+    surfaceTintColor: Colors.transparent,
+    elevation: 0,
+    height: 68,
+    indicatorColor: VeloraColors.plum,
+    indicatorShape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(VeloraRadii.control),
+    ),
+    labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+    iconTheme: WidgetStateProperty.resolveWith(
+      (states) => states.contains(WidgetState.selected)
+          ? const IconThemeData(color: Colors.white, size: 22)
+          : const IconThemeData(color: VeloraColors.muted, size: 22),
+    ),
+    labelTextStyle: WidgetStateProperty.resolveWith(
+      (states) => TextStyle(
+        fontSize: 11,
+        fontWeight: FontWeight.w700,
+        color: states.contains(WidgetState.selected)
+            ? VeloraColors.plum
+            : VeloraColors.muted,
+      ),
+    ),
   );
 }
 

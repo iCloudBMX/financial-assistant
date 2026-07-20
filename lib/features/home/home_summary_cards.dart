@@ -1,73 +1,17 @@
 import 'package:flutter/material.dart';
 
-import '../../core/money/currency.dart';
 import '../../core/money/money.dart';
 import '../../core/theme/velora_tokens.dart';
 import '../../ui/components/velora_card.dart';
 import '../../ui/components/velora_status.dart';
 import 'dashboard_data.dart';
 
-/// Total available balance (§6.2 step 1), with a privacy toggle so sensitive
-/// amounts can be masked without leaving Home (§5.4).
-class TotalBalanceCard extends StatelessWidget {
-  const TotalBalanceCard({
-    super.key,
-    required this.totals,
-    required this.hidden,
-    required this.onToggleHidden,
-  });
-
-  final Map<Currency, Money> totals;
-  final bool hidden;
-  final VoidCallback onToggleHidden;
-
-  static const _mask = '••••••';
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final lines = totals.entries.map((e) => e.value.format()).toList();
-    final display = lines.isEmpty ? '—' : lines.join('\n');
-    return VeloraCard(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Jami mavjud balans', style: theme.textTheme.bodyMedium),
-                const SizedBox(height: VeloraSpacing.xs),
-                Text(
-                  key: const Key('balance-amount'),
-                  hidden ? _mask : display,
-                  style: theme.textTheme.headlineSmall,
-                  semanticsLabel: hidden
-                      ? 'Balans yashirilgan'
-                      : lines.join(', '),
-                ),
-              ],
-            ),
-          ),
-          ConstrainedBox(
-            constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
-            child: IconButton(
-              key: const Key('balance-privacy-toggle'),
-              icon: Icon(hidden ? Icons.visibility_off : Icons.visibility),
-              tooltip: hidden ? "Balansni ko'rsatish" : 'Balansni yashirish',
-              onPressed: onToggleHidden,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 /// One horizontal row of the five Home quick actions (§6.2 step 3): expense,
-/// income, allocation, goal contribution, mortgage payment. Callbacks are
-/// nullable so an action can be omitted/disabled when the destination has no
-/// meaningful target yet (e.g. nothing left to allocate).
+/// income, allocation, goal contribution, mortgage payment. The first
+/// (expense) is the single coral primary action from the mockup; the rest use
+/// the soft plum tint. Callbacks are nullable so an action can be
+/// omitted/disabled when the destination has no meaningful target yet (e.g.
+/// nothing left to allocate).
 class QuickActionsRow extends StatelessWidget {
   const QuickActionsRow({
     super.key,
@@ -87,14 +31,14 @@ class QuickActionsRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final actions = <_QuickAction>[
-      _QuickAction('expense', Icons.remove_circle_outline, 'Chiqim', onExpense),
-      _QuickAction('income', Icons.add_circle_outline, 'Kirim', onIncome),
       _QuickAction(
-          'allocate', Icons.pie_chart_outline, "Taqsimlash", onAllocate),
+          'expense', Icons.remove, 'Chiqim', onExpense, primary: true),
+      _QuickAction('income', Icons.add, 'Kirim', onIncome),
+      _QuickAction('allocate', Icons.pie_chart_outline, 'Taqsimlash', onAllocate),
       _QuickAction('goal-contribution', Icons.flag_outlined, 'Maqsadga',
           onGoalContribution),
-      _QuickAction('mortgage-payment', Icons.account_balance_outlined,
-          "To'lov", onMortgagePayment),
+      _QuickAction('mortgage-payment', Icons.account_balance_outlined, "To'lov",
+          onMortgagePayment),
     ];
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
@@ -115,7 +59,9 @@ class _QuickAction {
   final IconData icon;
   final String label;
   final VoidCallback? onTap;
-  const _QuickAction(this.id, this.icon, this.label, this.onTap);
+  final bool primary;
+  const _QuickAction(this.id, this.icon, this.label, this.onTap,
+      {this.primary = false});
 }
 
 class _QuickActionButton extends StatelessWidget {
@@ -127,15 +73,24 @@ class _QuickActionButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final enabled = action.onTap != null;
+    final Color fill;
+    final Color fg;
+    if (!enabled) {
+      fill = VeloraColors.plumTint.withValues(alpha: 0.5);
+      fg = theme.colorScheme.outline;
+    } else if (action.primary) {
+      fill = VeloraColors.coral;
+      fg = Colors.white;
+    } else {
+      fill = VeloraColors.plumTint;
+      fg = VeloraColors.plum;
+    }
     return SizedBox(
       key: Key('quick-action-${action.id}'),
-      width: 84,
+      width: action.primary ? 96 : 84,
       child: Material(
-        color: theme.colorScheme.surfaceContainerLowest,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(VeloraRadii.control),
-          side: BorderSide(color: theme.colorScheme.outlineVariant),
-        ),
+        color: fill,
+        borderRadius: BorderRadius.circular(VeloraRadii.control),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: action.onTap,
@@ -143,22 +98,20 @@ class _QuickActionButton extends StatelessWidget {
             constraints: const BoxConstraints(minHeight: 64),
             child: Padding(
               padding: const EdgeInsets.symmetric(
-                  vertical: VeloraSpacing.sm, horizontal: VeloraSpacing.xs),
+                  vertical: VeloraSpacing.md, horizontal: VeloraSpacing.xs),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(
-                    action.icon,
-                    color: enabled
-                        ? theme.colorScheme.primary
-                        : theme.colorScheme.outline,
-                  ),
+                  Icon(action.icon, color: fg),
                   const SizedBox(height: VeloraSpacing.xs),
                   Text(
                     action.label,
                     textAlign: TextAlign.center,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.labelSmall?.copyWith(
-                      color: enabled ? null : theme.colorScheme.outline,
+                      color: fg,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                 ],
@@ -220,9 +173,10 @@ class UnallocatedAlertCard extends StatelessWidget {
   }
 }
 
-/// The Home primary-goal summary (§6.2 step 6, first half). Shows a reachable
-/// creation CTA when there is no active goal yet, matching the pattern used
-/// by `MortgageSummaryCard`'s empty state.
+/// The Home primary-goal summary (§6.2 step 6, first half). The mockup renders
+/// it as a warm apricot-tinted card with a rounded icon tile. Shows a
+/// reachable creation CTA when there is no active goal yet, matching the
+/// pattern used by `MortgageSummaryCard`'s empty state.
 class PrimaryGoalSummaryCard extends StatelessWidget {
   const PrimaryGoalSummaryCard({
     super.key,
@@ -240,11 +194,12 @@ class PrimaryGoalSummaryCard extends StatelessWidget {
     final theme = Theme.of(context);
     final g = goal;
     if (g == null) {
-      return VeloraCard(
+      return _GoalShell(
         onTap: onCreate,
         child: Row(
           children: [
-            Icon(Icons.flag_outlined, color: theme.colorScheme.primary),
+            const _GoalIconTile(child: Icon(Icons.flag_outlined,
+                color: VeloraColors.plum, size: 20)),
             const SizedBox(width: VeloraSpacing.md),
             Expanded(
               child: Column(
@@ -252,43 +207,102 @@ class PrimaryGoalSummaryCard extends StatelessWidget {
                 children: [
                   Text('Asosiy maqsad', style: theme.textTheme.titleMedium),
                   const SizedBox(height: VeloraSpacing.xs),
-                  const Text("Birinchi maqsadingizni qo'shing"),
+                  Text("Birinchi maqsadingizni qo'shing",
+                      style: theme.textTheme.bodySmall
+                          ?.copyWith(color: VeloraColors.muted)),
                 ],
               ),
             ),
-            const Icon(Icons.add),
+            const Icon(Icons.add, color: VeloraColors.plum),
           ],
         ),
       );
     }
     final progress = (g.percentBp / 10000).clamp(0.0, 1.0);
-    return VeloraCard(
+    return _GoalShell(
       onTap: onTap,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(Icons.flag_outlined, color: theme.colorScheme.primary),
-              const SizedBox(width: VeloraSpacing.sm),
-              Expanded(
-                child: Text(g.name, style: theme.textTheme.titleMedium),
+              const _GoalIconTile(
+                child: Icon(Icons.flag_outlined,
+                    color: Colors.white, size: 20),
               ),
-              Text('${(g.percentBp / 100).toStringAsFixed(0)}%'),
+              const SizedBox(width: VeloraSpacing.md),
+              Expanded(
+                child: Text(g.name,
+                    style: theme.textTheme.titleMedium
+                        ?.copyWith(fontWeight: FontWeight.w700)),
+              ),
+              Text('${(g.percentBp / 100).toStringAsFixed(0)}%',
+                  style: theme.textTheme.titleMedium
+                      ?.copyWith(color: VeloraColors.plum)),
             ],
           ),
-          const SizedBox(height: VeloraSpacing.sm),
+          const SizedBox(height: VeloraSpacing.md),
           ClipRRect(
-            borderRadius: BorderRadius.circular(VeloraRadii.control),
-            child: LinearProgressIndicator(value: progress),
+            borderRadius: BorderRadius.circular(99),
+            child: LinearProgressIndicator(
+              value: progress,
+              minHeight: 7,
+              backgroundColor: Colors.white,
+              valueColor: const AlwaysStoppedAnimation(VeloraColors.apricot),
+            ),
           ),
           const SizedBox(height: VeloraSpacing.sm),
           Text('${g.saved.format()} / ${g.target.format()}',
-              style: theme.textTheme.bodySmall),
+              style:
+                  theme.textTheme.bodySmall?.copyWith(color: VeloraColors.muted)),
           Text("Qoldi: ${g.remaining.format()}",
-              style: theme.textTheme.bodySmall),
+              style:
+                  theme.textTheme.bodySmall?.copyWith(color: VeloraColors.muted)),
         ],
       ),
+    );
+  }
+}
+
+class _GoalShell extends StatelessWidget {
+  const _GoalShell({required this.child, required this.onTap});
+  final Widget child;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final borderRadius = BorderRadius.circular(VeloraRadii.card);
+    return Material(
+      color: VeloraColors.apricotTint,
+      borderRadius: borderRadius,
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: borderRadius,
+        child: Padding(
+          padding: const EdgeInsets.all(VeloraSpacing.lg),
+          child: child,
+        ),
+      ),
+    );
+  }
+}
+
+class _GoalIconTile extends StatelessWidget {
+  const _GoalIconTile({required this.child});
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 36,
+      height: 36,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: VeloraColors.apricot,
+        borderRadius: BorderRadius.circular(VeloraRadii.control),
+      ),
+      child: child,
     );
   }
 }

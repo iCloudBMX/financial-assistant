@@ -206,9 +206,14 @@ Future<void> _pumpRouterApp(WidgetTester tester, GoRouter router) async {
 }
 
 double _scrollOffset(WidgetTester tester, Finder listView) {
+  // Target the vertical (Home) scrollable specifically: the redesigned Home
+  // also hosts a horizontal quick-actions scroller, so an unqualified
+  // `byType(Scrollable)` is ambiguous whenever that row stays on screen.
   final scrollable = find.descendant(
     of: listView,
-    matching: find.byType(Scrollable),
+    matching: find.byWidgetPredicate(
+      (w) => w is Scrollable && w.axisDirection == AxisDirection.down,
+    ),
   );
   return tester.state<ScrollableState>(scrollable).position.pixels;
 }

@@ -10,8 +10,12 @@ import '../../data/mortgage/mortgage_model.dart';
 import '../../providers/app_providers.dart';
 import '../../ui/components/velora_money_field.dart';
 import '../../ui/components/velora_sheet.dart';
-import '../../ui/components/velora_status.dart';
 import 'mortgage_controller.dart';
+
+// The dark-apricot ink the mockup uses for the interest figures (#9D5D18), so
+// interest reads as visually distinct from the plum principal. A one-off shade
+// kept private rather than added to the shared token set.
+const _interestInk = Color(0xFF9D5D18);
 
 Future<void> showMortgagePaymentSheet(
     BuildContext context, WidgetRef ref, int mortgageId) {
@@ -150,75 +154,122 @@ class _MortgagePaymentSheetState extends ConsumerState<MortgagePaymentSheet> {
             autofocus: true,
           ),
           const SizedBox(height: VeloraSpacing.lg),
-          Row(
-            children: [
-              Expanded(
-                child: _ModeButton(
-                  key: const Key('payment-mode-auto'),
-                  label: 'Avtomatik',
-                  selected: _mode == MortgageSplitMode.auto,
-                  onTap: () => setState(() => _mode = MortgageSplitMode.auto),
+          Text('To\'lovni qanday bo\'lamiz?',
+              style: theme.textTheme.labelLarge),
+          const SizedBox(height: VeloraSpacing.sm),
+          // Segmented pill toggle (Auto / Manual), styled like the mockup.
+          Container(
+            padding: const EdgeInsets.all(VeloraSpacing.xs),
+            decoration: BoxDecoration(
+              color: VeloraColors.plumTint,
+              borderRadius: BorderRadius.circular(VeloraRadii.control),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: _ModeButton(
+                    key: const Key('payment-mode-auto'),
+                    label: 'Avtomatik',
+                    selected: _mode == MortgageSplitMode.auto,
+                    onTap: () => setState(() => _mode = MortgageSplitMode.auto),
+                  ),
                 ),
-              ),
-              const SizedBox(width: VeloraSpacing.sm),
-              Expanded(
-                child: _ModeButton(
-                  key: const Key('payment-mode-manual'),
-                  label: 'Qo\'lda',
-                  selected: _mode == MortgageSplitMode.manual,
-                  onTap: () =>
-                      setState(() => _mode = MortgageSplitMode.manual),
+                const SizedBox(width: VeloraSpacing.xs),
+                Expanded(
+                  child: _ModeButton(
+                    key: const Key('payment-mode-manual'),
+                    label: 'Qo\'lda',
+                    selected: _mode == MortgageSplitMode.manual,
+                    onTap: () =>
+                        setState(() => _mode = MortgageSplitMode.manual),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
           const SizedBox(height: VeloraSpacing.lg),
           if (_mode == MortgageSplitMode.auto) ...[
-            _SplitRow(label: 'Asosiy qarzga', value: split.principal),
+            _SplitCard(
+              tint: VeloraColors.plumTint,
+              iconTileColor: VeloraColors.plum,
+              icon: Icons.home_outlined,
+              title: 'Asosiy qarzga',
+              subtitle: 'Qarz qoldig\'ini kamaytiradi',
+              valueColor: VeloraColors.plum,
+              value: split.principal,
+            ),
             const SizedBox(height: VeloraSpacing.sm),
-            _SplitRow(label: 'Foiz to‘lovi', value: split.interest),
+            _SplitCard(
+              tint: VeloraColors.apricotTint,
+              iconTileColor: VeloraColors.apricot,
+              icon: Icons.percent,
+              title: 'Foiz to‘lovi',
+              subtitle: 'Qarz qoldig\'ini kamaytirmaydi',
+              valueColor: _interestInk,
+              value: split.interest,
+            ),
             const SizedBox(height: VeloraSpacing.sm),
             Text(
               'Taqsimot joriy qarz qoldig\'i va foiz stavkasidan avtomatik '
               'hisoblandi.',
-              style: theme.textTheme.bodySmall,
+              style: theme.textTheme.bodySmall
+                  ?.copyWith(color: VeloraColors.muted),
             ),
             if (autoOverPayoff) ...[
               const SizedBox(height: VeloraSpacing.sm),
-              VeloraStatusBadge(
+              _EquationBar(
                 color: VeloraColors.critical,
                 icon: Icons.error_outline,
-                label: 'To\'lov qarz qoldig\'idan oshib ketdi '
+                title: 'To\'lov qarz qoldig\'idan oshib ketdi '
                     '(ortiqcha: ${split.difference.format()})',
+              ),
+            ] else if (split.canSave) ...[
+              const SizedBox(height: VeloraSpacing.sm),
+              _EquationBar(
+                color: VeloraColors.success,
+                icon: Icons.check_circle,
+                title: 'To\'lov tarkibi umumiy summaga teng',
+                trailing: split.total.format(),
               ),
             ],
           ] else ...[
-            VeloraMoneyField(
-              key: const Key('payment-principal'),
-              controller: _principal,
-              currency: _uzs,
-              label: 'Asosiy qarzga',
-            ),
-            const SizedBox(height: VeloraSpacing.md),
-            VeloraMoneyField(
-              key: const Key('payment-interest'),
-              controller: _interest,
-              currency: _uzs,
-              label: 'Foiz to‘lovi',
-            ),
-            const SizedBox(height: VeloraSpacing.sm),
-            Text(
-              'Asosiy qarz summasi qarzni kamaytiradi, foiz summasi qarzni '
-              'kamaytirmaydi.',
-              style: theme.textTheme.bodySmall,
+            _SplitCard(
+              tint: VeloraColors.plumTint,
+              iconTileColor: VeloraColors.plum,
+              icon: Icons.home_outlined,
+              title: 'Asosiy qarzga',
+              subtitle: 'Qarz qoldig\'ini kamaytiradi',
+              valueColor: VeloraColors.plum,
+              field: VeloraMoneyField(
+                key: const Key('payment-principal'),
+                controller: _principal,
+                currency: _uzs,
+                label: 'Miqdor',
+              ),
             ),
             const SizedBox(height: VeloraSpacing.sm),
-            VeloraStatusBadge(
+            _SplitCard(
+              tint: VeloraColors.apricotTint,
+              iconTileColor: VeloraColors.apricot,
+              icon: Icons.percent,
+              title: 'Foiz to‘lovi',
+              subtitle: 'Qarz qoldig\'ini kamaytirmaydi',
+              valueColor: _interestInk,
+              field: VeloraMoneyField(
+                key: const Key('payment-interest'),
+                controller: _interest,
+                currency: _uzs,
+                label: 'Miqdor',
+              ),
+            ),
+            const SizedBox(height: VeloraSpacing.sm),
+            _EquationBar(
               color: balanced ? VeloraColors.success : VeloraColors.critical,
               icon: balanced ? Icons.check_circle : Icons.error_outline,
-              label: balanced
-                  ? 'Jami to\'lovga teng'
+              title: balanced
+                  ? 'To\'lov tarkibi umumiy summaga teng'
                   : 'Farq: ${split.difference.format()}',
+              trailing: balanced ? split.total.format() : null,
             ),
           ],
           if (_error != null) ...[
@@ -233,6 +284,10 @@ class _MortgagePaymentSheetState extends ConsumerState<MortgagePaymentSheet> {
         height: 52,
         child: FilledButton(
           key: const Key('payment-save'),
+          style: FilledButton.styleFrom(
+            backgroundColor: VeloraColors.coral,
+            foregroundColor: Colors.white,
+          ),
           onPressed: (!split.canSave || _saving) ? null : () => _save(split),
           child: const Text('Saqlash'),
         ),
@@ -241,6 +296,8 @@ class _MortgagePaymentSheetState extends ConsumerState<MortgagePaymentSheet> {
   }
 }
 
+/// One tab of the Auto/Manual segmented control. Renders as a flat pill inside
+/// the tinted track; the selected tab lifts onto a white surface.
 class _ModeButton extends StatelessWidget {
   const _ModeButton({
     super.key,
@@ -256,51 +313,179 @@ class _ModeButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return ConstrainedBox(
-      constraints: const BoxConstraints(minHeight: 48),
-      child: OutlinedButton(
-        onPressed: onTap,
-        style: OutlinedButton.styleFrom(
-          backgroundColor: selected
-              ? theme.colorScheme.primary.withValues(alpha: 0.12)
-              : null,
-          side: BorderSide(
-            color: selected
-                ? theme.colorScheme.primary
-                : theme.colorScheme.outlineVariant,
+    return Semantics(
+      selected: selected,
+      button: true,
+      child: Material(
+        color: selected
+            ? theme.colorScheme.surfaceContainerLowest
+            : Colors.transparent,
+        borderRadius: BorderRadius.circular(VeloraRadii.control - 4),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(VeloraRadii.control - 4),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 44),
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: VeloraSpacing.sm,
+                  vertical: VeloraSpacing.sm,
+                ),
+                child: Text(
+                  label,
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.labelLarge?.copyWith(
+                    color: selected ? VeloraColors.plum : VeloraColors.muted,
+                    fontWeight:
+                        selected ? FontWeight.w700 : FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
           ),
-        ),
-        child: Semantics(
-          selected: selected,
-          child: Text(label),
         ),
       ),
     );
   }
 }
 
-class _SplitRow extends StatelessWidget {
-  const _SplitRow({required this.label, required this.value});
+/// One explicit split component (§6.9): a tinted card with an icon tile, the
+/// portion name, the always-on "reduces / does not reduce debt" helper line,
+/// and either the derived value (Auto) or an editable field (Manual).
+class _SplitCard extends StatelessWidget {
+  const _SplitCard({
+    required this.tint,
+    required this.iconTileColor,
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.valueColor,
+    this.value,
+    this.field,
+  });
 
-  final String label;
-  final Money value;
+  final Color tint;
+  final Color iconTileColor;
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final Color valueColor;
+  final Money? value;
+  final Widget? field;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(label, style: theme.textTheme.bodyMedium),
-        Flexible(
-          child: Text(
-            value.format(),
-            style: theme.textTheme.titleMedium,
-            textAlign: TextAlign.end,
-            overflow: TextOverflow.ellipsis,
+    return Container(
+      padding: const EdgeInsets.all(VeloraSpacing.md),
+      decoration: BoxDecoration(
+        color: tint,
+        borderRadius: BorderRadius.circular(VeloraRadii.card),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: iconTileColor,
+                  borderRadius: BorderRadius.circular(VeloraRadii.control),
+                ),
+                child: Icon(icon, color: Colors.white, size: 20),
+              ),
+              const SizedBox(width: VeloraSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title,
+                        style: theme.textTheme.titleSmall
+                            ?.copyWith(fontWeight: FontWeight.w700)),
+                    const SizedBox(height: VeloraSpacing.xs),
+                    Text(subtitle,
+                        style: theme.textTheme.bodySmall
+                            ?.copyWith(color: VeloraColors.muted)),
+                  ],
+                ),
+              ),
+              if (value != null) ...[
+                const SizedBox(width: VeloraSpacing.sm),
+                Flexible(
+                  child: Text(
+                    value!.format(),
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      color: valueColor,
+                      fontWeight: FontWeight.w800,
+                    ),
+                    textAlign: TextAlign.end,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ],
           ),
-        ),
-      ],
+          if (field != null) ...[
+            const SizedBox(height: VeloraSpacing.sm),
+            field!,
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// The live balance line (§6.9): a tinted bar that turns green when the split
+/// balances to the total and critical when it does not — the plain-language
+/// half of the "save disabled until balanced" contract.
+class _EquationBar extends StatelessWidget {
+  const _EquationBar({
+    required this.color,
+    required this.icon,
+    required this.title,
+    this.trailing,
+  });
+
+  final Color color;
+  final IconData icon;
+  final String title;
+  final String? trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: VeloraSpacing.md,
+        vertical: VeloraSpacing.sm,
+      ),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        border: Border.all(color: color.withValues(alpha: 0.4)),
+        borderRadius: BorderRadius.circular(VeloraRadii.control),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: color),
+          const SizedBox(width: VeloraSpacing.sm),
+          Expanded(
+            child: Text(title, style: theme.textTheme.labelLarge),
+          ),
+          if (trailing != null) ...[
+            const SizedBox(width: VeloraSpacing.sm),
+            Text(
+              trailing!,
+              style: theme.textTheme.labelLarge
+                  ?.copyWith(color: color, fontWeight: FontWeight.w800),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }

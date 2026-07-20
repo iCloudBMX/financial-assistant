@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/theme/velora_tokens.dart';
 import '../onboarding_controller.dart';
 import '../onboarding_step.dart';
 
@@ -7,6 +8,9 @@ class PeriodStep extends OnboardingStep {
   String get id => 'period';
   @override
   String get title => 'Davr sozlamalari';
+  @override
+  String get lead =>
+      'Moliyaviy oyingiz va haftangiz qachon boshlanishini tanlang.';
 
   static const _weekdayNames = [
     'Dushanba',
@@ -20,32 +24,33 @@ class PeriodStep extends OnboardingStep {
 
   @override
   Widget build(BuildContext context, OnboardingController controller) =>
-      Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(title, style: Theme.of(context).textTheme.headlineSmall),
-            const SizedBox(height: 16),
-            Text("Oy davrining boshlanish kuni",
-                style: Theme.of(context).textTheme.bodyMedium),
-            DropdownButton<int>(
+      OnboardingStepScaffold(
+        title: title,
+        lead: lead,
+        children: [
+          OnboardingFieldTile(
+            label: 'Oy davrining boshlanish kuni',
+            child: DropdownButton<int>(
               value: controller.state.settings.periodStartDay,
+              isExpanded: true,
+              underline: const SizedBox.shrink(),
               items: [
                 for (var day = 1; day <= 31; day++)
                   DropdownMenuItem(value: day, child: Text('$day')),
               ],
               onChanged: (day) {
                 if (day == null) return;
-                controller
-                    .update((s) => s.copyWith(periodStartDay: day));
+                controller.update((s) => s.copyWith(periodStartDay: day));
               },
             ),
-            const SizedBox(height: 16),
-            Text('Hafta boshlanish kuni',
-                style: Theme.of(context).textTheme.bodyMedium),
-            DropdownButton<int>(
+          ),
+          const SizedBox(height: VeloraSpacing.md),
+          OnboardingFieldTile(
+            label: 'Hafta boshlanish kuni',
+            child: DropdownButton<int>(
               value: controller.state.settings.weekStartIso,
+              isExpanded: true,
+              underline: const SizedBox.shrink(),
               items: [
                 for (var i = 0; i < _weekdayNames.length; i++)
                   DropdownMenuItem(
@@ -58,7 +63,7 @@ class PeriodStep extends OnboardingStep {
                 controller.update((s) => s.copyWith(weekStartIso: iso));
               },
             ),
-          ],
-        ),
+          ),
+        ],
       );
 }

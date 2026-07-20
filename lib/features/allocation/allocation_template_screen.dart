@@ -105,12 +105,17 @@ class _RuleCard extends StatelessWidget {
       child: VeloraCard(
         child: Row(
           children: [
-            CircleAvatar(
-              radius: 14,
-              backgroundColor: theme.colorScheme.primaryContainer,
+            Container(
+              width: 32,
+              height: 32,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: VeloraColors.plumTint,
+                borderRadius: BorderRadius.circular(VeloraRadii.control),
+              ),
               child: Text('$priority',
-                  style: theme.textTheme.labelLarge
-                      ?.copyWith(color: theme.colorScheme.primary)),
+                  style: theme.textTheme.labelLarge?.copyWith(
+                      color: VeloraColors.plum, fontWeight: FontWeight.w800)),
             ),
             const SizedBox(width: VeloraSpacing.md),
             Expanded(
@@ -131,18 +136,19 @@ class _RuleCard extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(
                             horizontal: VeloraSpacing.sm, vertical: 2),
                         decoration: BoxDecoration(
-                          color: theme.colorScheme.secondaryContainer,
+                          color: VeloraColors.plumTint,
                           borderRadius:
                               BorderRadius.circular(VeloraRadii.control),
                         ),
                         child: Text(typeLabel,
-                            style: theme.textTheme.labelSmall?.copyWith(
-                                color: theme.colorScheme.onSecondaryContainer)),
+                            style: theme.textTheme.labelSmall
+                                ?.copyWith(color: VeloraColors.plum)),
                       ),
                       if (valueLabel != null)
                         Text(valueLabel,
                             style: theme.textTheme.bodyMedium?.copyWith(
-                                color: theme.colorScheme.onSurfaceVariant)),
+                                color: VeloraColors.coral,
+                                fontWeight: FontWeight.w700)),
                     ],
                   ),
                 ],

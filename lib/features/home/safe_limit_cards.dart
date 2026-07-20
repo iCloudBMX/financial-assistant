@@ -2,14 +2,15 @@ import 'package:flutter/material.dart';
 import '../../core/limit/safe_limit_engine.dart';
 import '../../core/theme/velora_tokens.dart';
 import '../../ui/components/velora_card.dart';
-import '../../ui/components/velora_status.dart';
 
 /// Today's safe-to-spend amount — the dominant decision card (§6.2 step 2).
 ///
-/// A pure value widget: it renders the already-resolved [limit] and
-/// [overspendCategories] that `dashboardProvider` folded into
-/// `DashboardData`, per the "widgets consume immutable values, not
-/// providers" boundary.
+/// The approved mockup makes this the one filled plum hero on Home: white
+/// amount on Velora Plum, an apricot progress track showing how much of the
+/// day's limit is left, and a plain-language note. A pure value widget: it
+/// renders the already-resolved [limit] and [overspendCategories] that
+/// `dashboardProvider` folded into `DashboardData`, per the "widgets consume
+/// immutable values, not providers" boundary.
 class SafeLimitCard extends StatelessWidget {
   const SafeLimitCard({
     super.key,
@@ -24,30 +25,89 @@ class SafeLimitCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final status = _statusFor(limit);
-    return VeloraCard(
+    // Fraction of today's limit still available (0..1). Over-limit clamps to
+    // an empty track; a zero/negative per-day limit hides the track entirely.
+    final perDay = limit.perDay.minorUnits;
+    final remaining = limit.todayRemaining.minorUnits;
+    final fraction =
+        perDay <= 0 ? null : (remaining / perDay).clamp(0.0, 1.0);
+    const onPlum = Colors.white;
+
+    return Container(
       key: const Key('safe-limit-hero'),
+      padding: const EdgeInsets.all(VeloraSpacing.lg),
+      decoration: BoxDecoration(
+        color: VeloraColors.plum,
+        borderRadius: BorderRadius.circular(VeloraRadii.card),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x335B3A6E),
+            blurRadius: 26,
+            offset: Offset(0, 12),
+          ),
+        ],
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Bugungi xavfsiz limit', style: theme.textTheme.bodyMedium),
-          const SizedBox(height: VeloraSpacing.xs),
           Text(
-            limit.perDay.format(),
-            style: theme.textTheme.headlineMedium?.copyWith(
-              color: status == VeloraStatus.over ? status.color : null,
+            'BUGUN BEMALOL',
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: onPlum.withValues(alpha: 0.68),
+              fontWeight: FontWeight.w700,
+              letterSpacing: 1.2,
             ),
           ),
           const SizedBox(height: VeloraSpacing.sm),
-          VeloraStatusBadge(
-            color: status.color,
-            icon: status.icon,
-            label: 'Bugun qoldi: ${limit.todayRemaining.format()} '
-                '· ${limit.daysLeft} kun qoldi',
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              limit.perDay.format(),
+              maxLines: 1,
+              softWrap: false,
+              style: theme.textTheme.headlineMedium?.copyWith(
+                color: onPlum,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
           ),
+          const SizedBox(height: VeloraSpacing.sm),
+          Row(
+            children: [
+              Icon(status.icon,
+                  size: 16, color: onPlum.withValues(alpha: 0.85)),
+              const SizedBox(width: VeloraSpacing.xs),
+              Expanded(
+                child: Text(
+                  'Bugun qoldi: ${limit.todayRemaining.format()} '
+                  '· ${limit.daysLeft} kun qoldi',
+                  style: theme.textTheme.bodySmall
+                      ?.copyWith(color: onPlum.withValues(alpha: 0.82)),
+                ),
+              ),
+            ],
+          ),
+          if (fraction != null) ...[
+            const SizedBox(height: VeloraSpacing.md),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(99),
+              child: LinearProgressIndicator(
+                value: fraction,
+                minHeight: 7,
+                backgroundColor: VeloraColors.onPlumTrack,
+                valueColor:
+                    const AlwaysStoppedAnimation(VeloraColors.apricot),
+              ),
+            ),
+          ],
           if (status == VeloraStatus.over && overspendCategories.isNotEmpty) ...[
-            const SizedBox(height: VeloraSpacing.xs),
-            Text('Limitdan chiqqan: ${overspendCategories.join(', ')}',
-                style: TextStyle(color: status.color)),
+            const SizedBox(height: VeloraSpacing.sm),
+            Text(
+              'Limitdan chiqqan: ${overspendCategories.join(', ')}',
+              style: theme.textTheme.bodySmall
+                  ?.copyWith(color: VeloraColors.apricot),
+            ),
           ],
         ],
       ),

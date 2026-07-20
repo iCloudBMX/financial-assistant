@@ -8,6 +8,8 @@ class ThemeStep extends OnboardingStep {
   String get id => 'theme';
   @override
   String get title => 'Mavzu';
+  @override
+  String get lead => "Velora'ning ko'rinishini xohlaganingizcha tanlang.";
 
   static String _labelFor(ThemeModeSetting mode) => switch (mode) {
         ThemeModeSetting.system => 'Tizim',
@@ -17,14 +19,13 @@ class ThemeStep extends OnboardingStep {
 
   @override
   Widget build(BuildContext context, OnboardingController controller) =>
-      Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(title, style: Theme.of(context).textTheme.headlineSmall),
-            const SizedBox(height: 16),
-            SegmentedButton<ThemeModeSetting>(
+      OnboardingStepScaffold(
+        title: title,
+        lead: lead,
+        children: [
+          Align(
+            alignment: Alignment.centerLeft,
+            child: SegmentedButton<ThemeModeSetting>(
               segments: [
                 for (final mode in ThemeModeSetting.values)
                   ButtonSegment(value: mode, label: Text(_labelFor(mode))),
@@ -36,7 +37,7 @@ class ThemeStep extends OnboardingStep {
                 );
               },
             ),
-          ],
-        ),
+          ),
+        ],
       );
 }

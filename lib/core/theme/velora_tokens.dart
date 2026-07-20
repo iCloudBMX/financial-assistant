@@ -8,6 +8,16 @@ abstract final class VeloraColors {
   static const inkberry = Color(0xFF332A3A);
   static const success = Color(0xFF2E9D7C);
   static const critical = Color(0xFFC94E58);
+
+  /// Secondary / supporting hues from the approved mockups. These are the
+  /// soft surface tints the "Velora Human" direction uses to give each card a
+  /// warm, payment-app tone instead of flat Material surfaces.
+  static const muted = Color(0xFF7B6F7F); // secondary label text
+  static const line = Color(0xFFEBDDE5); // hairline card borders
+  static const plumTint = Color(0xFFF4E6EE); // soft plum action fill
+  static const apricotTint = Color(0xFFFFF0E0); // goal / highlight card fill
+  static const coralTint = Color(0xFFFFF0EC); // primary-action tint
+  static const onPlumTrack = Color(0xFF765281); // progress track on plum hero
 }
 
 abstract final class VeloraSpacing {

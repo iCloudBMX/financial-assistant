@@ -67,42 +67,33 @@ class _FinancialBaselineStepBodyState
   @override
   Widget build(BuildContext context) {
     final currency = widget.controller.state.settings.primaryCurrency;
-    return Padding(
-      padding: const EdgeInsets.all(VeloraSpacing.xl),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(widget.title, style: Theme.of(context).textTheme.headlineSmall),
-          const SizedBox(height: VeloraSpacing.sm),
-          Text(
-            "Erkin xarajatlar uchun oylik byudjet va tegilmaydigan zaxira.",
-            style: Theme.of(context).textTheme.bodyMedium,
-          ),
-          const SizedBox(height: VeloraSpacing.lg),
-          VeloraMoneyField(
-            key: const Key('onboarding_variable_budget'),
-            controller: _budgetCtrl,
-            currency: currency,
-            label: 'Erkin xarajat byudjeti',
-            onChanged: (m) {
-              if (m == null) return;
-              widget.controller.update((s) => s.copyWith(variableBudget: m));
-            },
-          ),
-          const SizedBox(height: VeloraSpacing.lg),
-          VeloraMoneyField(
-            key: const Key('onboarding_min_reserve'),
-            controller: _reserveCtrl,
-            currency: currency,
-            label: 'Minimal zaxira',
-            onChanged: (m) {
-              if (m == null) return;
-              widget.controller.update((s) => s.copyWith(minReserve: m));
-            },
-          ),
-        ],
-      ),
+    return OnboardingStepScaffold(
+      title: widget.title,
+      lead: 'Erkin xarajatlar uchun oylik byudjet va tegilmaydigan zaxira. '
+          'Taxminiy summalar yetarli.',
+      children: [
+        VeloraMoneyField(
+          key: const Key('onboarding_variable_budget'),
+          controller: _budgetCtrl,
+          currency: currency,
+          label: 'Erkin xarajat byudjeti',
+          onChanged: (m) {
+            if (m == null) return;
+            widget.controller.update((s) => s.copyWith(variableBudget: m));
+          },
+        ),
+        const SizedBox(height: VeloraSpacing.lg),
+        VeloraMoneyField(
+          key: const Key('onboarding_min_reserve'),
+          controller: _reserveCtrl,
+          currency: currency,
+          label: 'Minimal zaxira',
+          onChanged: (m) {
+            if (m == null) return;
+            widget.controller.update((s) => s.copyWith(minReserve: m));
+          },
+        ),
+      ],
     );
   }
 }

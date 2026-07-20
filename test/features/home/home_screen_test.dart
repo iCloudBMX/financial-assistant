@@ -95,8 +95,11 @@ void main() {
     expect(find.byKey(const Key('goal-summary-card')), findsOneWidget);
     expect(find.byKey(const Key('mortgage-summary-card')), findsOneWidget);
 
-    expect(top('balance-card'), lessThan(top('safe-limit-hero')));
-    expect(top('safe-limit-hero'), lessThan(top('quick-actions-row')));
+    // Velora redesign order: the safe-to-spend hero leads as the dominant
+    // decision card, with the balance minis directly beneath it (mockup
+    // "Bugun bemalol" → "Hamma pul / Rezerv / Erkin").
+    expect(top('safe-limit-hero'), lessThan(top('balance-card')));
+    expect(top('balance-card'), lessThan(top('quick-actions-row')));
     expect(top('quick-actions-row'), lessThan(top('unallocated-alert')));
     expect(top('unallocated-alert'), lessThan(top('weekly-limit-card')));
     expect(top('weekly-limit-card'), lessThan(top('goal-summary-card')));

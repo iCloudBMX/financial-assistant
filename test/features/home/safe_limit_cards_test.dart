@@ -39,7 +39,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('Bugungi xavfsiz limit'), findsOneWidget);
+    expect(find.textContaining('BUGUN BEMALOL'), findsOneWidget);
     // Exact match (not textContaining) so this pins to the dedicated headline
     // Text: with no expenses, "Bugun qoldi: ..." also contains the same figure.
     expect(find.text(limit.perDay.format()), findsOneWidget);

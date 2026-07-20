@@ -175,7 +175,8 @@ class _LockScreenState extends State<_LockScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     return Scaffold(
       key: const Key('app_lock_keypad'),
       body: SafeArea(
@@ -185,9 +186,57 @@ class _LockScreenState extends State<_LockScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.lock_outline, size: 48, color: colorScheme.primary),
-                const SizedBox(height: VeloraSpacing.lg),
-                const Text('Ilova qulflangan'),
+                // The Velora brand mark: a plum tile + wordmark, so the lock
+                // screen reads as "Velora, locked" rather than a bare OS
+                // prompt (design spec sec. 6.13).
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 34,
+                      height: 34,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: VeloraColors.plum,
+                        borderRadius:
+                            BorderRadius.circular(VeloraRadii.control),
+                      ),
+                      child: const Text(
+                        'V',
+                        textScaler: TextScaler.noScaling,
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: VeloraSpacing.sm),
+                    Text(
+                      'Velora',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        color: colorScheme.primary,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: VeloraSpacing.xl),
+                Text(
+                  'Ilova qulflangan',
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: VeloraSpacing.xs),
+                Text(
+                  'PIN kodni kiriting',
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: VeloraColors.muted,
+                  ),
+                ),
                 const SizedBox(height: VeloraSpacing.xl),
                 _PinDots(filled: _digits.length, error: _error != null),
                 const SizedBox(height: VeloraSpacing.md),
@@ -208,6 +257,16 @@ class _LockScreenState extends State<_LockScreen> {
                   showBiometric: widget.biometricEnabled,
                   onBiometricRetry: _tryBiometric,
                 ),
+                if (widget.biometricEnabled) ...[
+                  const SizedBox(height: VeloraSpacing.lg),
+                  Text(
+                    'Biometrika qurilma orqali avtomatik ishlaydi',
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: VeloraColors.muted,
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -299,7 +358,7 @@ class _Keypad extends StatelessWidget {
               key: const Key('app_lock_biometric_retry'),
               onPressed: enabled ? onBiometricRetry : null,
               semanticLabel: "Biometrik orqali qayta urinish",
-              child: const Icon(Icons.fingerprint),
+              child: const Icon(Icons.fingerprint, color: VeloraColors.plum),
             )
           else
             const SizedBox(width: 56, height: 56),
@@ -308,7 +367,8 @@ class _Keypad extends StatelessWidget {
             key: const Key('app_lock_key_backspace'),
             onPressed: enabled ? onBackspace : null,
             semanticLabel: "Bitta raqamni o'chirish",
-            child: const Icon(Icons.backspace_outlined),
+            child:
+                const Icon(Icons.backspace_outlined, color: VeloraColors.plum),
           ),
         ]),
       ],
@@ -342,9 +402,11 @@ class _KeypadButton extends StatelessWidget {
         height: 56,
         child: Material(
           color: Theme.of(context).colorScheme.surfaceContainerHighest,
-          shape: const CircleBorder(),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(VeloraRadii.control),
+          ),
           child: InkWell(
-            customBorder: const CircleBorder(),
+            borderRadius: BorderRadius.circular(VeloraRadii.control),
             onTap: onPressed,
             child: ExcludeSemantics(
               child: Center(

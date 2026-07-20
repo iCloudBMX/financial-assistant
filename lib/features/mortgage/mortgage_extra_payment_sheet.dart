@@ -7,7 +7,6 @@ import '../../core/mortgage/mortgage_engine.dart';
 import '../../core/theme/velora_tokens.dart';
 import '../../providers/app_providers.dart';
 import '../../ui/components/velora_button.dart';
-import '../../ui/components/velora_card.dart';
 import '../../ui/components/velora_money_field.dart';
 import '../../ui/components/velora_sheet.dart';
 import 'mortgage_controller.dart';
@@ -68,6 +67,7 @@ class _ExtraSheetState extends ConsumerState<_ExtraSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final list = ref.watch(mortgagesProvider).value;
     MortgageWithProjection? item;
     for (final e in (list ?? const <MortgageWithProjection>[])) {
@@ -97,9 +97,9 @@ class _ExtraSheetState extends ConsumerState<_ExtraSheet> {
           .clamp(0, 1 << 62);
       // §6.9: every projection is informational, never a bank statement —
       // the "Taxminiy" (estimate) word is always present here, not only when
-      // the plan itself is flagged approximate.
-      preview = 'Taxminiy natija:\n'
-          'Muddat qisqarishi: $monthsSaved oy\n'
+      // the plan itself is flagged approximate. The single-Text body keeps the
+      // "Muddat qisqarishi: N oy" line whole for the differential-preview test.
+      preview = 'Muddat qisqarishi: $monthsSaved oy\n'
           'Tejalgan foiz: ${Money(interestSaved, _uzs).format()}'
           '${after.isApproximate ? ' (taxminiy hisob-kitob)' : ''}';
     }
@@ -114,15 +114,22 @@ class _ExtraSheetState extends ConsumerState<_ExtraSheet> {
               currency: _uzs,
               label: 'Qo\'shimcha to\'lov summasi',
               autofocus: true),
+          const SizedBox(height: VeloraSpacing.sm),
+          Text(
+            'Qo\'shimcha to\'lov to\'g\'ridan-to\'g\'ri asosiy qarzni '
+            'kamaytiradi.',
+            style: theme.textTheme.bodySmall
+                ?.copyWith(color: VeloraColors.muted),
+          ),
           if (preview.isNotEmpty) ...[
             const SizedBox(height: VeloraSpacing.md),
-            VeloraCard(child: Text(preview)),
+            _PreviewCard(body: preview),
           ],
           if (_error != null)
             Padding(
               padding: const EdgeInsets.only(top: VeloraSpacing.sm),
               child: Text(_error!,
-                  style: TextStyle(color: Theme.of(context).colorScheme.error)),
+                  style: TextStyle(color: theme.colorScheme.error)),
             ),
         ],
       ),
@@ -130,6 +137,43 @@ class _ExtraSheetState extends ConsumerState<_ExtraSheet> {
         key: const Key('extra-save'),
         label: 'Saqlash',
         onPressed: _save,
+      ),
+    );
+  }
+}
+
+/// The plum-tinted estimate preview: a header labeling the figures as an
+/// estimate, over the whole "months / interest saved" body text.
+class _PreviewCard extends StatelessWidget {
+  const _PreviewCard({required this.body});
+
+  final String body;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.all(VeloraSpacing.md),
+      decoration: BoxDecoration(
+        color: VeloraColors.plumTint,
+        borderRadius: BorderRadius.circular(VeloraRadii.card),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.insights_outlined,
+                  size: 18, color: VeloraColors.plum),
+              const SizedBox(width: VeloraSpacing.sm),
+              Text('Taxminiy natija',
+                  style: theme.textTheme.labelLarge
+                      ?.copyWith(color: VeloraColors.plum)),
+            ],
+          ),
+          const SizedBox(height: VeloraSpacing.sm),
+          Text(body, style: theme.textTheme.bodyMedium),
+        ],
       ),
     );
   }

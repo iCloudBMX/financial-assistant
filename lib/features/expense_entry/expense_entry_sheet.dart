@@ -148,6 +148,7 @@ class _ExpenseEntrySheetBodyState
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          const _AmountCaption('Qancha sarfladingiz?'),
           VeloraMoneyField(
             controller: _amountCtrl,
             currency: widget.currency,
@@ -156,6 +157,8 @@ class _ExpenseEntrySheetBodyState
             onChanged: (m) => setState(() => _amount = m),
           ),
           const SizedBox(height: VeloraSpacing.lg),
+          const _SheetSectionLabel('Qaysi hisobdan?'),
+          const SizedBox(height: VeloraSpacing.sm),
           accountsAsync.when(
             data: (list) => AccountCardPicker(
               accounts: [for (final a in list) a.account],
@@ -169,6 +172,7 @@ class _ExpenseEntrySheetBodyState
             error: (_, _) => const SizedBox.shrink(),
           ),
           const SizedBox(height: VeloraSpacing.lg),
+          const _SheetSectionLabel('Tez kategoriyalar'),
           CategoryPicker(
             categories: widget.categories,
             quickIds: widget.quickIds,
@@ -196,11 +200,75 @@ class _ExpenseEntrySheetBodyState
           ),
         ],
       ),
-      primaryAction: VeloraPrimaryButton(
-        label: 'Saqlash',
-        loading: _saving,
-        onPressed: _canSave ? _save : null,
+      primaryAction: _CoralPrimaryAction(
+        child: VeloraPrimaryButton(
+          label: 'Saqlash',
+          loading: _saving,
+          onPressed: _canSave ? _save : null,
+        ),
       ),
+    );
+  }
+}
+
+/// The muted "what are we asking?" caption the mockups place directly above the
+/// amount field, giving the money input its Velora Human framing without
+/// touching the shared field component.
+class _AmountCaption extends StatelessWidget {
+  const _AmountCaption(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.only(bottom: VeloraSpacing.sm),
+        child: Text(
+          text,
+          style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                color: VeloraColors.muted,
+                fontWeight: FontWeight.w600,
+              ),
+        ),
+      );
+}
+
+/// The small uppercase muted section header ("Qaysi hisobdan?", "Tez
+/// kategoriyalar") the approved money-flow mockups put above each picker.
+class _SheetSectionLabel extends StatelessWidget {
+  const _SheetSectionLabel(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Text(
+        text.toUpperCase(),
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: VeloraColors.muted,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.6,
+            ),
+      );
+}
+
+/// Recolors its subtree's primary to Velora coral so the pinned save CTA is the
+/// single coral primary action from the mockups, while keeping the shared
+/// [VeloraPrimaryButton] (its loading + a11y semantics) unchanged.
+class _CoralPrimaryAction extends StatelessWidget {
+  const _CoralPrimaryAction({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Theme(
+      data: theme.copyWith(
+        colorScheme: theme.colorScheme.copyWith(
+          primary: VeloraColors.coral,
+          onPrimary: Colors.white,
+        ),
+      ),
+      child: child,
     );
   }
 }

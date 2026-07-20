@@ -107,8 +107,23 @@ final dashboardProvider = FutureProvider<DashboardData>((ref) async {
     overspendCategories: _overspendCategories(budgets),
     primaryGoal: _selectPrimaryGoal(goals),
     mortgageSummary: _selectMortgageSummary(mortgages),
+    goalsSavedTotal: _goalsSavedTotal(goals, settings.primaryCurrency),
   );
 });
+
+/// Sum of amounts currently saved across every active goal, in the primary
+/// currency — the Home distribution bar's goals segment. Non-primary-currency
+/// goals are out of MVP scope (see `goalsProvider`), so only matching-currency
+/// progress is aggregated.
+Money _goalsSavedTotal(List<GoalWithProgress> goals, Currency currency) {
+  var minor = 0;
+  for (final g in goals) {
+    if (g.goal.status != GoalStatus.active) continue;
+    if (g.progress.saved.currency != currency) continue;
+    minor += g.progress.saved.minorUnits;
+  }
+  return Money(minor, currency);
+}
 
 /// The names of categories whose month spend is over their limit (§11.5),
 /// used to explain which category caused an overspend under the safe-limit

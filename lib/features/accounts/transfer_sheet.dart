@@ -52,6 +52,45 @@ Future<void> showTransferSheet(BuildContext context, WidgetRef ref) async {
   );
 }
 
+/// A calm reassurance that an internal transfer is not a spend: it leaves the
+/// combined balance and the month's expense total untouched (mirrors the
+/// mockup's green safe-note, and the §6.6 rule that transfers never count as
+/// income or expense). Colour + icon + text, never colour alone.
+class _TransferSafeNote extends StatelessWidget {
+  const _TransferSafeNote();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: VeloraSpacing.md,
+        vertical: VeloraSpacing.md,
+      ),
+      decoration: BoxDecoration(
+        color: VeloraColors.success.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(VeloraRadii.control),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.check_circle,
+              size: 18, color: VeloraColors.success),
+          const SizedBox(width: VeloraSpacing.sm),
+          Flexible(
+            child: Text(
+              'O\'tkazma umumiy balans va chiqimni o\'zgartirmaydi.',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: VeloraColors.success,
+                    fontWeight: FontWeight.w600,
+                  ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _TransferSheetBody extends ConsumerStatefulWidget {
   const _TransferSheetBody({
     required this.currency,
@@ -161,6 +200,8 @@ class _TransferSheetBodyState extends ConsumerState<_TransferSheetBody> {
                 label: 'Summa',
                 onChanged: (m) => setState(() => _amount = m),
               ),
+              const SizedBox(height: VeloraSpacing.lg),
+              const _TransferSafeNote(),
             ],
           );
         },

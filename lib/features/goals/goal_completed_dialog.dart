@@ -42,10 +42,29 @@ Future<void> showGoalCompletedDialog(BuildContext context, WidgetRef ref,
         final canMoveSurplus = excessMinor > 0 && others.isNotEmpty;
 
         return AlertDialog(
-          icon: const Icon(Icons.celebration_outlined,
-              color: VeloraColors.success, size: 32),
+          backgroundColor: VeloraColors.blush,
+          surfaceTintColor: Colors.transparent,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(VeloraRadii.sheet),
+          ),
+          icon: Container(
+            width: 56,
+            height: 56,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: VeloraColors.success.withValues(alpha: 0.14),
+              borderRadius: BorderRadius.circular(VeloraRadii.control),
+            ),
+            child: const Icon(Icons.celebration_outlined,
+                color: VeloraColors.success, size: 30),
+          ),
           title: const Text('Tabriklaymiz!'),
-          content: const Text('Maqsadga yetdingiz. Keyingi qadam?'),
+          content: Text(
+            item == null
+                ? 'Maqsadga yetdingiz. Keyingi qadam?'
+                : '"${item.goal.name}" maqsadiga yetdingiz. Keyingi qadam?',
+            textAlign: TextAlign.center,
+          ),
           actions: [
             TextButton(
               onPressed: () async {

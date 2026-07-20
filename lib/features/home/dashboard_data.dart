@@ -77,6 +77,11 @@ class DashboardData {
   final PrimaryGoalSummary? primaryGoal;
   final MortgageSummaryView? mortgageSummary;
 
+  /// Total currently saved across all active goals, in the primary currency.
+  /// Feeds the Home "Pul taqsimoti" (money distribution) bar's goals segment
+  /// so it shows a real aggregate, not just the primary goal.
+  final Money goalsSavedTotal;
+
   const DashboardData({
     required this.totals,
     required this.monthIncome,
@@ -91,6 +96,7 @@ class DashboardData {
     this.overspendCategories = const [],
     this.primaryGoal,
     this.mortgageSummary,
+    this.goalsSavedTotal = const Money(0, CurrencyRegistry.uzs),
   });
 }
 
@@ -105,6 +111,7 @@ DashboardData buildDashboard({
   List<String> overspendCategories = const [],
   PrimaryGoalSummary? primaryGoal,
   MortgageSummaryView? mortgageSummary,
+  Money goalsSavedTotal = const Money(0, CurrencyRegistry.uzs),
 }) {
   final period = FinancialPeriod.containing(now, periodStartDay);
   final latest = _latestUnallocatedIncome(entries, primaryCurrency);
@@ -130,6 +137,7 @@ DashboardData buildDashboard({
             latest.amount.currency),
     primaryGoal: primaryGoal,
     mortgageSummary: mortgageSummary,
+    goalsSavedTotal: goalsSavedTotal,
   );
 }
 

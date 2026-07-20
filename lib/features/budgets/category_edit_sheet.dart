@@ -179,6 +179,10 @@ class _CategoryFormState extends ConsumerState<_CategoryForm> {
   bool _loaded = false;
   Currency _currency = CurrencyRegistry.uzs;
 
+  /// The loaded category's live budget standing, used to render the mockup's
+  /// "Joriy holat" summary above the form. Null for a brand-new category.
+  CategoryBudgetView? _view;
+
   @override
   void initState() {
     super.initState();
@@ -195,6 +199,7 @@ class _CategoryFormState extends ConsumerState<_CategoryForm> {
     final views = await ref.read(categoryBudgetsProvider.future);
     final view = views.firstWhere((v) => v.category.id == id);
     final c = view.category;
+    _view = view;
     _currency = view.monthSpent.currency;
     _nameCtrl.text = c.name;
     _monthlyCtrl.text = c.monthlyLimitMinor == null
@@ -317,6 +322,10 @@ class _CategoryFormState extends ConsumerState<_CategoryForm> {
                 label: const Text('Orqaga'),
               ),
             ),
+          if (_view != null) ...[
+            _CurrentStatusCard(view: _view!),
+            const SizedBox(height: VeloraSpacing.md),
+          ],
           TextField(
             key: const Key('category-edit-name'),
             controller: _nameCtrl,
@@ -338,6 +347,8 @@ class _CategoryFormState extends ConsumerState<_CategoryForm> {
             ],
           ),
           const SizedBox(height: VeloraSpacing.md),
+          Text('Turi', style: Theme.of(context).textTheme.labelLarge),
+          const SizedBox(height: VeloraSpacing.xs),
           Wrap(
             spacing: VeloraSpacing.sm,
             children: [
@@ -380,6 +391,93 @@ class _CategoryFormState extends ConsumerState<_CategoryForm> {
         key: const Key('category-edit-save'),
         label: 'Saqlash',
         onPressed: _canSave ? _save : null,
+      ),
+    );
+  }
+}
+
+/// The mockup's "Joriy holat" summary: the category's period spend with a
+/// status-colored progress bar and a color + icon + text status line (the
+/// design spec's safe/near/over contract; a limitless category shows a neutral
+/// tone with no bar).
+class _CurrentStatusCard extends StatelessWidget {
+  const _CurrentStatusCard({required this.view});
+
+  final CategoryBudgetView view;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final status = view.monthStatus;
+    final velora = budgetVeloraStatus(status);
+    final color = velora?.color ?? VeloraColors.muted;
+    final limit = view.category.monthlyLimitMinor;
+    final spent = view.monthSpent;
+    final fraction = (limit == null || limit == 0)
+        ? null
+        : (spent.minorUnits / limit).clamp(0.0, 1.0);
+    final headline = limit == null
+        ? '${spent.format()} sarflandi'
+        : '${spent.format()} / ${Money(limit, spent.currency).format()}';
+
+    return Container(
+      padding: const EdgeInsets.all(VeloraSpacing.lg),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(VeloraRadii.card),
+        border: Border.all(color: VeloraColors.line),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'JORIY HOLAT',
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: VeloraColors.muted,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 1,
+            ),
+          ),
+          const SizedBox(height: VeloraSpacing.xs),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              headline,
+              maxLines: 1,
+              softWrap: false,
+              style: theme.textTheme.titleLarge
+                  ?.copyWith(fontWeight: FontWeight.w800),
+            ),
+          ),
+          if (fraction != null) ...[
+            const SizedBox(height: VeloraSpacing.md),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(99),
+              child: LinearProgressIndicator(
+                value: fraction,
+                minHeight: 7,
+                backgroundColor: VeloraColors.line,
+                valueColor: AlwaysStoppedAnimation(color),
+              ),
+            ),
+          ],
+          const SizedBox(height: VeloraSpacing.sm),
+          Row(
+            children: [
+              Icon(budgetStatusIcon(status), size: 16, color: color),
+              const SizedBox(width: VeloraSpacing.xs),
+              Expanded(
+                child: Text(
+                  budgetStatusLabel(status),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodySmall?.copyWith(color: color),
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

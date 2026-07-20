@@ -519,7 +519,12 @@ void main() {
       final cashId =
           await _seedAccount(container, name: 'Naqd', balanceMinor: 1000000);
       final ledger = container.read(ledgerRepositoryProvider);
-      final now = DateTime.now();
+      // A fixed time-of-day on *today* so entries still group under "Bugun"
+      // (and the adjustment a day back under "Kecha") while the rendered row
+      // time stays deterministic — seeding raw DateTime.now() made this golden
+      // flake whenever the run crossed a minute boundary.
+      final today = DateTime.now();
+      final now = DateTime(today.year, today.month, today.day, 9, 41);
       await ledger.addExpense(
           accountId: cardId,
           amount: const Money(85000, _uzs),
