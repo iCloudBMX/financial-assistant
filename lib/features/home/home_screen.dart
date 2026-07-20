@@ -182,9 +182,6 @@ class _HomeBody extends ConsumerWidget {
           ],
         ),
         const SizedBox(height: VeloraSpacing.md),
-        if (d.weeklyLimit != null && d.safeLimit != null)
-          WeeklySafeLimitCard(weekly: d.weeklyLimit!, monthly: d.safeLimit!),
-        const SizedBox(height: VeloraSpacing.md),
         PrimaryGoalSummaryCard(
           key: const Key('goal-summary-card'),
           goal: d.primaryGoal,

@@ -63,12 +63,11 @@ class DashboardData {
   final int? unallocatedEntryId;
   final Money? unallocatedEntryAmount;
 
-  /// Safe-limit view models, resolved by `dashboardProvider` so the Home
+  /// Safe-limit view model, resolved by `dashboardProvider` so the Home
   /// cards consume immutable values instead of watching providers directly.
   /// Nullable on the pure [buildDashboard] path (which does not compute the
   /// safe-limit engine); always populated when assembled by the provider.
   final SafeLimit? safeLimit;
-  final WeeklySafeLimit? weeklyLimit;
 
   /// Names of variable categories over their monthly limit — the offenders
   /// line under the safe-limit hero when it is over.
@@ -92,7 +91,6 @@ class DashboardData {
     this.unallocatedEntryId,
     this.unallocatedEntryAmount,
     this.safeLimit,
-    this.weeklyLimit,
     this.overspendCategories = const [],
     this.primaryGoal,
     this.mortgageSummary,
@@ -107,7 +105,6 @@ DashboardData buildDashboard({
   required int periodStartDay,
   required DateTime now,
   SafeLimit? safeLimit,
-  WeeklySafeLimit? weeklyLimit,
   List<String> overspendCategories = const [],
   PrimaryGoalSummary? primaryGoal,
   MortgageSummaryView? mortgageSummary,
@@ -123,7 +120,6 @@ DashboardData buildDashboard({
     undistributedFunds: undistributed(entries, primaryCurrency),
     primaryCurrency: primaryCurrency,
     safeLimit: safeLimit,
-    weeklyLimit: weeklyLimit,
     overspendCategories: overspendCategories,
     unallocatedEntryId: latest?.id,
     // The remaining unallocated amount (amount − allocated), NOT the gross

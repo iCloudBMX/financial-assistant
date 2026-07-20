@@ -92,7 +92,6 @@ final dashboardProvider = FutureProvider<DashboardData>((ref) async {
   // reads are wired, per the Velora presentation-architecture boundary:
   // widgets only ever consume the resulting DashboardData.
   final safeLimit = await ref.watch(safeLimitProvider.future);
-  final weeklyLimit = await ref.watch(weeklySafeLimitProvider.future);
   final budgets = await ref.watch(categoryBudgetsProvider.future);
   final goals = await ref.watch(goalsProvider.future);
   final mortgages = await ref.watch(mortgagesProvider.future);
@@ -103,7 +102,6 @@ final dashboardProvider = FutureProvider<DashboardData>((ref) async {
     periodStartDay: settings.periodStartDay,
     now: DateTime.now(),
     safeLimit: safeLimit,
-    weeklyLimit: weeklyLimit,
     overspendCategories: _overspendCategories(budgets),
     primaryGoal: _selectPrimaryGoal(goals),
     mortgageSummary: _selectMortgageSummary(mortgages),
@@ -422,35 +420,3 @@ final safeLimitProvider = FutureProvider<SafeLimit>((ref) async {
   return dailySafeLimit(inputs);
 });
 
-final weeklySafeLimitProvider = FutureProvider<WeeklySafeLimit>((ref) async {
-  final daily = await ref.watch(safeLimitProvider.future);
-  final settings = await ref.watch(settingsProvider.future);
-  final currency = settings.primaryCurrency;
-  final entries = await ref.watch(ledgerRepositoryProvider).allEntries();
-  final cats = await ref.watch(budgetRepositoryProvider).categoriesWithBudgets(
-        includeArchived: true,
-      );
-  final now = DateTime.now();
-  final weekStart = startOfWeek(now, settings.weekStartIso);
-  final weekEnd = weekStart.add(const Duration(days: 7));
-  final today = DateTime(now.year, now.month, now.day);
-  final daysLeftInWeek = weekEnd.difference(today).inDays.clamp(1, 7);
-
-  final variableIds = cats
-      .where((c) => c.kind == CategoryKind.variable)
-      .map((c) => c.id)
-      .toSet();
-  final weekByCat = categorySpent(
-    entries,
-    FinancialPeriod(weekStart, weekEnd, settings.periodStartDay),
-    currency,
-  );
-  var weekVarMinor = 0;
-  weekByCat.forEach((catId, spent) {
-    if (variableIds.contains(catId)) weekVarMinor += spent.minorUnits;
-  });
-
-  return weeklySafeLimit(daily,
-      daysLeftInWeek: daysLeftInWeek,
-      weeklySpent: Money(weekVarMinor, currency));
-});

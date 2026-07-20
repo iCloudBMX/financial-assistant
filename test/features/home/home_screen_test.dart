@@ -34,8 +34,7 @@ void main() {
 
   testWidgets(
       'renders the approved hierarchy: balance -> safe limit -> quick '
-      'actions -> unallocated alert -> weekly/monthly progress -> goal -> '
-      'mortgage', (t) async {
+      'actions -> unallocated alert -> goal -> mortgage', (t) async {
     final db = AppDatabase(NativeDatabase.memory());
     addTearDown(db.close);
     final container =
@@ -91,7 +90,6 @@ void main() {
     expect(find.byKey(const Key('safe-limit-hero')), findsOneWidget);
     expect(find.byKey(const Key('quick-actions-row')), findsOneWidget);
     expect(find.byKey(const Key('unallocated-alert')), findsOneWidget);
-    expect(find.byKey(const Key('weekly-limit-card')), findsOneWidget);
     expect(find.byKey(const Key('goal-summary-card')), findsOneWidget);
     expect(find.byKey(const Key('mortgage-summary-card')), findsOneWidget);
 
@@ -101,8 +99,7 @@ void main() {
     expect(top('safe-limit-hero'), lessThan(top('balance-card')));
     expect(top('balance-card'), lessThan(top('quick-actions-row')));
     expect(top('quick-actions-row'), lessThan(top('unallocated-alert')));
-    expect(top('unallocated-alert'), lessThan(top('weekly-limit-card')));
-    expect(top('weekly-limit-card'), lessThan(top('goal-summary-card')));
+    expect(top('unallocated-alert'), lessThan(top('goal-summary-card')));
     expect(top('goal-summary-card'), lessThan(top('mortgage-summary-card')));
   });
 

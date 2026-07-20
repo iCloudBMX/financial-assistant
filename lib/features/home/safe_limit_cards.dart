@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../../core/limit/safe_limit_engine.dart';
 import '../../core/money/money.dart';
 import '../../core/theme/velora_tokens.dart';
-import '../../ui/components/velora_card.dart';
 
 /// Today's safe-to-spend amount — the dominant decision card (§6.2 step 2).
 ///
@@ -132,40 +131,5 @@ class SafeLimitCard extends StatelessWidget {
       return VeloraStatus.near;
     }
     return VeloraStatus.safe;
-  }
-}
-
-/// Weekly limit and monthly free-budget progress (§6.2 step 5). A pure value
-/// widget over the resolved [weekly] and [monthly] safe-limit figures.
-class WeeklySafeLimitCard extends StatelessWidget {
-  const WeeklySafeLimitCard({
-    super.key,
-    required this.weekly,
-    required this.monthly,
-  });
-
-  final WeeklySafeLimit weekly;
-  final SafeLimit monthly;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return VeloraCard(
-      key: const Key('weekly-limit-card'),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Haftalik xavfsiz limit', style: theme.textTheme.titleMedium),
-          const SizedBox(height: VeloraSpacing.sm),
-          Text('Limit: ${weekly.weeklyLimit.format()}'),
-          Text('Sarflangan: ${weekly.weeklySpent.format()} '
-              '· Qoldi: ${weekly.weeklyRemaining.format()}'),
-          const Divider(height: VeloraSpacing.xl),
-          Text('Oylik erkin byudjet', style: theme.textTheme.titleMedium),
-          const SizedBox(height: VeloraSpacing.sm),
-          Text('Qoldiq: ${monthly.spendable.format()}'),
-        ],
-      ),
-    );
   }
 }
