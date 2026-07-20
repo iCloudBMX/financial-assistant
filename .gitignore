@@ -52,3 +52,6 @@ ios/Flutter/flutter_export_environment.sh
 
 # Subagent-driven development scratch state
 .superpowers/sdd/
+
+# Brainstorming visual-companion mockups (scratch)
+.superpowers/brainstorm/
