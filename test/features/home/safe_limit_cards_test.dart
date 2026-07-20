@@ -39,10 +39,12 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('BUGUN BEMALOL'), findsOneWidget);
-    // Exact match (not textContaining) so this pins to the dedicated headline
-    // Text: with no expenses, "Bugun qoldi: ..." also contains the same figure.
-    expect(find.text(limit.perDay.format()), findsOneWidget);
+    expect(find.textContaining('BUGUN QOLDI'), findsOneWidget);
+    // With no expenses today, remaining == perDay, so the hero's big number
+    // still equals the per-day figure. Exact match pins it to the headline Text.
+    expect(find.text(limit.todayRemaining.format()), findsOneWidget);
+    // The daily allowance now lives in the supporting line.
+    expect(find.textContaining('Kunlik limit'), findsOneWidget);
     await db.close();
   });
 
@@ -67,5 +69,29 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.textContaining('Limitdan chiqqan: Oziq'), findsOneWidget);
+  });
+
+  testWidgets('over-limit hero shows zero left and plain-language overage',
+      (tester) async {
+    const uzs = CurrencyRegistry.uzs;
+    const limit = SafeLimit(
+      spendable: Money(0, uzs),
+      perDay: Money(50000, uzs),
+      daysLeft: 5,
+      todaySpent: Money(80000, uzs),
+      todayRemaining: Money(-30000, uzs),
+    );
+
+    await tester.pumpWidget(
+      const MaterialApp(home: Scaffold(body: SafeLimitCard(limit: limit))),
+    );
+    await tester.pumpAndSettle();
+
+    // Big number is 0, not a negative figure.
+    expect(find.text(const Money(0, uzs).format()), findsOneWidget);
+    expect(find.textContaining('oshdingiz'), findsOneWidget);
+    // No naked negative anywhere on the card.
+    expect(find.textContaining('-30'), findsNothing);
+    expect(find.textContaining('−30'), findsNothing);
   });
 }

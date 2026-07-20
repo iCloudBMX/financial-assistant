@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/limit/safe_limit_engine.dart';
+import '../../core/money/money.dart';
 import '../../core/theme/velora_tokens.dart';
 import '../../ui/components/velora_card.dart';
 
@@ -25,6 +26,13 @@ class SafeLimitCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final status = _statusFor(limit);
+    final c = limit.perDay.currency;
+    // The hero answers "how much can I still spend today", floored at zero so
+    // an over-budget day reads as 0 + a plain sentence, never a raw negative.
+    final remainingToday = limit.todayRemaining.minorUnits < 0
+        ? Money(0, c)
+        : limit.todayRemaining;
+    final overBy = Money(-limit.todayRemaining.minorUnits, c);
     // Fraction of today's limit still available (0..1). Over-limit clamps to
     // an empty track; a zero/negative per-day limit hides the track entirely.
     final perDay = limit.perDay.minorUnits;
@@ -51,7 +59,7 @@ class SafeLimitCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'BUGUN BEMALOL',
+            'BUGUN QOLDI',
             style: theme.textTheme.labelSmall?.copyWith(
               color: onPlum.withValues(alpha: 0.68),
               fontWeight: FontWeight.w700,
@@ -63,7 +71,7 @@ class SafeLimitCard extends StatelessWidget {
             fit: BoxFit.scaleDown,
             alignment: Alignment.centerLeft,
             child: Text(
-              limit.perDay.format(),
+              remainingToday.format(),
               maxLines: 1,
               softWrap: false,
               style: theme.textTheme.headlineMedium?.copyWith(
@@ -80,8 +88,11 @@ class SafeLimitCard extends StatelessWidget {
               const SizedBox(width: VeloraSpacing.xs),
               Expanded(
                 child: Text(
-                  'Bugun qoldi: ${limit.todayRemaining.format()} '
-                  '· ${limit.daysLeft} kun qoldi',
+                  limit.isOver
+                      ? 'Bugungi limitdan ${overBy.format()} oshdingiz '
+                        '· ${limit.daysLeft} kun qoldi'
+                      : 'Kunlik limit ${limit.perDay.format()} '
+                        '· ${limit.daysLeft} kun qoldi',
                   style: theme.textTheme.bodySmall
                       ?.copyWith(color: onPlum.withValues(alpha: 0.82)),
                 ),
