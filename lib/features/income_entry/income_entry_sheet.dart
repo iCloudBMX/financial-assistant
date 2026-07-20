@@ -8,6 +8,7 @@ import '../../core/theme/velora_tokens.dart';
 import '../../data/recurring/recurring_model.dart';
 import '../../providers/app_providers.dart';
 import '../../ui/components/account_card_picker.dart';
+import '../../ui/components/app_snackbar.dart';
 import '../../ui/components/entry_details_section.dart';
 import '../../ui/components/velora_button.dart';
 import '../../ui/components/velora_money_field.dart';
@@ -25,7 +26,7 @@ Future<void> showIncomeEntrySheet(BuildContext context, WidgetRef ref) async {
   final accounts = await ref.read(accountRepositoryProvider).list();
   if (accounts.isEmpty) {
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context).showAutoDismissSnackBar(
           const SnackBar(content: Text('Avval hisob yarating')));
     }
     return;
@@ -130,7 +131,7 @@ class _IncomeEntrySheetBodyState extends ConsumerState<_IncomeEntrySheetBody> {
       err: (f) {
         setState(() => _saving = false);
         ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(userMessageFor(f))));
+            .showAutoDismissSnackBar(SnackBar(content: Text(userMessageFor(f))));
       },
     );
   }

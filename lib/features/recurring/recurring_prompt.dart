@@ -7,6 +7,7 @@ import '../../core/result/result.dart';
 import '../../core/theme/velora_tokens.dart';
 import '../../data/recurring/recurring_model.dart';
 import '../../providers/app_providers.dart';
+import '../../ui/components/app_snackbar.dart';
 import '../../ui/components/velora_button.dart';
 import '../../ui/components/velora_card.dart';
 import '../../ui/components/velora_money_field.dart';
@@ -211,7 +212,7 @@ class _RecurringPlanCard extends ConsumerWidget {
     result.when(
       ok: (_) {},
       err: (f) =>
-          messenger.showSnackBar(SnackBar(content: Text(userMessageFor(f)))),
+          messenger.showAutoDismissSnackBar(SnackBar(content: Text(userMessageFor(f)))),
     );
   }
 
@@ -237,7 +238,7 @@ class _RecurringPlanCard extends ConsumerWidget {
     result.when(
       ok: (_) {},
       err: (f) =>
-          messenger.showSnackBar(SnackBar(content: Text(userMessageFor(f)))),
+          messenger.showAutoDismissSnackBar(SnackBar(content: Text(userMessageFor(f)))),
     );
   }
 }
@@ -284,7 +285,7 @@ class _RecurringEditSheetState extends ConsumerState<_RecurringEditSheet> {
       ok: (_) => Navigator.of(context).pop(),
       err: (f) {
         setState(() => _saving = false);
-        messenger.showSnackBar(SnackBar(content: Text(userMessageFor(f))));
+        messenger.showAutoDismissSnackBar(SnackBar(content: Text(userMessageFor(f))));
       },
     );
   }

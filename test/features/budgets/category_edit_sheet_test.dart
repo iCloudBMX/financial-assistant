@@ -239,6 +239,11 @@ void main() {
     final views = await container.read(categoryBudgetsProvider.future);
     final cat1 = views.firstWhere((v) => v.category.id == 1).category;
     expect(cat1.name, isNot('Ovqatlanish'));
+
+    // The error snackbar auto-dismisses; let its backstop timer elapse so no
+    // timer outlives the test.
+    await tester.pump(const Duration(seconds: 5));
+    await tester.pumpAndSettle();
   });
 
   testWidgets('Saqlash stays disabled while the name is empty',

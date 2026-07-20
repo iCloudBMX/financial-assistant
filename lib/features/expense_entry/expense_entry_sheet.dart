@@ -6,6 +6,7 @@ import '../../core/result/failure_messages.dart';
 import '../../core/theme/velora_tokens.dart';
 import '../../data/categories/category_model.dart';
 import '../../providers/app_providers.dart';
+import '../../ui/components/app_snackbar.dart';
 import '../../ui/components/account_card_picker.dart';
 import '../../ui/components/category_picker.dart';
 import '../../ui/components/entry_details_section.dart';
@@ -128,14 +129,15 @@ class _ExpenseEntrySheetBodyState
     final messenger = ScaffoldMessenger.of(context);
     Navigator.of(context).pop();
     result.when(
-      ok: (_) => messenger.showSnackBar(SnackBar(
+      ok: (_) => messenger.showAutoDismissSnackBar(SnackBar(
         content: const Text('Chiqim saqlandi'),
         action: SnackBarAction(
           label: 'Bekor qilish',
           onPressed: controller.undo,
         ),
       )),
-      err: (f) => messenger.showSnackBar(SnackBar(content: Text(userMessageFor(f)))),
+      err: (f) => messenger
+          .showAutoDismissSnackBar(SnackBar(content: Text(userMessageFor(f)))),
     );
   }
 

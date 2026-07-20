@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/money/money.dart';
 import '../../core/result/failure_messages.dart';
 import '../../core/theme/velora_tokens.dart';
+import '../../ui/components/app_snackbar.dart';
 import 'allocate_sheet.dart';
 import 'allocation_controller.dart';
 import 'variable_budget_offer.dart';
@@ -39,7 +40,7 @@ Future<void> showAllocationChoice(
       confirmResult.when(
         ok: (_) {},
         err: (f) => ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(userMessageFor(f)))),
+            .showAutoDismissSnackBar(SnackBar(content: Text(userMessageFor(f)))),
       );
       return;
     }

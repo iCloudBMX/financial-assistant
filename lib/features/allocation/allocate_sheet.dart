@@ -6,6 +6,7 @@ import '../../core/allocation/allocation_result_labels.dart';
 import '../../core/money/money.dart';
 import '../../core/result/failure_messages.dart';
 import '../../core/theme/velora_tokens.dart';
+import '../../ui/components/app_snackbar.dart';
 import '../../ui/components/velora_button.dart';
 import '../../ui/components/velora_card.dart';
 import '../../ui/components/velora_money_field.dart';
@@ -183,7 +184,7 @@ class _AllocateSheetState extends ConsumerState<AllocateSheet> {
                   result.when(
                     ok: (_) {},
                     err: (f) => messenger
-                        .showSnackBar(SnackBar(content: Text(userMessageFor(f)))),
+                        .showAutoDismissSnackBar(SnackBar(content: Text(userMessageFor(f)))),
                   );
                   return;
                 }

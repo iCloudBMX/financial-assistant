@@ -4,6 +4,7 @@ import '../../core/allocation/allocation_models.dart';
 import '../../core/allocation/allocation_result_labels.dart';
 import '../../core/theme/velora_tokens.dart';
 import '../../providers/app_providers.dart';
+import '../../ui/components/app_snackbar.dart';
 import '../../ui/components/velora_card.dart';
 
 /// Allocation template editor (§8.3): reorder the template's directions and
@@ -40,7 +41,7 @@ class _AllocationTemplateScreenState
                         .read(ledgerRevisionProvider.notifier)
                         .update((n) => n + 1);
                     if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
+                      ScaffoldMessenger.of(context).showAutoDismissSnackBar(
                         const SnackBar(content: Text('Reja saqlandi')),
                       );
                     }

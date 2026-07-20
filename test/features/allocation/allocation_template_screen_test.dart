@@ -107,5 +107,10 @@ void main() {
             'priority order');
     expect(after.toSet(), before.toSet(),
         reason: 'reordering must not lose or duplicate a direction');
+
+    // The "saved" snackbar auto-dismisses; let its backstop timer elapse so
+    // no timer outlives the test.
+    await tester.pump(const Duration(seconds: 5));
+    await tester.pumpAndSettle();
   });
 }

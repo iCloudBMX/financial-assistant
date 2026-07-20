@@ -6,6 +6,7 @@ import '../../core/result/failure_messages.dart';
 import '../../core/theme/velora_tokens.dart';
 import '../../providers/app_providers.dart';
 import '../../ui/components/account_card_picker.dart';
+import '../../ui/components/app_snackbar.dart';
 import '../../ui/components/velora_button.dart';
 import '../../ui/components/velora_money_field.dart';
 import '../../ui/components/velora_sheet.dart';
@@ -34,7 +35,7 @@ Future<void> showTransferSheet(BuildContext context, WidgetRef ref) async {
   final accounts = await ref.read(accountsControllerProvider.future);
   if (accounts.length < 2) {
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context).showAutoDismissSnackBar(
           const SnackBar(content: Text('O\'tkazma uchun kamida 2 ta hisob kerak')));
     }
     return;
@@ -156,7 +157,7 @@ class _TransferSheetBodyState extends ConsumerState<_TransferSheetBody> {
       ok: (_) => Navigator.of(context).pop(),
       err: (f) {
         setState(() => _saving = false);
-        messenger.showSnackBar(SnackBar(content: Text(userMessageFor(f))));
+        messenger.showAutoDismissSnackBar(SnackBar(content: Text(userMessageFor(f))));
       },
     );
   }

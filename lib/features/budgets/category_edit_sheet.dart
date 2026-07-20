@@ -6,6 +6,7 @@ import '../../core/result/failure_messages.dart';
 import '../../core/theme/velora_tokens.dart';
 import '../../data/categories/category_model.dart';
 import '../../providers/app_providers.dart';
+import '../../ui/components/app_snackbar.dart';
 import '../../ui/components/category_icons.dart';
 import '../../ui/components/velora_button.dart';
 import '../../ui/components/velora_money_field.dart';
@@ -245,7 +246,7 @@ class _CategoryFormState extends ConsumerState<_CategoryForm> {
     result.when(
       ok: (_) => Navigator.of(context).pop(),
       err: (f) =>
-          messenger.showSnackBar(SnackBar(content: Text(userMessageFor(f)))),
+          messenger.showAutoDismissSnackBar(SnackBar(content: Text(userMessageFor(f)))),
     );
   }
 
