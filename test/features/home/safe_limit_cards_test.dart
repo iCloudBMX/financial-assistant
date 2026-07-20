@@ -48,6 +48,33 @@ void main() {
     await db.close();
   });
 
+  testWidgets(
+      'on-track hero shows today-remaining, not per-day, as the big number',
+      (tester) async {
+    const uzs = CurrencyRegistry.uzs;
+    // On-track limit where todayRemaining != perDay, so the hero's big
+    // number discriminates the new "today-remaining" behavior from the old
+    // "per-day" rendering.
+    const limit = SafeLimit(
+      spendable: Money(150000, uzs),
+      perDay: Money(50000, uzs),
+      daysLeft: 5,
+      todaySpent: Money(20000, uzs),
+      todayRemaining: Money(30000, uzs),
+    );
+
+    await tester.pumpWidget(
+      const MaterialApp(home: Scaffold(body: SafeLimitCard(limit: limit))),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text(const Money(30000, CurrencyRegistry.uzs).format()),
+        findsOneWidget); // remaining shown
+    expect(find.text(const Money(50000, CurrencyRegistry.uzs).format()),
+        findsNothing); // per-day NOT the big number
+    expect(find.textContaining('BUGUN QOLDI'), findsOneWidget);
+  });
+
   testWidgets('over-limit card renders the offenders line', (tester) async {
     const uzs = CurrencyRegistry.uzs;
     // A limit already over for today (todayRemaining negative → status over).

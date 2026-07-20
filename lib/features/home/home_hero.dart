@@ -148,7 +148,7 @@ class BalanceCard extends StatelessWidget {
     final freeMinor = free?.minorUnits ?? 0;
     final reservedMinor = reserved?.minorUnits ?? 0;
     final barTotal = freeMinor + reservedMinor;
-    final showBar = free != null && reserved != null && barTotal > 0;
+    final showBar = !hidden && free != null && reserved != null && barTotal > 0;
 
     String amount(Money? m) =>
         m == null ? '—' : (hidden ? _mask : m.formatNumber());
