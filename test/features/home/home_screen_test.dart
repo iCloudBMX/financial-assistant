@@ -106,6 +106,31 @@ void main() {
     expect(top('goal-summary-card'), lessThan(top('mortgage-summary-card')));
   });
 
+  testWidgets('header icons pin flush to the right edge, level with the cards',
+      (t) async {
+    final db = AppDatabase(NativeDatabase.memory());
+    addTearDown(db.close);
+    final container =
+        ProviderContainer(overrides: [databaseProvider.overrideWithValue(db)]);
+    addTearDown(container.dispose);
+    await container.read(accountRepositoryProvider).create(
+        name: 'Naqd', type: AccountType.cash,
+        openingBalance: const Money(1000000, CurrencyRegistry.uzs), icon: 'w');
+
+    await t.pumpWidget(UncontrolledProviderScope(
+      container: container,
+      child: const MaterialApp(home: HomeScreen()),
+    ));
+    await t.pumpAndSettle();
+
+    // The rightmost header icon (accounts) must reach the same right edge as
+    // the balance card below it — not float ~60px inward.
+    final cardRight = t.getBottomRight(find.byKey(const Key('balance-card'))).dx;
+    final iconRight =
+        t.getBottomRight(find.byKey(const Key('accounts-open'))).dx;
+    expect(iconRight, moreOrLessEquals(cardRight, epsilon: 1.0));
+  });
+
   testWidgets('privacy toggle hides and reveals the balance amount',
       (t) async {
     final db = AppDatabase(NativeDatabase.memory());

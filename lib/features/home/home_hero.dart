@@ -38,7 +38,14 @@ class HomeHeader extends StatelessWidget {
             // The wordmark is a logo, not body copy: it keeps a fixed size
             // (no text scaling) and can ellipsize, so it never pushes the
             // header icons off-screen at large accessibility text scales.
-            Flexible(
+            // `Expanded` (not `Flexible` + a `Spacer`): a loose `Flexible`
+            // competing with a flex-1 `Spacer` splits the row's free space
+            // 50/50, so the wordmark reserves a half it doesn't use and the
+            // leftover lands as trailing space that shoves the icons ~60px
+            // in from the right edge. `Expanded` lets the wordmark's box
+            // absorb all the slack (the text stays left-aligned) so the
+            // icons pin flush to the right, level with the cards below.
+            Expanded(
               child: Text(
                 'velora.',
                 maxLines: 1,
@@ -47,11 +54,11 @@ class HomeHeader extends StatelessWidget {
                 style: theme.textTheme.titleLarge?.copyWith(
                   color: VeloraColors.plum,
                   fontWeight: FontWeight.w800,
+                  fontSize: 28,
                   letterSpacing: -0.5,
                 ),
               ),
             ),
-            const Spacer(),
             _HeaderIconButton(
               key: const Key('balance-privacy-toggle'),
               icon: hidden ? Icons.visibility_off : Icons.visibility,
@@ -60,6 +67,7 @@ class HomeHeader extends StatelessWidget {
             ),
             const SizedBox(width: VeloraSpacing.sm),
             _HeaderIconButton(
+              key: const Key('accounts-open'),
               icon: Icons.account_balance_wallet_outlined,
               tooltip: 'Hisoblar',
               onPressed: onOpenAccounts,
