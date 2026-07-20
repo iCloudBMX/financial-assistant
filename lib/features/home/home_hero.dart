@@ -120,153 +120,41 @@ class _HeaderIconButton extends StatelessWidget {
   }
 }
 
-/// The three balance minis under the safe-to-spend hero — total, reserved, and
-/// free — mirroring the mockup's `Hamma pul / Rezerv / Erkin` row. All three
-/// mask together when the privacy toggle is on.
-class MiniBalanceRow extends StatelessWidget {
-  const MiniBalanceRow({
+/// The Home balance card: total on top, then a two-part Erkin/Rezerv split of
+/// that total. `reserved` is `total − free`, so goal earmarks and mandatory
+/// amounts are already inside it — the split is Erkin/Rezerv only, and always
+/// sums to the total. Goals and mortgage keep their own cards, so nothing is
+/// lost. Replaces the former `MiniBalanceRow` + `DistributionCard`. All amounts
+/// mask together under the privacy toggle; a null figure shows an em dash.
+class BalanceCard extends StatelessWidget {
+  const BalanceCard({
     super.key,
     required this.total,
-    required this.reserved,
     required this.free,
+    required this.reserved,
     required this.hidden,
   });
 
   final Money total;
-
-  /// Reserved and free may be null when the safe-limit engine has not resolved
-  /// a spendable figure yet; those minis then show an em dash instead of a
-  /// fabricated split.
-  final Money? reserved;
-  final Money? free;
+  final Money? free; // "Erkin" — spendable
+  final Money? reserved; // "Rezerv" — total − free
   final bool hidden;
 
   static const _mask = '••••••';
 
   @override
   Widget build(BuildContext context) {
-    // IntrinsicHeight bounds the row's cross-axis so the three minis can
-    // stretch to a common height without the circular constraint a bare
-    // `CrossAxisAlignment.stretch` Row hits inside a vertical ListView.
-    return IntrinsicHeight(
-      child: Row(
-        key: const Key('balance-card'),
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Expanded(
-            child: _Mini(
-              label: 'Jami',
-              value: hidden ? _mask : total.formatNumber(),
-              valueKey: const Key('balance-amount'),
-              semantics: hidden ? 'Balans yashirilgan' : total.format(),
-            ),
-          ),
-          const SizedBox(width: VeloraSpacing.sm),
-          Expanded(
-            child: _Mini(
-              label: 'Rezerv',
-              value: reserved == null
-                  ? '—'
-                  : (hidden ? _mask : reserved!.formatNumber()),
-            ),
-          ),
-          const SizedBox(width: VeloraSpacing.sm),
-          Expanded(
-            child: _Mini(
-              label: 'Erkin',
-              value:
-                  free == null ? '—' : (hidden ? _mask : free!.formatNumber()),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _Mini extends StatelessWidget {
-  const _Mini({
-    required this.label,
-    required this.value,
-    this.valueKey,
-    this.semantics,
-  });
-
-  final String label;
-  final String value;
-  final Key? valueKey;
-  final String? semantics;
-
-  @override
-  Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: VeloraSpacing.md,
-        vertical: VeloraSpacing.md,
-      ),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerLowest,
-        borderRadius: BorderRadius.circular(VeloraRadii.control),
-        border: Border.all(color: VeloraColors.line),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            label,
-            style: theme.textTheme.labelSmall?.copyWith(
-              color: VeloraColors.muted,
-            ),
-          ),
-          const SizedBox(height: VeloraSpacing.xs),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: Alignment.centerLeft,
-            child: Text(
-              value,
-              key: valueKey,
-              maxLines: 1,
-              softWrap: false,
-              semanticsLabel: semantics,
-              style: theme.textTheme.titleMedium
-                  ?.copyWith(fontWeight: FontWeight.w700),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
+    final freeMinor = free?.minorUnits ?? 0;
+    final reservedMinor = reserved?.minorUnits ?? 0;
+    final barTotal = freeMinor + reservedMinor;
+    final showBar = free != null && reserved != null && barTotal > 0;
 
-/// One distribution segment: a color, a label, and an amount.
-class DistributionSegment {
-  const DistributionSegment(this.label, this.amount, this.color);
-  final String label;
-  final Money amount;
-  final Color color;
-}
-
-/// The "Pul taqsimoti" card: a single stacked bar over the free-expense,
-/// goals, and mortgage totals, followed by a labeled row per segment. Segments
-/// with a zero amount are dropped so the bar always reflects real money.
-class DistributionCard extends StatelessWidget {
-  const DistributionCard({super.key, required this.segments});
-
-  final List<DistributionSegment> segments;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final active =
-        segments.where((s) => s.amount.minorUnits > 0).toList();
-    if (active.isEmpty) return const SizedBox.shrink();
-    final total =
-        active.fold<int>(0, (sum, s) => sum + s.amount.minorUnits);
+    String amount(Money? m) =>
+        m == null ? '—' : (hidden ? _mask : m.formatNumber());
 
     return Container(
-      key: const Key('distribution-card'),
+      key: const Key('balance-card'),
       padding: const EdgeInsets.all(VeloraSpacing.lg),
       decoration: BoxDecoration(
         color: theme.colorScheme.surfaceContainerLowest,
@@ -276,48 +164,82 @@ class DistributionCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Pul taqsimoti', style: theme.textTheme.titleMedium),
-          const SizedBox(height: VeloraSpacing.md),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(99),
-            child: Row(
-              children: [
-                for (final s in active)
-                  Expanded(
-                    flex: (s.amount.minorUnits * 1000 ~/ total).clamp(1, 1000),
-                    child: Container(height: 9, color: s.color),
-                  ),
-              ],
+          Text('Balans', style: theme.textTheme.titleMedium),
+          const SizedBox(height: VeloraSpacing.xs),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              hidden ? _mask : total.formatNumber(),
+              key: const Key('balance-amount'),
+              maxLines: 1,
+              softWrap: false,
+              semanticsLabel: hidden ? 'Balans yashirilgan' : total.format(),
+              style: theme.textTheme.headlineSmall
+                  ?.copyWith(fontWeight: FontWeight.w800),
             ),
           ),
-          const SizedBox(height: VeloraSpacing.md),
-          for (final s in active)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: VeloraSpacing.xs),
+          if (showBar) ...[
+            const SizedBox(height: VeloraSpacing.md),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(99),
               child: Row(
                 children: [
-                  Container(
-                    width: 8,
-                    height: 8,
-                    decoration: BoxDecoration(
-                      color: s.color,
-                      shape: BoxShape.circle,
+                  if (freeMinor > 0)
+                    Expanded(
+                      flex: (freeMinor * 1000 ~/ barTotal).clamp(1, 1000),
+                      child: Container(height: 9, color: VeloraColors.coral),
                     ),
-                  ),
-                  const SizedBox(width: VeloraSpacing.sm),
-                  Expanded(
-                    child: Text(s.label, style: theme.textTheme.bodyMedium),
-                  ),
-                  Text(
-                    s.amount.formatNumber(),
-                    style: theme.textTheme.bodyMedium
-                        ?.copyWith(fontWeight: FontWeight.w700),
-                  ),
+                  if (reservedMinor > 0)
+                    Expanded(
+                      flex: (reservedMinor * 1000 ~/ barTotal).clamp(1, 1000),
+                      child: Container(height: 9, color: VeloraColors.plum),
+                    ),
                 ],
               ),
             ),
+          ],
+          const SizedBox(height: VeloraSpacing.md),
+          _BalanceLegendRow(
+              color: VeloraColors.coral, label: 'Erkin', value: amount(free)),
+          const SizedBox(height: VeloraSpacing.xs),
+          _BalanceLegendRow(
+              color: VeloraColors.plum,
+              label: 'Rezerv',
+              value: amount(reserved)),
         ],
       ),
+    );
+  }
+}
+
+class _BalanceLegendRow extends StatelessWidget {
+  const _BalanceLegendRow({
+    required this.color,
+    required this.label,
+    required this.value,
+  });
+
+  final Color color;
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Row(
+      children: [
+        Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: VeloraSpacing.sm),
+        Expanded(child: Text(label, style: theme.textTheme.bodyMedium)),
+        Text(value,
+            style: theme.textTheme.bodyMedium
+                ?.copyWith(fontWeight: FontWeight.w700)),
+      ],
     );
   }
 }

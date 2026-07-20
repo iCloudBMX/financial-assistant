@@ -28,7 +28,7 @@ void main() {
       child: const MaterialApp(home: HomeScreen()),
     ));
     await tester.pumpAndSettle();
-    expect(find.textContaining('Jami'), findsWidgets);
+    expect(find.textContaining('Balans'), findsWidgets);
     expect(find.textContaining('1 000 000'), findsWidgets);
   });
 
@@ -94,13 +94,16 @@ void main() {
     expect(find.byKey(const Key('mortgage-summary-card')), findsOneWidget);
 
     // Velora redesign order: the safe-to-spend hero leads as the dominant
-    // decision card, with the balance minis directly beneath it (mockup
-    // "Bugun bemalol" → "Hamma pul / Rezerv / Erkin").
-    expect(top('safe-limit-hero'), lessThan(top('balance-card')));
-    expect(top('balance-card'), lessThan(top('quick-actions-row')));
+    // decision card; the merged Balans card sits below quick actions and the
+    // unallocated alert, above the goal and mortgage cards.
+    expect(top('safe-limit-hero'), lessThan(top('quick-actions-row')));
     expect(top('quick-actions-row'), lessThan(top('unallocated-alert')));
-    expect(top('unallocated-alert'), lessThan(top('goal-summary-card')));
+    expect(top('unallocated-alert'), lessThan(top('balance-card')));
+    expect(top('balance-card'), lessThan(top('goal-summary-card')));
     expect(top('goal-summary-card'), lessThan(top('mortgage-summary-card')));
+
+    expect(find.textContaining('Erkin'), findsWidgets);
+    expect(find.textContaining('Rezerv'), findsWidgets);
   });
 
   testWidgets('header icons pin flush to the right edge, level with the cards',

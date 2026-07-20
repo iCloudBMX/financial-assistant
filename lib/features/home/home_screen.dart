@@ -122,13 +122,6 @@ class _HomeBody extends ConsumerWidget {
           ),
           const SizedBox(height: VeloraSpacing.md),
         ],
-        MiniBalanceRow(
-          total: total,
-          reserved: reserved,
-          free: free,
-          hidden: hidden,
-        ),
-        const SizedBox(height: VeloraSpacing.md),
         QuickActionsRow(
           key: const Key('quick-actions-row'),
           onExpense: () => showExpenseEntrySheet(context, ref),
@@ -170,16 +163,11 @@ class _HomeBody extends ConsumerWidget {
           ),
         ],
         const SizedBox(height: VeloraSpacing.md),
-        DistributionCard(
-          segments: [
-            if (free != null)
-              DistributionSegment('Erkin xarajat', free, VeloraColors.coral),
-            DistributionSegment(
-                'Maqsadlar', d.goalsSavedTotal, VeloraColors.apricot),
-            if (d.mortgageSummary != null)
-              DistributionSegment('Ipoteka',
-                  d.mortgageSummary!.currentPrincipal, VeloraColors.plum),
-          ],
+        BalanceCard(
+          total: total,
+          free: free,
+          reserved: reserved,
+          hidden: hidden,
         ),
         const SizedBox(height: VeloraSpacing.md),
         PrimaryGoalSummaryCard(
