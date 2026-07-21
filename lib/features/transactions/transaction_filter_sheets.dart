@@ -277,7 +277,8 @@ class _AccountSheetState extends ConsumerState<_AccountSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final allSelected = _selected.isEmpty;
+    final allIds = {for (final a in widget.accounts) a.account.id};
+    final allSelected = _selected.isEmpty || _selected.containsAll(allIds);
     return VeloraSheetScaffold(
       title: 'Kartalar',
       body: Column(
@@ -308,6 +309,8 @@ class _AccountSheetState extends ConsumerState<_AccountSheet> {
         label: "Ko'rsatish",
         onPressed: () {
           final allIds = {for (final a in widget.accounts) a.account.id};
+          // All-selected and none-selected both mean "no restriction" —
+          // normalize to the empty set so the chip reads as un-narrowed.
           final committed =
               (_selected.isEmpty || _selected.containsAll(allIds))
                   ? <int>{}
@@ -369,6 +372,8 @@ class _TypeSheetState extends ConsumerState<_TypeSheet> {
       primaryAction: VeloraPrimaryButton(
         label: "Ko'rsatish",
         onPressed: () {
+          // All-selected and none-selected both mean "no restriction" —
+          // normalize to the empty set so the chip reads as un-narrowed.
           final committed =
               (_selected.isEmpty || _selected.containsAll(_allTypes))
                   ? <LedgerEntryType>{}

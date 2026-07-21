@@ -6,6 +6,7 @@ import '../../core/money/money.dart';
 import '../../core/theme/velora_tokens.dart';
 import '../../core/transactions/transaction_filter.dart';
 import '../../core/transactions/transaction_row_content.dart';
+import '../../data/categories/category_model.dart';
 import '../../providers/app_providers.dart';
 import '../../ui/components/velora_async_state.dart';
 import '../accounts/accounts_controller.dart';
@@ -84,8 +85,8 @@ class TransactionsScreen extends ConsumerWidget {
     };
     final categoryById = <int, String>{
       for (final c in ref.watch(categoriesProvider).asData?.value ??
-          const <dynamic>[])
-        c.id as int: c.name as String,
+          const <Category>[])
+        c.id: c.name,
     };
     return Scaffold(
       appBar: AppBar(
