@@ -81,40 +81,6 @@ void main() {
   });
 
   testWidgets(
-      'setting a weekly limit via the sheet persists it and leaves the '
-      'unedited monthly limit untouched', (tester) async {
-    final db = AppDatabase(NativeDatabase.memory());
-    addTearDown(db.close);
-    final container = ProviderContainer(
-        overrides: [databaseProvider.overrideWithValue(db)]);
-    addTearDown(container.dispose);
-
-    await container
-        .read(budgetsControllerProvider)
-        .setMonthlyLimit(1, const Money(500000, uzs));
-
-    await tester.pumpWidget(UncontrolledProviderScope(
-      container: container,
-      child: const MaterialApp(home: BudgetsScreen()),
-    ));
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.byIcon(Icons.edit_outlined).first);
-    await tester.pumpAndSettle();
-
-    await tester.enterText(
-        find.byKey(const Key('category-edit-weekly')), '20 000');
-    await tester.tap(find.text('Saqlash'));
-    await tester.pumpAndSettle();
-
-    final views =
-        await container.read(categoryBudgetsProvider.future);
-    final cat1 = views.firstWhere((v) => v.category.id == 1).category;
-    expect(cat1.monthlyLimitMinor, 500000, reason: 'unedited, preserved');
-    expect(cat1.weeklyLimitMinor, 20000);
-  });
-
-  testWidgets(
       'a category over its monthly limit shows the over status as BOTH '
       'text and a warning icon (red reserved for over)', (tester) async {
     final db = AppDatabase(NativeDatabase.memory());

@@ -4,7 +4,6 @@ import '../../core/money/currency.dart';
 import '../../core/money/money.dart';
 import '../../core/result/failure_messages.dart';
 import '../../core/theme/velora_tokens.dart';
-import '../../data/categories/category_model.dart';
 import '../../providers/app_providers.dart';
 import '../../ui/components/app_snackbar.dart';
 import '../../ui/components/category_icons.dart';
@@ -135,7 +134,11 @@ class _CategoryList extends ConsumerWidget {
                           minTileHeight: 48,
                           leading: Icon(categoryIcon(v.category.icon)),
                           title: Text(v.category.name),
-                          subtitle: Text(categoryKindLabel(v.category.kind)),
+                          subtitle: Text(v.category.monthlyLimitMinor == null
+                              ? 'Rejasiz'
+                              : Money(v.category.monthlyLimitMinor!,
+                                      v.monthSpent.currency)
+                                  .format()),
                           onTap: () => onSelect(v.category.id),
                         ),
                       ),
@@ -173,9 +176,7 @@ class _CategoryForm extends ConsumerStatefulWidget {
 class _CategoryFormState extends ConsumerState<_CategoryForm> {
   final _nameCtrl = TextEditingController();
   final _monthlyCtrl = TextEditingController();
-  final _weeklyCtrl = TextEditingController();
   String _icon = 'category';
-  CategoryKind _kind = CategoryKind.variable;
   bool _archived = false;
   bool _loaded = false;
   Currency _currency = CurrencyRegistry.uzs;
@@ -206,11 +207,7 @@ class _CategoryFormState extends ConsumerState<_CategoryForm> {
     _monthlyCtrl.text = c.monthlyLimitMinor == null
         ? ''
         : Money(c.monthlyLimitMinor!, _currency).formatNumber();
-    _weeklyCtrl.text = c.weeklyLimitMinor == null
-        ? ''
-        : Money(c.weeklyLimitMinor!, _currency).formatNumber();
     _icon = c.icon;
-    _kind = c.kind;
     _archived = c.archived;
     if (mounted) setState(() => _loaded = true);
   }
@@ -219,7 +216,6 @@ class _CategoryFormState extends ConsumerState<_CategoryForm> {
   void dispose() {
     _nameCtrl.dispose();
     _monthlyCtrl.dispose();
-    _weeklyCtrl.dispose();
     super.dispose();
   }
 
@@ -229,18 +225,14 @@ class _CategoryFormState extends ConsumerState<_CategoryForm> {
     final controller = ref.read(budgetsControllerProvider);
     final name = _nameCtrl.text.trim();
     final monthly = _parseLimit(_monthlyCtrl.text);
-    final weekly = _parseLimit(_weeklyCtrl.text);
     final messenger = ScaffoldMessenger.of(context);
 
     final result = await controller.saveCategory(
       id: widget.categoryId,
       name: name,
       icon: _icon,
-      kind: _kind,
       monthlyLimit: monthly.value,
       monthlyLimitUnparseable: monthly.unparseable,
-      weeklyLimit: weekly.value,
-      weeklyLimitUnparseable: weekly.unparseable,
     );
     if (!mounted) return;
     result.when(
@@ -270,10 +262,10 @@ class _CategoryFormState extends ConsumerState<_CategoryForm> {
     if (mounted) Navigator.of(context).pop();
   }
 
-  /// A monthly/weekly limit money input. The descriptive label ("Oylik
-  /// limit") and the "empty = no limit" hint sit ABOVE the field as free-
-  /// wrapping captions; the `VeloraMoneyField`'s own internal label is a
-  /// short constant ("Summa") so a long label never wraps into the field's
+  /// The monthly plan money input. The descriptive label ("Oylik reja") and
+  /// the "empty = no plan" hint sit ABOVE the field as free-wrapping
+  /// captions; the `VeloraMoneyField`'s own internal label is a short
+  /// constant ("Summa") so a long label never wraps into the field's
   /// single-line floating-label slot and overlaps the amount at 320px/200%
   /// (the same overlap fix applied to the variable-budget field).
   Widget _limitField(
@@ -287,7 +279,7 @@ class _CategoryFormState extends ConsumerState<_CategoryForm> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label, style: theme.textTheme.labelLarge),
-        Text('Bo‘sh = limitsiz',
+        Text('Bo‘sh = rejasiz',
             style: theme.textTheme.bodySmall
                 ?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
         const SizedBox(height: VeloraSpacing.xs),
@@ -348,32 +340,11 @@ class _CategoryFormState extends ConsumerState<_CategoryForm> {
             ],
           ),
           const SizedBox(height: VeloraSpacing.md),
-          Text('Turi', style: Theme.of(context).textTheme.labelLarge),
-          const SizedBox(height: VeloraSpacing.xs),
-          Wrap(
-            spacing: VeloraSpacing.sm,
-            children: [
-              for (final kind in CategoryKind.values)
-                ChoiceChip(
-                  label: Text(categoryKindLabel(kind)),
-                  selected: _kind == kind,
-                  onSelected: (_) => setState(() => _kind = kind),
-                ),
-            ],
-          ),
-          const SizedBox(height: VeloraSpacing.md),
           _limitField(
             context,
             fieldKey: const Key('category-edit-monthly'),
             controller: _monthlyCtrl,
-            label: 'Oylik limit',
-          ),
-          const SizedBox(height: VeloraSpacing.md),
-          _limitField(
-            context,
-            fieldKey: const Key('category-edit-weekly'),
-            controller: _weeklyCtrl,
-            label: 'Haftalik limit',
+            label: 'Oylik reja',
           ),
           if (widget.categoryId != null) ...[
             const SizedBox(height: VeloraSpacing.md),

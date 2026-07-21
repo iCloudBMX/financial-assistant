@@ -67,25 +67,23 @@ class BudgetsController {
   }
 
   /// The category editor's full Saqlash write, as one atomic transaction
-  /// (mirrors `IncomeEntryController.save`): rename/setIcon/setKind (an
-  /// existing category) or create+setKind (a new one), then the monthly and
-  /// weekly limit writes. Previously these ran as 3-5 unguarded sequential
+  /// (mirrors `IncomeEntryController.save`): rename/setIcon (an existing
+  /// category) or create (a new one; its `kind` stays at the model default
+  /// `variable` -- the budget page no longer offers a kind chooser), then
+  /// the monthly limit write. Previously these ran as unguarded sequential
   /// writes with no rollback -- a failure partway (e.g. the limit write)
-  /// left the rename/icon/kind changes persisted with no error shown.
+  /// left the rename/icon changes persisted with no error shown.
   ///
-  /// [monthlyLimit]/[weeklyLimit] follow `_applyLimit`'s three-way rule:
-  /// null value + not-unparseable means "clear the limit"; a non-null value
-  /// sets it; `...Unparseable: true` means the typed text didn't parse and
-  /// that field is left untouched (skips the write instead of clearing it).
+  /// [monthlyLimit] follows `_applyLimit`'s three-way rule: null value +
+  /// not-unparseable means "clear the limit"; a non-null value sets it;
+  /// `monthlyLimitUnparseable: true` means the typed text didn't parse and
+  /// the field is left untouched (skips the write instead of clearing it).
   Future<Result<int>> saveCategory({
     int? id,
     required String name,
     required String icon,
-    required CategoryKind kind,
     Money? monthlyLimit,
     bool monthlyLimitUnparseable = false,
-    Money? weeklyLimit,
-    bool weeklyLimitUnparseable = false,
   }) async {
     late int categoryId;
     try {
@@ -94,30 +92,16 @@ class BudgetsController {
           categoryId = id;
           await ref.read(categoryRepositoryProvider).rename(categoryId, name);
           await ref.read(categoryRepositoryProvider).setIcon(categoryId, icon);
-          await ref.read(budgetRepositoryProvider)
-              .setCategoryKind(categoryId, kind);
         } else {
           categoryId = await ref
               .read(categoryRepositoryProvider)
               .create(name: name, icon: icon);
-          if (kind != CategoryKind.variable) {
-            await ref
-                .read(budgetRepositoryProvider)
-                .setCategoryKind(categoryId, kind);
-          }
         }
         if (!monthlyLimitUnparseable) {
           await ref.read(budgetRepositoryProvider).setCategoryLimits(
                 categoryId,
                 monthlyLimitMinor: monthlyLimit?.minorUnits,
                 clearMonthly: monthlyLimit == null,
-              );
-        }
-        if (!weeklyLimitUnparseable) {
-          await ref.read(budgetRepositoryProvider).setCategoryLimits(
-                categoryId,
-                weeklyLimitMinor: weeklyLimit?.minorUnits,
-                clearWeekly: weeklyLimit == null,
               );
         }
       });

@@ -12,10 +12,13 @@ import 'package:financial_assistant/features/budgets/budgets_controller.dart';
 import 'package:financial_assistant/features/budgets/category_edit_sheet.dart';
 
 /// Wraps a real [BudgetRepository] but fails `setCategoryLimits`, to prove
-/// that `BudgetsController.saveCategory` rolls back the rename/icon/kind
-/// writes when the limit write in the same transaction fails (MINOR #5: the
-/// category-editor save is a 5-write sequence -- rename, setIcon, setKind,
-/// and two `_applyLimit` writes -- that must be all-or-nothing).
+/// that `BudgetsController.saveCategory` rolls back the rename/icon writes
+/// when the limit write in the same transaction fails (MINOR #5: the
+/// category-editor save is a multi-write sequence -- rename, setIcon, and
+/// the monthly `_applyLimit` write -- that must be all-or-nothing). This
+/// fake still implements `setCategoryKind` because `BudgetRepository` keeps
+/// that method (the budget page UI no longer uses it, but the data-model
+/// interface is unchanged).
 class _ThrowingBudgetRepository implements BudgetRepository {
   _ThrowingBudgetRepository(this._delegate);
   final BudgetRepository _delegate;
@@ -124,33 +127,29 @@ void main() {
         500000);
   });
 
-  testWidgets('editing the name and a weekly limit persists both changes',
+  testWidgets('editing the name and the Oylik reja persists both',
       (tester) async {
     final container = await pumpDirectEdit(tester, categoryId: 1);
 
     await tester.enterText(
         find.byKey(const Key('category-edit-name')), 'Ovqatlanish');
     await tester.enterText(
-        find.byKey(const Key('category-edit-weekly')), '20 000');
+        find.byKey(const Key('category-edit-monthly')), '500 000');
     await tester.tap(find.text('Saqlash'));
     await tester.pumpAndSettle();
 
     final views = await container.read(categoryBudgetsProvider.future);
     final cat1 = views.firstWhere((v) => v.category.id == 1).category;
     expect(cat1.name, 'Ovqatlanish');
-    expect(cat1.weeklyLimitMinor, 20000);
+    expect(cat1.monthlyLimitMinor, 500000);
   });
 
-  testWidgets('toggling kind to majburiy persists', (tester) async {
-    final container = await pumpDirectEdit(tester, categoryId: 1);
-
-    await tester.tap(find.text('majburiy'));
-    await tester.tap(find.text('Saqlash'));
-    await tester.pumpAndSettle();
-
-    final views = await container.read(categoryBudgetsProvider.future);
-    expect(views.firstWhere((v) => v.category.id == 1).category.kind.name,
-        'mandatory');
+  testWidgets('there is no Turi (kind) chooser and no weekly field',
+      (tester) async {
+    await pumpDirectEdit(tester, categoryId: 1);
+    expect(find.text('Turi'), findsNothing);
+    expect(find.byKey(const Key('category-edit-weekly')), findsNothing);
+    expect(find.text('Oylik reja'), findsOneWidget);
   });
 
   testWidgets('archiving removes the category from the default budgets list',
@@ -208,7 +207,7 @@ void main() {
   });
 
   testWidgets(
-      'a failed limit write rolls back the rename/icon/kind edits in the '
+      'a failed limit write rolls back the rename/icon edits in the '
       'same Saqlash (atomic save, no partial category edit)', (tester) async {
     final db = AppDatabase(NativeDatabase.memory());
     addTearDown(db.close);
@@ -230,15 +229,21 @@ void main() {
 
     await tester.enterText(
         find.byKey(const Key('category-edit-name')), 'Ovqatlanish');
+    await tester.tap(find.byKey(const Key('category-edit-icon-directions_car')));
+    await tester.enterText(
+        find.byKey(const Key('category-edit-monthly')), '500 000');
     await tester.tap(find.text('Saqlash'));
     await tester.pumpAndSettle();
 
     // The sheet stays open (Saqlash did not pop as a success) and the
-    // rename was rolled back along with the failed limit write.
+    // rename/icon/limit edits were all rolled back along with the failed
+    // limit write.
     expect(find.byKey(const Key('category-edit-name')), findsOneWidget);
     final views = await container.read(categoryBudgetsProvider.future);
     final cat1 = views.firstWhere((v) => v.category.id == 1).category;
     expect(cat1.name, isNot('Ovqatlanish'));
+    expect(cat1.icon, isNot('directions_car'));
+    expect(cat1.monthlyLimitMinor, isNot(500000));
 
     // The error snackbar auto-dismisses; let its backstop timer elapse so no
     // timer outlives the test.
