@@ -136,4 +136,36 @@ void main() {
     // Balance adjustment is visibly labeled.
     expect(find.text('Balans tuzatish'), findsOneWidget);
   });
+
+  testWidgets(
+      'default current-month filter hiding all entries shows the empty '
+      'message instead of crashing', (tester) async {
+    final db = AppDatabase(NativeDatabase.memory());
+    addTearDown(db.close);
+    final container = ProviderContainer(overrides: [
+      databaseProvider.overrideWithValue(db),
+    ]);
+    addTearDown(container.dispose);
+    final accId = await container.read(accountRepositoryProvider).create(
+        name: 'Naqd',
+        type: AccountType.cash,
+        openingBalance: const Money(1000000, uzs),
+        icon: 'w');
+    await container.read(ledgerRepositoryProvider).addExpense(
+        accountId: accId,
+        amount: const Money(250000, uzs),
+        categoryId: 1,
+        occurredAt: DateTime(2020, 1, 5));
+
+    await tester.pumpWidget(UncontrolledProviderScope(
+      container: container,
+      child: const MaterialApp(home: TransactionsScreen()),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('Tranzaksiya topilmadi'), findsOneWidget);
+    expect(find.byKey(const Key('transactions-summary-income')),
+        findsOneWidget);
+  });
 }

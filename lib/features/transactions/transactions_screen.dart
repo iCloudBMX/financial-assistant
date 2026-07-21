@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/ledger/ledger_entry.dart';
+import '../../core/money/currency.dart';
 import '../../core/money/money.dart';
 import '../../core/theme/velora_tokens.dart';
 import '../../core/transactions/transaction_filter.dart';
@@ -53,6 +54,7 @@ String _timeLabel(DateTime t) =>
 /// The signed income+expense net for a set of entries. Transfers and balance
 /// adjustments are excluded so they never distort a day's spend/earn figure.
 Money _incomeExpenseNet(Iterable<LedgerEntry> entries) {
+  if (entries.isEmpty) return const Money(0, CurrencyRegistry.uzs);
   var minor = 0;
   Money? sample;
   for (final e in entries) {
@@ -222,7 +224,7 @@ class _SummaryCards extends StatelessWidget {
   Widget build(BuildContext context) {
     final currency = entries.isNotEmpty
         ? entries.first.amount.currency
-        : _incomeExpenseNet(entries).currency;
+        : CurrencyRegistry.uzs;
     var incomeMinor = 0;
     var expenseMinor = 0;
     for (final e in entries) {
