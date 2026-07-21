@@ -9,6 +9,7 @@ import '../../core/transactions/transaction_row_content.dart';
 import '../../providers/app_providers.dart';
 import '../../ui/components/velora_async_state.dart';
 import '../accounts/accounts_controller.dart';
+import 'transaction_filter_sheets.dart';
 import 'transactions_controller.dart';
 import 'transactions_filter_provider.dart';
 
@@ -118,10 +119,17 @@ class TransactionsScreen extends ConsumerWidget {
             );
           }
           final items = applyTransactionFilter(all, filter);
-          return _TransactionsBody(
-            entries: items,
-            nameById: nameById,
-            categoryById: categoryById,
+          return Column(
+            children: [
+              _FilterChipsRow(filter: filter),
+              Expanded(
+                child: _TransactionsBody(
+                  entries: items,
+                  nameById: nameById,
+                  categoryById: categoryById,
+                ),
+              ),
+            ],
           );
         },
       ),
@@ -521,6 +529,119 @@ class _TransactionCard extends ConsumerWidget {
               ],
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// The three history filters as tappable chips. A chip is filled and shows its
+/// selection when that axis is narrowed; otherwise it shows the bare axis name.
+class _FilterChipsRow extends ConsumerWidget {
+  const _FilterChipsRow({required this.filter});
+
+  final TransactionFilter filter;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final accountLabel = filter.accountIds.isEmpty
+        ? 'Kartalar'
+        : 'Kartalar · ${filter.accountIds.length} ta';
+    final typeLabel = _typeChipLabel(filter.types);
+    final periodLabel =
+        filter.period == null ? 'Davr' : 'Davr · ${filter.periodLabel ?? ''}';
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.fromLTRB(
+          VeloraSpacing.lg, VeloraSpacing.sm, VeloraSpacing.lg, VeloraSpacing.sm),
+      child: Row(
+        children: [
+          _FilterChip(
+            chipKey: const Key('filter-chip-account'),
+            label: accountLabel,
+            active: filter.accountIds.isNotEmpty,
+            onTap: () => showAccountFilterSheet(context, ref),
+          ),
+          const SizedBox(width: VeloraSpacing.sm),
+          _FilterChip(
+            chipKey: const Key('filter-chip-type'),
+            label: typeLabel,
+            active: filter.types.isNotEmpty,
+            onTap: () => showTypeFilterSheet(context, ref),
+          ),
+          const SizedBox(width: VeloraSpacing.sm),
+          _FilterChip(
+            chipKey: const Key('filter-chip-period'),
+            label: periodLabel,
+            active: filter.period != null,
+            onTap: () => showPeriodFilterSheet(context, ref),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _typeChipLabel(Set<LedgerEntryType> types) {
+    if (types.isEmpty) return 'Operatsiya turi';
+    final parts = <String>[
+      if (types.contains(LedgerEntryType.income)) 'Kirim',
+      if (types.contains(LedgerEntryType.expense)) 'Chiqim',
+      if (types.contains(LedgerEntryType.transferOut) ||
+          types.contains(LedgerEntryType.transferIn))
+        "O'tkazma",
+    ];
+    return 'Turi · ${parts.join(', ')}';
+  }
+}
+
+class _FilterChip extends StatelessWidget {
+  const _FilterChip({
+    required this.chipKey,
+    required this.label,
+    required this.active,
+    required this.onTap,
+  });
+
+  final Key chipKey;
+  final String label;
+  final bool active;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Material(
+      key: chipKey,
+      color: active ? VeloraColors.plum : theme.colorScheme.surfaceContainerLowest,
+      borderRadius: BorderRadius.circular(VeloraRadii.control),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(VeloraRadii.control),
+        child: Container(
+          padding: const EdgeInsets.symmetric(
+              horizontal: VeloraSpacing.md, vertical: VeloraSpacing.sm),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(VeloraRadii.control),
+            border: Border.all(
+                color: active ? VeloraColors.plum : VeloraColors.line),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                label,
+                style: theme.textTheme.labelLarge?.copyWith(
+                  color: active ? Colors.white : VeloraColors.inkberry,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(width: VeloraSpacing.xs),
+              Icon(Icons.keyboard_arrow_down,
+                  size: 18,
+                  color: active ? Colors.white : VeloraColors.muted),
+            ],
+          ),
         ),
       ),
     );
