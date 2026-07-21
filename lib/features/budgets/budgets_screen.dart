@@ -11,6 +11,7 @@ import '../../ui/components/velora_card.dart';
 import '../../ui/components/velora_money_field.dart';
 import '../allocation/allocation_template_screen.dart';
 import 'budget_labels.dart';
+import 'budget_summary_card.dart';
 import 'budgets_controller.dart';
 import 'category_edit_sheet.dart';
 
@@ -24,7 +25,7 @@ class BudgetsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final views = ref.watch(categoryBudgetsProvider);
-    final settings = ref.watch(settingsProvider);
+    final safeLimit = ref.watch(safeLimitProvider);
     final controller = ref.read(budgetsControllerProvider);
 
     return Scaffold(
@@ -48,17 +49,11 @@ class BudgetsScreen extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: VeloraSpacing.lg),
-              settings.maybeWhen(
+              safeLimit.maybeWhen(
                 orElse: () => const SizedBox.shrink(),
-                data: (s) => Padding(
+                data: (l) => Padding(
                   padding: const EdgeInsets.only(bottom: VeloraSpacing.md),
-                  child: _VariableBudgetCard(
-                    variableBudget: s.variableBudget,
-                    safetyBuffer: s.safetyBuffer,
-                    spent: _variableSpent(list, s.variableBudget.currency),
-                    onSetBudget: controller.setVariableBudget,
-                    onSetBuffer: controller.setSafetyBuffer,
-                  ),
+                  child: BudgetSummaryCard(limit: l),
                 ),
               ),
               for (final v in list)
