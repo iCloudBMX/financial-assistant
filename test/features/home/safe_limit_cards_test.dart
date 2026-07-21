@@ -7,7 +7,6 @@ import 'package:financial_assistant/core/limit/safe_limit_engine.dart';
 import 'package:financial_assistant/core/money/currency.dart';
 import 'package:financial_assistant/core/money/money.dart';
 import 'package:financial_assistant/data/db/app_database.dart';
-import 'package:financial_assistant/data/settings/settings_repository.dart';
 import 'package:financial_assistant/providers/app_providers.dart';
 import 'package:financial_assistant/features/home/safe_limit_cards.dart';
 
@@ -19,11 +18,9 @@ void main() {
             name: 'Naqd',
             type: 'cash',
             openingBalanceMinor: const Value(100000000),
+            role: const Value('spending'),
           ),
         );
-    final base = await DriftSettingsRepository(db).read();
-    await DriftSettingsRepository(db)
-        .write(base.copyWith(variableBudget: const Money(1400000, CurrencyRegistry.uzs)));
 
     final container = ProviderContainer(
       overrides: [databaseProvider.overrideWithValue(db)],
