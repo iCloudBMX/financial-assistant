@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/budget/category_budget_engine.dart';
-import '../../core/money/currency.dart';
 import '../../core/money/money.dart';
 import '../../core/theme/velora_tokens.dart';
 import '../../data/categories/category_model.dart';
@@ -9,7 +8,6 @@ import '../../providers/app_providers.dart';
 import '../../ui/components/category_icons.dart';
 import '../../ui/components/velora_button.dart';
 import '../../ui/components/velora_card.dart';
-import '../../ui/components/velora_money_field.dart';
 import '../../ui/components/velora_sheet.dart';
 import '../allocation/allocation_template_screen.dart';
 import 'budget_labels.dart';
@@ -140,17 +138,6 @@ class _BudgetsScreenState extends ConsumerState<BudgetsScreen> {
     );
   }
 
-  /// Sum of this period's spend across the o‘zgaruvchan (variable) categories,
-  /// the figure the variable-budget total card measures itself against.
-  Money _variableSpent(List<CategoryBudgetView> list, Currency currency) {
-    var minor = 0;
-    for (final v in list) {
-      if (v.category.kind == CategoryKind.variable) {
-        minor += v.monthSpent.minorUnits;
-      }
-    }
-    return Money(minor, currency);
-  }
 }
 
 /// Opens the "Olib tashlangan" (removed) sheet: archived categories with a
@@ -294,117 +281,6 @@ class _HeaderIconButton extends StatelessWidget {
   }
 }
 
-/// The monthly variable-budget "total" card from the mockup: the budget amount
-/// with a coral progress bar and a spent/remaining legend, over the two
-/// editable money fields (variable budget + safety buffer).
-class _VariableBudgetCard extends StatelessWidget {
-  const _VariableBudgetCard({
-    required this.variableBudget,
-    required this.safetyBuffer,
-    required this.spent,
-    required this.onSetBudget,
-    required this.onSetBuffer,
-  });
-
-  final Money variableBudget;
-  final Money safetyBuffer;
-  final Money spent;
-  final Future<void> Function(Money) onSetBudget;
-  final Future<void> Function(Money) onSetBuffer;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final budgetMinor = variableBudget.minorUnits;
-    final remaining = Money(
-      (budgetMinor - spent.minorUnits).clamp(0, budgetMinor),
-      variableBudget.currency,
-    );
-    final fraction = budgetMinor <= 0
-        ? null
-        : (spent.minorUnits / budgetMinor).clamp(0.0, 1.0);
-
-    return VeloraCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'O‘ZGARUVCHAN BUDJET',
-            style: theme.textTheme.labelSmall?.copyWith(
-              color: VeloraColors.muted,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 1,
-            ),
-          ),
-          const SizedBox(height: VeloraSpacing.sm),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: Alignment.centerLeft,
-            child: Text(
-              variableBudget.format(),
-              maxLines: 1,
-              softWrap: false,
-              style: theme.textTheme.headlineSmall?.copyWith(
-                color: VeloraColors.plum,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ),
-          if (fraction != null) ...[
-            const SizedBox(height: VeloraSpacing.md),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(99),
-              child: LinearProgressIndicator(
-                value: fraction,
-                minHeight: 7,
-                backgroundColor: VeloraColors.line,
-                valueColor: const AlwaysStoppedAnimation(VeloraColors.coral),
-              ),
-            ),
-            const SizedBox(height: VeloraSpacing.sm),
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    '${spent.format()} sarflandi',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.bodySmall
-                        ?.copyWith(color: VeloraColors.muted),
-                  ),
-                ),
-                const SizedBox(width: VeloraSpacing.sm),
-                Flexible(
-                  child: Text(
-                    '${remaining.format()} qoldi',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.end,
-                    style: theme.textTheme.bodySmall
-                        ?.copyWith(fontWeight: FontWeight.w700),
-                  ),
-                ),
-              ],
-            ),
-          ],
-          const Divider(height: VeloraSpacing.xl),
-          _BudgetMoneyField(
-            label: 'Oylik o‘zgaruvchan budjet',
-            value: variableBudget,
-            onSubmit: onSetBudget,
-          ),
-          const SizedBox(height: VeloraSpacing.md),
-          _BudgetMoneyField(
-            label: 'Xavfsizlik buferi',
-            value: safetyBuffer,
-            onSubmit: onSetBuffer,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _CategoryBudgetCard extends StatelessWidget {
   const _CategoryBudgetCard({required this.view, required this.controller});
 
@@ -477,28 +353,6 @@ class _CategoryBudgetCard extends StatelessWidget {
             status: view.monthStatus,
             spent: view.monthSpent,
             limitMinor: c.monthlyLimitMinor,
-          ),
-          if (c.weeklyLimitMinor != null) ...[
-            const SizedBox(height: VeloraSpacing.sm),
-            _StatusLine(
-              label: 'Haftalik',
-              status: view.weekStatus,
-              spent: view.weekSpent,
-              limitMinor: c.weeklyLimitMinor,
-            ),
-          ],
-          const SizedBox(height: VeloraSpacing.md),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: _KindChip(
-              kind: c.kind,
-              onToggle: () => controller.setKind(
-                c.id,
-                c.kind == CategoryKind.mandatory
-                    ? CategoryKind.variable
-                    : CategoryKind.mandatory,
-              ),
-            ),
           ),
         ],
       ),
@@ -608,96 +462,3 @@ class _StatusLine extends StatelessWidget {
   }
 }
 
-/// A soft, tappable pill that flips a category between o‘zgaruvchan and
-/// majburiy (kept from the previous screen's inline kind toggle).
-class _KindChip extends StatelessWidget {
-  const _KindChip({required this.kind, required this.onToggle});
-
-  final CategoryKind kind;
-  final VoidCallback onToggle;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Material(
-      color: VeloraColors.plumTint,
-      borderRadius: BorderRadius.circular(99),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onToggle,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-              horizontal: VeloraSpacing.md, vertical: VeloraSpacing.xs),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.swap_horiz, size: 15, color: VeloraColors.plum),
-              const SizedBox(width: VeloraSpacing.xs),
-              Text(
-                categoryKindLabel(kind),
-                style: theme.textTheme.labelMedium?.copyWith(
-                  color: VeloraColors.plum,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _BudgetMoneyField extends StatefulWidget {
-  final String label;
-  final Money value;
-  final Future<void> Function(Money) onSubmit;
-  const _BudgetMoneyField(
-      {required this.label, required this.value, required this.onSubmit});
-  @override
-  State<_BudgetMoneyField> createState() => _BudgetMoneyFieldState();
-}
-
-class _BudgetMoneyFieldState extends State<_BudgetMoneyField> {
-  late final TextEditingController _ctrl = TextEditingController(
-      text: widget.value.minorUnits == 0 ? '' : widget.value.formatNumber());
-  Money? _pending;
-
-  @override
-  Widget build(BuildContext context) {
-    // The descriptive label lives in its own free-wrapping Text, not the
-    // field's internal floating label: a long label ("Oylik o'zgaruvchan
-    // budjet") wrapped onto 2+ lines inside InputDecoration's floating-label
-    // slot at 320px/200% text scale overlapped the entered amount, since
-    // that slot reserves single-line height. `VeloraMoneyField` still gets
-    // a short internal label for its own accessibility contract.
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(widget.label, style: Theme.of(context).textTheme.labelLarge),
-        const SizedBox(height: VeloraSpacing.xs),
-        Row(
-          children: [
-            Expanded(
-              child: VeloraMoneyField(
-                controller: _ctrl,
-                currency: widget.value.currency,
-                label: 'Summa',
-                onChanged: (m) => _pending = m,
-              ),
-            ),
-            IconButton(
-              icon: const Icon(Icons.check),
-              tooltip: 'Saqlash',
-              onPressed: () {
-                final m =
-                    _pending ?? Money.tryParse(_ctrl.text, widget.value.currency);
-                if (m != null) widget.onSubmit(m);
-              },
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-}

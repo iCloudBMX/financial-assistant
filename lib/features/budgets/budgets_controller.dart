@@ -2,8 +2,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/money/money.dart';
 import '../../core/result/failure.dart';
 import '../../core/result/result.dart';
-import '../../data/categories/category_model.dart';
-import '../../data/settings/settings_model.dart';
 import '../../providers/app_providers.dart';
 
 class BudgetsController {
@@ -13,8 +11,17 @@ class BudgetsController {
   void _bump() =>
       ref.read(ledgerRevisionProvider.notifier).update((n) => n + 1);
 
-  Future<void> setKind(int id, CategoryKind kind) async {
-    await ref.read(budgetRepositoryProvider).setCategoryKind(id, kind);
+  /// Sets `settings.variableBudget`, the numerator of the daily safe limit.
+  /// The budget page no longer has its own variable-budget editor, but the
+  /// allocation flow still writes this (see
+  /// `allocation/variable_budget_offer.dart`'s post-confirm "update variable
+  /// budget?" prompt), so this stays even though the rest of Task 7 removed
+  /// its sibling budget-page settings methods.
+  Future<void> setVariableBudget(Money value) async {
+    final repo = ref.read(settingsRepositoryProvider);
+    final current = await repo.read();
+    await repo.write(current.copyWith(variableBudget: value));
+    ref.invalidate(settingsProvider);
     _bump();
   }
 
@@ -23,15 +30,6 @@ class BudgetsController {
           id,
           monthlyLimitMinor: limit?.minorUnits,
           clearMonthly: limit == null,
-        );
-    _bump();
-  }
-
-  Future<void> setWeeklyLimit(int id, Money? limit) async {
-    await ref.read(budgetRepositoryProvider).setCategoryLimits(
-          id,
-          weeklyLimitMinor: limit?.minorUnits,
-          clearWeekly: limit == null,
         );
     _bump();
   }
@@ -113,20 +111,6 @@ class BudgetsController {
     _bump();
     return Ok(categoryId);
   }
-
-  Future<void> _writeSettings(AppSettings Function(AppSettings) mutate) async {
-    final repo = ref.read(settingsRepositoryProvider);
-    final current = await repo.read();
-    await repo.write(mutate(current));
-    ref.invalidate(settingsProvider);
-    _bump();
-  }
-
-  Future<void> setVariableBudget(Money value) =>
-      _writeSettings((s) => s.copyWith(variableBudget: value));
-
-  Future<void> setSafetyBuffer(Money value) =>
-      _writeSettings((s) => s.copyWith(safetyBuffer: value));
 }
 
 final budgetsControllerProvider =

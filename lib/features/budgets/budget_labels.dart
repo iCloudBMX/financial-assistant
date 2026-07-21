@@ -2,12 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../core/budget/category_budget_engine.dart';
 import '../../core/theme/velora_tokens.dart';
-import '../../data/categories/category_model.dart';
-
-String categoryKindLabel(CategoryKind k) => switch (k) {
-      CategoryKind.mandatory => 'majburiy',
-      CategoryKind.variable => 'o‘zgaruvchan',
-    };
 
 String budgetStatusLabel(CategoryLimitStatus s) => switch (s) {
       CategoryLimitStatus.noLimit => 'rejasiz',

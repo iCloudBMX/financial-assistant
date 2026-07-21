@@ -37,7 +37,14 @@ Future<ProviderContainer> _seededContainer() async {
 
   final budgets = container.read(budgetsControllerProvider);
   await budgets.setVariableBudget(const Money(3000000, uzs));
-  await budgets.setSafetyBuffer(const Money(500000, uzs));
+  // The budget page no longer has its own safety-buffer editor (Task 7
+  // dropped `BudgetsController.setSafetyBuffer`), so seed the setting
+  // directly through the repository instead of through the controller.
+  final settingsRepo = container.read(settingsRepositoryProvider);
+  await settingsRepo
+      .write((await settingsRepo.read()).copyWith(
+        safetyBuffer: const Money(500000, uzs),
+      ));
 
   final ledger = container.read(ledgerRepositoryProvider);
   final now = DateTime.now();
@@ -62,7 +69,13 @@ Future<ProviderContainer> _seededContainer() async {
 
   // Category 3 (Uy): over its monthly limit, with a weekly limit too.
   await budgets.setMonthlyLimit(3, const Money(200000, uzs));
-  await budgets.setWeeklyLimit(3, const Money(50000, uzs));
+  // The budget page no longer renders a weekly status line (Task 7 dropped
+  // `BudgetsController.setWeeklyLimit`), so seed the weekly limit directly
+  // through the repository instead of through the controller.
+  await container.read(budgetRepositoryProvider).setCategoryLimits(
+        3,
+        weeklyLimitMinor: const Money(50000, uzs).minorUnits,
+      );
   await ledger.addExpense(
     accountId: accountId,
     amount: const Money(250000, uzs),
