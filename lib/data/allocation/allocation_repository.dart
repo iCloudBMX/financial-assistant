@@ -15,11 +15,11 @@ abstract class AllocationRepository {
 
   /// Σ of every income allocation per bucketKey, as [currency].
   ///
-  /// Not consumed anywhere in `lib/` as of SP2 — this is a forward-facing
-  /// read for SP3/SP4 (goal and mortgage bucket reserves feeding
-  /// `SafeLimitInputs.goalReserves`/`unpaidMandatory`). It is not dead code
-  /// and SP2's safe-limit engine does not read bucket allocations as a
-  /// reserve; do not remove it.
+  /// A currency-neutral sum of allocations per bucket. Not consumed anywhere
+  /// in `lib/` yet — kept as a forward-facing read for allocation reporting.
+  /// Note: under model A the daily safe limit is derived purely from
+  /// Sarf-role card balances and does NOT read bucket allocations, so this
+  /// no longer feeds any safe-limit deduction.
   Future<Map<String, Money>> reservedTotals(Currency currency);
 }
 

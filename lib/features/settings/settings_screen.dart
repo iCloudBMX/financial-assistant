@@ -477,8 +477,8 @@ class SettingsScreen extends ConsumerWidget {
     // Symbol-less numeric form so an unchanged field re-parses to the same
     // reserve; format() would embed the currency symbol, which tryParse
     // rejects → "Saqlash" unedited would silently drop the edit, leaving
-    // minReserve unchanged with no error shown (it feeds the safe-limit
-    // free balance).
+    // minReserve unchanged with no error shown (it feeds allocation's
+    // minimum-reserve bucket; the model-A daily limit no longer reads it).
     final controller =
         TextEditingController(text: s.minReserve.formatNumber());
     final result = await showDialog<String>(
