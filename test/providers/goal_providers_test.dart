@@ -42,12 +42,13 @@ void main() {
     expect(goals.single.progress.saved, const Money(250000, CurrencyRegistry.uzs));
   });
 
-  test('goal reserve reduces the daily safe limit', () async {
-    // Seed an account with a modest opening balance and a variable budget
-    // that's larger than that balance, so `freeBalance` (which the goal
-    // reserve eats into) — not `remainingVariable` — is the binding
-    // constraint on `spendable`. Mirrors the account/budget seeding pattern
-    // in safe_limit_providers_test.dart.
+  test(
+      'a goal reserve does not change the daily safe limit (model A: '
+      'role-based exclusion, not subtraction)', () async {
+    // Seed a Sarf-role (spending) account — the default role — with an
+    // opening balance. Under model A this balance is the entire spendable
+    // pool; goal money instead lives on Jamg'arma-role cards, which are
+    // excluded from the pool by role, not by subtracting a reserve here.
     await db.into(db.accountsTable).insert(
           AccountsTableCompanion.insert(
             name: 'Naqd',
@@ -55,16 +56,11 @@ void main() {
             openingBalanceMinor: const Value(300000),
           ),
         );
-    final settingsRepo = container.read(settingsRepositoryProvider);
-    final baseSettings = await settingsRepo.read();
-    await settingsRepo.write(baseSettings.copyWith(
-      variableBudget: const Money(1400000, CurrencyRegistry.uzs),
-    ));
     container.read(ledgerRevisionProvider.notifier).update((n) => n + 1);
 
     final before = await container.read(safeLimitProvider.future);
-    // Sanity check: the setup actually produces a positive spendable amount
-    // before the goal exists, otherwise a decrease wouldn't be observable.
+    // Sanity check: the setup actually produces a positive spendable amount,
+    // otherwise "unchanged" would be a vacuous 0 == 0.
     expect(before.spendable.minorUnits, greaterThan(0));
 
     final GoalRepository repo = container.read(goalRepositoryProvider);
@@ -78,9 +74,12 @@ void main() {
     container.read(ledgerRevisionProvider.notifier).update((n) => n + 1);
 
     final after = await container.read(safeLimitProvider.future);
-    // The goal reserve must strictly reduce spendable, and not simply floor
-    // it at 0 (which would also pass a non-strict `<=` check vacuously).
-    expect(after.spendable.minorUnits, lessThan(before.spendable.minorUnits));
-    expect(after.spendable.minorUnits, greaterThan(0));
+    // A goal contribution writes a `goal_contributions` earmark row, not a
+    // ledger transfer out of the Sarf-role account, so the daily safe limit
+    // must be exactly unchanged.
+    expect(after.spendable, before.spendable);
+    // The reserve calculation itself still works correctly — it's just no
+    // longer wired into the safe limit.
+    expect(await repo.activeReserveMinor(), 100000);
   });
 }

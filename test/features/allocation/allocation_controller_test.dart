@@ -162,8 +162,9 @@ void main() {
   test(
       'design §4: confirming a split with a variableBudget bucket, then '
       'applying the offered update, sets settings.variableBudget to that '
-      'same amount and safeLimitProvider recomputes with it as the '
-      'numerator', () async {
+      'same amount; under model A, safeLimitProvider no longer reads '
+      'variableBudget so the daily safe limit is unaffected by it',
+      () async {
     final db = AppDatabase(NativeDatabase.memory());
     await db.into(db.accountsTable).insert(
           AccountsTableCompanion.insert(
@@ -188,10 +189,11 @@ void main() {
     addTearDown(container.dispose);
     addTearDown(db.close);
 
-    // Sanity: before the offer is applied, the safe-limit numerator is the
-    // default (zero) — allocateIncome alone must not move it.
+    // Model A: safeLimitProvider's spendable pool is the summed balance of
+    // Sarf-role (default) accounts — here Cash's opening balance plus the
+    // seeded income transaction — and never reads settings.variableBudget.
     final before = await container.read(safeLimitProvider.future);
-    expect(before.spendable, const Money(0, uzs));
+    expect(before.spendable, const Money(101000000, uzs));
 
     // Confirm a split that puts 700,000 into variableBudget.
     const variableAmount = Money(700000, uzs);
@@ -214,9 +216,12 @@ void main() {
     final settings = await container.refresh(settingsProvider.future);
     expect(settings.variableBudget, variableAmount);
 
+    // Model A invariant: neither `confirm` (an earmark write against the
+    // transaction/goal tables, not a ledger transfer) nor the
+    // variableBudget write moves any account balance, so the daily safe
+    // limit is exactly unchanged by this whole flow.
     final after = await container.refresh(safeLimitProvider.future);
-    // numerator 700,000 - 0 spent variable = 700,000.
-    expect(after.spendable, variableAmount);
+    expect(after.spendable, before.spendable);
   });
 
   test('confirming an allocation with a goal bucket writes a contribution',
