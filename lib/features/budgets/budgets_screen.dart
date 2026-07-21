@@ -7,8 +7,10 @@ import '../../core/theme/velora_tokens.dart';
 import '../../data/categories/category_model.dart';
 import '../../providers/app_providers.dart';
 import '../../ui/components/category_icons.dart';
+import '../../ui/components/velora_button.dart';
 import '../../ui/components/velora_card.dart';
 import '../../ui/components/velora_money_field.dart';
+import '../../ui/components/velora_sheet.dart';
 import '../allocation/allocation_template_screen.dart';
 import 'budget_labels.dart';
 import 'budget_summary_card.dart';
@@ -106,14 +108,7 @@ class _BudgetsScreenState extends ConsumerState<BudgetsScreen> {
                   leading: const Icon(Icons.inventory_2_outlined,
                       color: VeloraColors.muted),
                   title: const Text('Olib tashlangan'),
-                  onTap: () {
-                    // Task 5 builds the full archived-list view; this is a
-                    // stub entry point so that screen can be wired in later.
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                          content: Text('Olib tashlangan kategoriyalar')),
-                    );
-                  },
+                  onTap: () => showRemovedCategoriesSheet(context),
                 ),
               ] else
                 for (final v in list)
@@ -155,6 +150,62 @@ class _BudgetsScreenState extends ConsumerState<BudgetsScreen> {
       }
     }
     return Money(minor, currency);
+  }
+}
+
+/// Opens the "Olib tashlangan" (removed) sheet: archived categories with a
+/// restore action each, reached from the manage-mode entry row.
+Future<void> showRemovedCategoriesSheet(BuildContext context) {
+  return showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    useSafeArea: true,
+    builder: (_) => const _RemovedCategoriesSheet(),
+  );
+}
+
+class _RemovedCategoriesSheet extends ConsumerWidget {
+  const _RemovedCategoriesSheet();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final archived = ref.watch(archivedCategoriesProvider);
+    return VeloraSheetScaffold(
+      title: 'Olib tashlangan',
+      body: archived.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (_, _) => const Text('Xatolik yuz berdi'),
+        data: (cats) {
+          if (cats.isEmpty) {
+            return const Padding(
+              padding: EdgeInsets.symmetric(vertical: VeloraSpacing.lg),
+              child: Text('Olib tashlangan kategoriyalar yo‘q'),
+            );
+          }
+          return Column(
+            children: [
+              for (final c in cats)
+                ListTile(
+                  key: Key('budgets-restore-${c.id}'),
+                  leading: Icon(categoryIcon(c.icon)),
+                  title: Text(c.name),
+                  trailing: TextButton(
+                    onPressed: () => ref
+                        .read(budgetsControllerProvider)
+                        .setCategoryArchived(c.id, false),
+                    child: const Text('Tiklash'),
+                  ),
+                ),
+            ],
+          );
+        },
+      ),
+      primaryAction: VeloraPrimaryButton(
+        key: const Key('budgets-removed-close'),
+        label: 'Yopish',
+        onPressed: () => Navigator.of(context).pop(),
+      ),
+    );
   }
 }
 

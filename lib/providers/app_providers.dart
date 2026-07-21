@@ -361,6 +361,17 @@ final categoryBudgetsProvider =
   }).toList();
 });
 
+/// Archived (removed) categories, for the Budget page's "Olib tashlangan"
+/// restore view. History is preserved: removal is `archived = true`, never a
+/// delete, so these can be restored.
+final archivedCategoriesProvider = FutureProvider<List<Category>>((ref) async {
+  ref.watch(ledgerRevisionProvider);
+  final cats = await ref
+      .watch(budgetRepositoryProvider)
+      .categoriesWithBudgets(includeArchived: true);
+  return cats.where((c) => c.archived).toList(growable: false);
+});
+
 final safeLimitProvider = FutureProvider<SafeLimit>((ref) async {
   ref.watch(ledgerRevisionProvider);
   final settings = await ref.watch(settingsProvider.future);
