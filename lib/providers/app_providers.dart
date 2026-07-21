@@ -65,6 +65,14 @@ final categoryRepositoryProvider = Provider<CategoryRepository>(
   (ref) => DriftCategoryRepository(ref.watch(databaseProvider)),
 );
 
+/// Every category (including archived), used to resolve category names for
+/// history rows. Rebuilds when the ledger revision changes so a newly added
+/// category appears without a manual refresh.
+final categoriesProvider = FutureProvider<List<Category>>((ref) async {
+  ref.watch(ledgerRevisionProvider);
+  return ref.watch(categoryRepositoryProvider).list(includeArchived: true);
+});
+
 final ledgerRepositoryProvider = Provider<LedgerRepository>(
   (ref) => DriftLedgerRepository(
     ref.watch(databaseProvider),
