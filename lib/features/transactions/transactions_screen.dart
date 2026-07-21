@@ -545,54 +545,38 @@ class _FilterChipsRow extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final accountLabel = filter.accountIds.isEmpty
-        ? 'Kartalar'
-        : 'Kartalar · ${filter.accountIds.length} ta';
-    final typeLabel = _typeChipLabel(filter.types);
-    final periodLabel =
-        filter.period == null ? 'Davr' : 'Davr · ${filter.periodLabel ?? ''}';
-
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
+    // Chips keep the bare axis name (like the Click reference) so they fit
+    // without a "· value" suffix; the fill colour signals whether that axis is
+    // narrowed. Wrap (not a scroll row) so a chip that can't fit flows to a
+    // second line instead of being clipped off the right edge.
+    return Padding(
       padding: const EdgeInsets.fromLTRB(
           VeloraSpacing.lg, VeloraSpacing.sm, VeloraSpacing.lg, VeloraSpacing.sm),
-      child: Row(
+      child: Wrap(
+        spacing: VeloraSpacing.sm,
+        runSpacing: VeloraSpacing.sm,
         children: [
           _FilterChip(
             chipKey: const Key('filter-chip-account'),
-            label: accountLabel,
+            label: 'Kartalar',
             active: filter.accountIds.isNotEmpty,
             onTap: () => showAccountFilterSheet(context, ref),
           ),
-          const SizedBox(width: VeloraSpacing.sm),
           _FilterChip(
             chipKey: const Key('filter-chip-type'),
-            label: typeLabel,
+            label: 'Operatsiya turi',
             active: filter.types.isNotEmpty,
             onTap: () => showTypeFilterSheet(context, ref),
           ),
-          const SizedBox(width: VeloraSpacing.sm),
           _FilterChip(
             chipKey: const Key('filter-chip-period'),
-            label: periodLabel,
+            label: 'Davr',
             active: filter.period != null,
             onTap: () => showPeriodFilterSheet(context, ref),
           ),
         ],
       ),
     );
-  }
-
-  String _typeChipLabel(Set<LedgerEntryType> types) {
-    if (types.isEmpty) return 'Operatsiya turi';
-    final parts = <String>[
-      if (types.contains(LedgerEntryType.income)) 'Kirim',
-      if (types.contains(LedgerEntryType.expense)) 'Chiqim',
-      if (types.contains(LedgerEntryType.transferOut) ||
-          types.contains(LedgerEntryType.transferIn))
-        "O'tkazma",
-    ];
-    return 'Turi · ${parts.join(', ')}';
   }
 }
 

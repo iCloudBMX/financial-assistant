@@ -5,9 +5,82 @@ import '../../core/ledger/ledger_entry.dart';
 import '../../core/theme/velora_tokens.dart';
 import '../../core/transactions/transaction_filter.dart';
 import '../../ui/components/velora_button.dart'; // exports VeloraPrimaryButton
-import '../../ui/components/velora_sheet.dart';
 import '../accounts/accounts_controller.dart';
 import 'transactions_filter_provider.dart';
+
+/// A compact, content-height bottom sheet for the filters: a grabber handle,
+/// a title, a scrollable body capped at ~55% of the screen, and a fixed action
+/// area. Unlike [VeloraSheetScaffold] (which fills the whole screen via a
+/// Scaffold + Expanded), this wraps its content so a short sheet like Davr
+/// only takes the space it needs.
+class _FilterSheetShell extends StatelessWidget {
+  const _FilterSheetShell({
+    required this.title,
+    required this.body,
+    required this.actions,
+  });
+
+  final String title;
+  final Widget body;
+  final Widget actions;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final media = MediaQuery.of(context);
+    return Padding(
+      padding: EdgeInsets.only(bottom: media.viewInsets.bottom),
+      child: Material(
+        color: theme.colorScheme.surface,
+        borderRadius: const BorderRadius.vertical(
+          top: Radius.circular(VeloraRadii.sheet),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: SafeArea(
+          top: false,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const SizedBox(height: VeloraSpacing.sm),
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: VeloraColors.line,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(VeloraSpacing.lg),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(title, style: theme.textTheme.headlineSmall),
+                    const SizedBox(height: VeloraSpacing.lg),
+                    // Cap the body so a long list scrolls instead of pushing the
+                    // sheet full-screen; short content keeps the sheet compact.
+                    ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxHeight: media.size.height * 0.55,
+                      ),
+                      child: SingleChildScrollView(child: body),
+                    ),
+                    const SizedBox(height: VeloraSpacing.lg),
+                    actions,
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 /// The three "O'tkazma"-grouped operation choices offered to the user.
 const _typeChoices = <({String label, Set<LedgerEntryType> types})>[
@@ -25,6 +98,7 @@ Future<void> showPeriodFilterSheet(BuildContext context, WidgetRef ref) async {
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
+    backgroundColor: Colors.transparent,
     builder: (ctx) => _PeriodSheet(initial: current),
   );
 }
@@ -37,6 +111,7 @@ Future<void> showAccountFilterSheet(BuildContext context, WidgetRef ref) async {
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
+    backgroundColor: Colors.transparent,
     builder: (ctx) => _AccountSheet(
       accounts: accounts,
       initial: current.accountIds,
@@ -50,6 +125,7 @@ Future<void> showTypeFilterSheet(BuildContext context, WidgetRef ref) async {
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
+    backgroundColor: Colors.transparent,
     builder: (ctx) => _TypeSheet(initial: current.types),
   );
 }
@@ -133,9 +209,10 @@ class _PeriodSheetState extends ConsumerState<_PeriodSheet> {
       (label: 'Bu oy', range: currentMonthFilter(now).period!),
     ];
 
-    return VeloraSheetScaffold(
+    return _FilterSheetShell(
       title: 'Davr',
       body: Column(
+        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(
@@ -170,7 +247,7 @@ class _PeriodSheetState extends ConsumerState<_PeriodSheet> {
           ),
         ],
       ),
-      primaryAction: Row(
+      actions: Row(
         children: [
           Expanded(
             child: TextButton(
@@ -279,9 +356,10 @@ class _AccountSheetState extends ConsumerState<_AccountSheet> {
   Widget build(BuildContext context) {
     final allIds = {for (final a in widget.accounts) a.account.id};
     final allSelected = _selected.isEmpty || _selected.containsAll(allIds);
-    return VeloraSheetScaffold(
+    return _FilterSheetShell(
       title: 'Kartalar',
       body: Column(
+        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           CheckboxListTile(
@@ -305,7 +383,7 @@ class _AccountSheetState extends ConsumerState<_AccountSheet> {
             ),
         ],
       ),
-      primaryAction: VeloraPrimaryButton(
+      actions: VeloraPrimaryButton(
         label: "Ko'rsatish",
         onPressed: () {
           final allIds = {for (final a in widget.accounts) a.account.id};
@@ -349,9 +427,10 @@ class _TypeSheetState extends ConsumerState<_TypeSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return VeloraSheetScaffold(
+    return _FilterSheetShell(
       title: 'Operatsiya turi',
       body: Column(
+        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           for (final choice in _typeChoices)
@@ -369,7 +448,7 @@ class _TypeSheetState extends ConsumerState<_TypeSheet> {
             ),
         ],
       ),
-      primaryAction: VeloraPrimaryButton(
+      actions: VeloraPrimaryButton(
         label: "Ko'rsatish",
         onPressed: () {
           // All-selected and none-selected both mean "no restriction" —
