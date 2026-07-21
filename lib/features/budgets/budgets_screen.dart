@@ -19,11 +19,18 @@ import 'category_edit_sheet.dart';
 /// "Chiqim" FAB the shell pins to the bottom-left.
 const double _fabClearance = 88;
 
-class BudgetsScreen extends ConsumerWidget {
+class BudgetsScreen extends ConsumerStatefulWidget {
   const BudgetsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<BudgetsScreen> createState() => _BudgetsScreenState();
+}
+
+class _BudgetsScreenState extends ConsumerState<BudgetsScreen> {
+  bool _manage = false;
+
+  @override
+  Widget build(BuildContext context) {
     final views = ref.watch(categoryBudgetsProvider);
     final safeLimit = ref.watch(safeLimitProvider);
     final controller = ref.read(budgetsControllerProvider);
@@ -66,22 +73,75 @@ class BudgetsScreen extends ConsumerWidget {
                   ),
                   TextButton.icon(
                     key: const Key('budgets-manage'),
-                    onPressed: () {/* Task 4 wires manage mode */},
+                    onPressed: () => setState(() => _manage = !_manage),
                     icon: const Icon(Icons.tune, size: 18),
-                    label: const Text('Boshqarish'),
+                    label: Text(_manage ? 'Tayyor' : 'Boshqarish'),
                   ),
                 ],
               ),
               const SizedBox(height: VeloraSpacing.sm),
-              for (final v in list)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: VeloraSpacing.md),
-                  child: _CategoryBudgetCard(view: v, controller: controller),
+              if (_manage) ...[
+                ReorderableListView(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  onReorder: (oldIndex, newIndex) {
+                    final ids = [for (final v in list) v.category.id];
+                    if (newIndex > oldIndex) newIndex -= 1;
+                    final moved = ids.removeAt(oldIndex);
+                    ids.insert(newIndex, moved);
+                    controller.reorderCategories(ids);
+                  },
+                  children: [for (final v in list) _manageRow(v, controller)],
                 ),
+                const SizedBox(height: VeloraSpacing.sm),
+                ListTile(
+                  key: const Key('budgets-add-category'),
+                  leading: const Icon(Icons.add_circle_outline,
+                      color: VeloraColors.plum),
+                  title: const Text('Yangi kategoriya'),
+                  onTap: () => showCategoryEditSheet(context),
+                ),
+                ListTile(
+                  key: const Key('budgets-removed-entry'),
+                  leading: const Icon(Icons.inventory_2_outlined,
+                      color: VeloraColors.muted),
+                  title: const Text('Olib tashlangan'),
+                  onTap: () {
+                    // Task 5 builds the full archived-list view; this is a
+                    // stub entry point so that screen can be wired in later.
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                          content: Text('Olib tashlangan kategoriyalar')),
+                    );
+                  },
+                ),
+              ] else
+                for (final v in list)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: VeloraSpacing.md),
+                    child: _CategoryBudgetCard(view: v, controller: controller),
+                  ),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  /// A manage-mode row: drag handle + remove(=archive) button, no detail
+  /// content (mirrors the mockup's compact reorder list).
+  Widget _manageRow(CategoryBudgetView v, BudgetsController controller) {
+    return ListTile(
+      key: ValueKey(v.category.id),
+      leading: IconButton(
+        key: Key('budgets-remove-${v.category.id}'),
+        icon: const Icon(Icons.remove_circle_outline,
+            color: VeloraColors.critical),
+        tooltip: 'Olib tashlash',
+        onPressed: () => controller.setCategoryArchived(v.category.id, true),
+      ),
+      title: Text(v.category.name),
+      trailing: const Icon(Icons.drag_handle),
     );
   }
 

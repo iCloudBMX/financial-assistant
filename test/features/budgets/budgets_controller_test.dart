@@ -173,4 +173,25 @@ void main() {
     final views = await container.read(categoryBudgetsProvider.future);
     expect(views.any((v) => v.category.id == 1), isFalse);
   });
+
+  test('reorderCategories persists the new sortOrder and bumps the revision',
+      () async {
+    final db = AppDatabase(NativeDatabase.memory());
+    final container = ProviderContainer(overrides: [
+      databaseProvider.overrideWithValue(db),
+    ]);
+    addTearDown(container.dispose);
+    addTearDown(db.close);
+
+    final before = await container.read(categoryBudgetsProvider.future);
+    final ids = before.map((v) => v.category.id).toList();
+    final reversed = ids.reversed.toList();
+
+    final rev = container.read(ledgerRevisionProvider);
+    await container.read(budgetsControllerProvider).reorderCategories(reversed);
+    expect(container.read(ledgerRevisionProvider), greaterThan(rev));
+
+    final after = await container.read(categoryBudgetsProvider.future);
+    expect(after.map((v) => v.category.id).toList(), reversed);
+  });
 }

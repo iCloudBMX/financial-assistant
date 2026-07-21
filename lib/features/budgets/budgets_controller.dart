@@ -60,6 +60,12 @@ class BudgetsController {
     _bump();
   }
 
+  /// Persists a manage-mode drag reorder as the new sortOrder (§6.7).
+  Future<void> reorderCategories(List<int> orderedIds) async {
+    await ref.read(categoryRepositoryProvider).reorder(orderedIds);
+    _bump();
+  }
+
   /// The category editor's full Saqlash write, as one atomic transaction
   /// (mirrors `IncomeEntryController.save`): rename/setIcon/setKind (an
   /// existing category) or create+setKind (a new one), then the monthly and
