@@ -23,6 +23,32 @@ const List<AccountType> accountTypesInDisplayOrder = [
   AccountType.other,
 ];
 
+/// Single source of truth for the Uzbek account-role labels shown in the
+/// role selector (create/edit sheet + onboarding). Roles drive the budget
+/// spendable pool (SP-B); the labels here are the user-facing names.
+String accountRoleLabel(AccountRole role) => switch (role) {
+      AccountRole.spending => 'Sarf',
+      AccountRole.reserve => 'Zaxira',
+      AccountRole.credit => 'Kredit',
+      AccountRole.savings => 'Jamg\'arma',
+    };
+
+/// One-line helper text under each role, explaining what the role means.
+String accountRoleHelper(AccountRole role) => switch (role) {
+      AccountRole.spending => 'Kundalik xarajatlar uchun',
+      AccountRole.reserve => 'Favqulodda holatlar, tegilmaydi',
+      AccountRole.credit => 'Kredit to\'lovlari uchun',
+      AccountRole.savings => 'Maqsad/jamg\'arma uchun',
+    };
+
+/// The order roles are offered in the selector.
+const List<AccountRole> accountRolesInDisplayOrder = [
+  AccountRole.spending,
+  AccountRole.reserve,
+  AccountRole.credit,
+  AccountRole.savings,
+];
+
 /// Single source of truth for the account-type icon shown across the
 /// accounts feature. [icon] is the account's own stored icon key (from
 /// `account_edit_sheet`'s icon picker); when it doesn't match a known key

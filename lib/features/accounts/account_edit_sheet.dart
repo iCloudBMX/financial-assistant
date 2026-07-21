@@ -38,6 +38,7 @@ class _AccountEditSheetBodyState extends ConsumerState<_AccountEditSheetBody> {
   late final TextEditingController _balanceCtrl;
   Money? _opening;
   AccountType _type = AccountType.cash;
+  AccountRole _role = AccountRole.spending;
   bool _saving = false;
 
   @override
@@ -60,7 +61,8 @@ class _AccountEditSheetBodyState extends ConsumerState<_AccountEditSheetBody> {
         name: _nameCtrl.text.trim().isEmpty ? 'Hisob' : _nameCtrl.text.trim(),
         type: _type,
         openingBalance: _opening ?? Money.zero(widget.currency),
-        icon: 'wallet');
+        icon: 'wallet',
+        role: _role);
     if (mounted) Navigator.of(context).pop();
   }
 
@@ -100,6 +102,28 @@ class _AccountEditSheetBodyState extends ConsumerState<_AccountEditSheetBody> {
                   onSelected: (_) => setState(() => _type = type),
                 ),
             ],
+          ),
+          const SizedBox(height: VeloraSpacing.lg),
+          const Text('Byudjet roli'),
+          const SizedBox(height: VeloraSpacing.sm),
+          Wrap(
+            spacing: VeloraSpacing.sm,
+            runSpacing: VeloraSpacing.sm,
+            children: [
+              for (final role in accountRolesInDisplayOrder)
+                ChoiceChip(
+                  key: Key('account-role-${role.name}'),
+                  label: Text(accountRoleLabel(role)),
+                  selected: _role == role,
+                  showCheckmark: false,
+                  onSelected: (_) => setState(() => _role = role),
+                ),
+            ],
+          ),
+          const SizedBox(height: VeloraSpacing.sm),
+          Text(
+            accountRoleHelper(_role),
+            style: Theme.of(context).textTheme.bodySmall,
           ),
         ],
       ),
