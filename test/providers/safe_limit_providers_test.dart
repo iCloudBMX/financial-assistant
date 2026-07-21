@@ -3,40 +3,28 @@ import 'package:drift/native.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:financial_assistant/core/budget/category_budget_engine.dart';
-import 'package:financial_assistant/core/money/currency.dart';
-import 'package:financial_assistant/core/money/money.dart';
 import 'package:financial_assistant/data/db/app_database.dart';
-import 'package:financial_assistant/data/goals/goal_model.dart';
-import 'package:financial_assistant/data/goals/goal_repository.dart';
-import 'package:financial_assistant/data/settings/settings_repository.dart';
 import 'package:financial_assistant/data/budget/budget_repository.dart';
 import 'package:financial_assistant/providers/app_providers.dart';
 
 void main() {
-  test('safeLimitProvider computes the daily figure from ledger + budget', () async {
+  test('safeLimitProvider sums only Sarf-role account balances', () async {
     final db = AppDatabase(NativeDatabase.memory());
-    // One cash account, opening 100,000,000; variable budget 1,400,000.
-    final accId = await db.into(db.accountsTable).insert(
+    // Spending card: 8,000,000. Reserve card: 5,000,000 (must be excluded).
+    await db.into(db.accountsTable).insert(
           AccountsTableCompanion.insert(
-            name: 'Naqd',
-            type: 'cash',
-            openingBalanceMinor: const Value(100000000),
+            name: 'Asosiy',
+            type: 'bankCard',
+            openingBalanceMinor: const Value(8000000),
+            role: const Value('spending'),
           ),
         );
-    final base = await DriftSettingsRepository(db).read();
-    await DriftSettingsRepository(db).write(base.copyWith(
-      variableBudget: const Money(1400000, CurrencyRegistry.uzs),
-    ));
-    // Spend 200,000 today in a variable category (category 1 is default/variable).
-    await db.into(db.transactionsTable).insert(
-          TransactionsTableCompanion.insert(
-            accountId: accId,
-            type: 'expense',
-            amountMinor: -200000,
-            currencyCode: 'UZS',
-            categoryId: const Value(1),
-            occurredAt: DateTime.now(),
-            createdAt: DateTime.now(),
+    await db.into(db.accountsTable).insert(
+          AccountsTableCompanion.insert(
+            name: 'Zaxira',
+            type: 'bankCard',
+            openingBalanceMinor: const Value(5000000),
+            role: const Value('reserve'),
           ),
         );
 
@@ -46,54 +34,61 @@ void main() {
     addTearDown(container.dispose);
 
     final limit = await container.read(safeLimitProvider.future);
-    // numerator 1,400,000 - 200,000(spent variable) = 1,200,000; today spent 200,000.
-    expect(limit.spendable.minorUnits, 1200000);
-    expect(limit.todaySpent, const Money(200000, CurrencyRegistry.uzs));
+    // Only the 8,000,000 Sarf balance is in the pool; reserve is excluded.
+    expect(limit.spendable.minorUnits, 8000000);
+    // perDay = pool / daysLeft; daysLeft depends on the period, so assert the
+    // invariant rather than a hard-coded quotient.
+    expect(limit.perDay.minorUnits, 8000000 ~/ limit.daysLeft);
+    expect(limit.hasSpendingAccounts, isTrue);
     await db.close();
   });
 
-  test('safeLimitProvider subtracts a goal earmark once from ledger cash',
-      () async {
+  test('safeLimitProvider flags a present-but-empty spending pool', () async {
+    // A Sarf card exists but its balance nets to zero: hasSpendingAccounts is
+    // still true, so SP-C must NOT show the "add a spending card" hint here.
     final db = AppDatabase(NativeDatabase.memory());
     await db.into(db.accountsTable).insert(
           AccountsTableCompanion.insert(
-            name: 'Naqd',
-            type: 'cash',
-            openingBalanceMinor: const Value(1000000),
+            name: 'Asosiy',
+            type: 'bankCard',
+            openingBalanceMinor: const Value(0),
+            role: const Value('spending'),
           ),
         );
-    final settingsRepo = DriftSettingsRepository(db);
-    final base = await settingsRepo.read();
-    await settingsRepo.write(base.copyWith(
-      variableBudget: const Money(2000000, CurrencyRegistry.uzs),
-      minReserve: Money.zero(CurrencyRegistry.uzs),
-      safetyBuffer: Money.zero(CurrencyRegistry.uzs),
-    ));
 
     final container = ProviderContainer(overrides: [
       databaseProvider.overrideWithValue(db),
     ]);
     addTearDown(container.dispose);
 
-    final GoalRepository goals = container.read(goalRepositoryProvider);
-    final goalId = await goals.create(GoalDraft(
-      name: 'Zaxira',
-      targetAmountMinor: 1000000,
-      startDate: DateTime.now(),
-    ));
-    await goals.addContribution(
-      goalId: goalId,
-      signedAmountMinor: 300000,
-      source: ContributionSource.manual,
-    );
+    final limit = await container.read(safeLimitProvider.future);
+    expect(limit.spendable.minorUnits, 0);
+    expect(limit.perDay.minorUnits, 0);
+    expect(limit.hasSpendingAccounts, isTrue);
+    await db.close();
+  });
 
-    // A goal contribution is an earmark, not a ledger transaction. The
-    // provider must pass the full 1,000,000 ledger cash as totalAvailable;
-    // dailySafeLimit owns the one 300,000 reserve subtraction.
-    expect(
-      (await container.read(safeLimitProvider.future)).spendable.minorUnits,
-      700000,
-    );
+  test('safeLimitProvider is zero and unflagged with no Sarf accounts',
+      () async {
+    final db = AppDatabase(NativeDatabase.memory());
+    await db.into(db.accountsTable).insert(
+          AccountsTableCompanion.insert(
+            name: 'Jamgarma',
+            type: 'savings',
+            openingBalanceMinor: const Value(3000000),
+            role: const Value('savings'),
+          ),
+        );
+
+    final container = ProviderContainer(overrides: [
+      databaseProvider.overrideWithValue(db),
+    ]);
+    addTearDown(container.dispose);
+
+    final limit = await container.read(safeLimitProvider.future);
+    expect(limit.spendable.minorUnits, 0);
+    expect(limit.perDay.minorUnits, 0);
+    expect(limit.hasSpendingAccounts, isFalse);
     await db.close();
   });
 

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/legacy.dart';
 import '../core/allocation/allocation_models.dart';
 import '../core/budget/category_budget_engine.dart';
 import '../core/goal/goal_engine.dart';
+import '../core/ledger/account.dart';
 import '../core/ledger/summary_engine.dart';
 import '../core/limit/safe_limit_engine.dart';
 import '../core/money/currency.dart';
@@ -367,49 +368,28 @@ final safeLimitProvider = FutureProvider<SafeLimit>((ref) async {
   final accounts =
       await ref.watch(accountRepositoryProvider).list(includeArchived: false);
   final entries = await ref.watch(ledgerRepositoryProvider).allEntries();
-  final cats = await ref.watch(budgetRepositoryProvider).categoriesWithBudgets(
-        includeArchived: true,
-      );
   final now = DateTime.now();
   final period = FinancialPeriod.containing(now, settings.periodStartDay);
 
-  final variableIds = cats
-      .where((c) => c.kind == CategoryKind.variable)
-      .map((c) => c.id)
-      .toSet();
-  final byCat = categorySpent(entries, period, currency);
-  var variableSpentMinor = 0;
-  byCat.forEach((catId, spent) {
-    if (variableIds.contains(catId)) variableSpentMinor += spent.minorUnits;
-  });
+  // Model A: the spendable pool is the summed ledger balance of the
+  // Sarf-role (spending) cards in the primary currency. Reserve / Kredit /
+  // Jamg'arma cards are excluded purely by role — there is no separate
+  // reserve, goal, or mortgage subtraction in the daily-limit path anymore.
+  final spending =
+      accounts.where((a) => a.role == AccountRole.spending).toList();
+  final pool =
+      totalsByCurrency(spending, entries)[currency] ?? Money.zero(currency);
 
-  final totals = totalsByCurrency(accounts, entries);
-  // Ownership contract: this is the full cash balance derived from the
-  // ledger. Goal earmarks, the minimum reserve, and unpaid mandatory amounts
-  // do not mutate it; dailySafeLimit subtracts each reserve exactly once.
-  final ledgerCash = totals[currency] ?? Money.zero(currency);
-  final goalReserveMinor =
-      await ref.watch(goalRepositoryProvider).activeReserveMinor();
-  final unpaidMandatoryMinor =
-      await ref.watch(mortgageRepositoryProvider).unpaidMandatoryMinor(
-            periodStart: period.start,
-            periodEndExclusive: period.endExclusive,
-          );
+  // Whole days from today (date-floored) to the period's exclusive end; the
+  // engine floors this at 1, so passing 0 on the last day is safe.
+  final today = DateTime(now.year, now.month, now.day);
+  final daysLeft = period.endExclusive.difference(today).inDays;
 
-  final inputs = SafeLimitInputs(
-    variableBudget: settings.variableBudget,
-    variableSpent: Money(variableSpentMinor, currency),
-    manualBuffer: settings.safetyBuffer,
-    totalAvailable: ledgerCash,
-    minReserve: settings.minReserve.currency == currency
-        ? settings.minReserve
-        : Money.zero(currency),
-    goalReserves: Money(goalReserveMinor, currency),
-    unpaidMandatory: Money(unpaidMandatoryMinor, currency),
+  return dailySpendLimit(
+    spendablePool: pool,
+    daysLeft: daysLeft,
     todaySpent: spentOn(now, entries, currency),
-    period: period,
-    asOf: now,
+    hasSpendingAccounts: spending.isNotEmpty,
   );
-  return dailySafeLimit(inputs);
 });
 
