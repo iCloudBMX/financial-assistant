@@ -9,6 +9,8 @@ import 'package:financial_assistant/data/db/app_database.dart';
 import 'package:financial_assistant/providers/app_providers.dart';
 import 'package:financial_assistant/features/transactions/transactions_controller.dart';
 import 'package:financial_assistant/features/transactions/transactions_screen.dart';
+import 'package:financial_assistant/core/transactions/transaction_filter.dart';
+import 'package:financial_assistant/features/transactions/transactions_filter_provider.dart';
 
 void main() {
   const uzs = CurrencyRegistry.uzs;
@@ -16,8 +18,10 @@ void main() {
   Future<ProviderContainer> seeded() async {
     final db = AppDatabase(NativeDatabase.memory());
     addTearDown(db.close);
-    final c = ProviderContainer(
-        overrides: [databaseProvider.overrideWithValue(db)]);
+    final c = ProviderContainer(overrides: [
+      databaseProvider.overrideWithValue(db),
+      transactionFilterProvider.overrideWith((ref) => const TransactionFilter()),
+    ]);
     addTearDown(c.dispose);
     final accId = await c.read(accountRepositoryProvider).create(
         name: 'Naqd',
@@ -41,7 +45,7 @@ void main() {
       child: const MaterialApp(home: TransactionsScreen()),
     ));
     await tester.pumpAndSettle();
-    expect(find.text('Chiqim'), findsOneWidget);
+    expect(find.text('Oziq-ovqat'), findsOneWidget);
 
     await tester.drag(find.byType(Dismissible), const Offset(-500, 0));
     await tester.pump();
@@ -56,7 +60,7 @@ void main() {
     // Entry is preserved.
     final list = await container.read(transactionsControllerProvider.future);
     expect(list, hasLength(1));
-    expect(find.text('Chiqim'), findsOneWidget);
+    expect(find.text('Oziq-ovqat'), findsOneWidget);
   });
 
   testWidgets('swiping a row and confirming deletes the entry',
@@ -67,7 +71,7 @@ void main() {
       child: const MaterialApp(home: TransactionsScreen()),
     ));
     await tester.pumpAndSettle();
-    expect(find.text('Chiqim'), findsOneWidget);
+    expect(find.text('Oziq-ovqat'), findsOneWidget);
 
     await tester.drag(find.byType(Dismissible), const Offset(-500, 0));
     await tester.pump();
@@ -87,8 +91,10 @@ void main() {
       (tester) async {
     final db = AppDatabase(NativeDatabase.memory());
     addTearDown(db.close);
-    final container =
-        ProviderContainer(overrides: [databaseProvider.overrideWithValue(db)]);
+    final container = ProviderContainer(overrides: [
+      databaseProvider.overrideWithValue(db),
+      transactionFilterProvider.overrideWith((ref) => const TransactionFilter()),
+    ]);
     addTearDown(container.dispose);
     final fromId = await container.read(accountRepositoryProvider).create(
         name: 'Naqd',
@@ -120,11 +126,13 @@ void main() {
     ));
     await tester.pumpAndSettle();
 
-    // Transfer legs use their own labels, never "Kirim"/"Chiqim".
+    // Transfer legs use their own labels, never "Kirim"/"Chiqim" as a row
+    // title. The one remaining match for each is the fixed income/expense
+    // summary card label (always rendered, independent of entry types).
     expect(find.text('O\'tkazma (chiqdi)'), findsOneWidget);
     expect(find.text('O\'tkazma (kirdi)'), findsOneWidget);
-    expect(find.text('Kirim'), findsNothing);
-    expect(find.text('Chiqim'), findsNothing);
+    expect(find.text('Kirim'), findsOneWidget);
+    expect(find.text('Chiqim'), findsOneWidget);
     // Balance adjustment is visibly labeled.
     expect(find.text('Balans tuzatish'), findsOneWidget);
   });

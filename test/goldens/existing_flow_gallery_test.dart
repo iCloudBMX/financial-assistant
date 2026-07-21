@@ -50,7 +50,9 @@ import 'package:financial_assistant/features/income_entry/income_entry_sheet.dar
 import 'package:financial_assistant/features/mortgage/mortgage_dashboard_screen.dart';
 import 'package:financial_assistant/features/mortgage/mortgage_edit_sheet.dart';
 import 'package:financial_assistant/features/recurring/recurring_prompt.dart';
+import 'package:financial_assistant/core/transactions/transaction_filter.dart';
 import 'package:financial_assistant/features/transactions/transactions_controller.dart';
+import 'package:financial_assistant/features/transactions/transactions_filter_provider.dart';
 import 'package:financial_assistant/features/transactions/transactions_screen.dart';
 import 'package:financial_assistant/providers/app_providers.dart';
 import 'package:financial_assistant/ui/components/velora_sheet.dart';
@@ -547,6 +549,8 @@ void main() {
           occurredAt: now.subtract(const Duration(days: 1)));
       container.read(ledgerRevisionProvider.notifier).state++;
       await container.read(transactionsControllerProvider.future);
+      container.read(transactionFilterProvider.notifier).state =
+          const TransactionFilter();
       return container;
     }
 
