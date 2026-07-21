@@ -112,7 +112,7 @@ class _BudgetsScreenState extends ConsumerState<BudgetsScreen> {
                 for (final v in list)
                   Padding(
                     padding: const EdgeInsets.only(bottom: VeloraSpacing.md),
-                    child: _CategoryBudgetCard(view: v, controller: controller),
+                    child: _CategoryBudgetCard(view: v),
                   ),
             ],
           ),
@@ -282,10 +282,9 @@ class _HeaderIconButton extends StatelessWidget {
 }
 
 class _CategoryBudgetCard extends StatelessWidget {
-  const _CategoryBudgetCard({required this.view, required this.controller});
+  const _CategoryBudgetCard({required this.view});
 
   final CategoryBudgetView view;
-  final BudgetsController controller;
 
   @override
   Widget build(BuildContext context) {
