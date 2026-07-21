@@ -307,9 +307,14 @@ class _AccountSheetState extends ConsumerState<_AccountSheet> {
       primaryAction: VeloraPrimaryButton(
         label: "Ko'rsatish",
         onPressed: () {
+          final allIds = {for (final a in widget.accounts) a.account.id};
+          final committed =
+              (_selected.isEmpty || _selected.containsAll(allIds))
+                  ? <int>{}
+                  : {..._selected};
           ref
               .read(transactionFilterProvider.notifier)
-              .update((f) => f.copyWith(accountIds: {..._selected}));
+              .update((f) => f.copyWith(accountIds: committed));
           Navigator.of(context).pop();
         },
       ),
@@ -327,10 +332,14 @@ class _TypeSheet extends ConsumerStatefulWidget {
 class _TypeSheetState extends ConsumerState<_TypeSheet> {
   late Set<LedgerEntryType> _selected;
 
+  static Set<LedgerEntryType> get _allTypes =>
+      {for (final c in _typeChoices) ...c.types};
+
   @override
   void initState() {
     super.initState();
-    _selected = {...widget.initial};
+    _selected =
+        widget.initial.isEmpty ? {..._allTypes} : {...widget.initial};
   }
 
   bool _isOn(Set<LedgerEntryType> group) => group.every(_selected.contains);
@@ -360,9 +369,13 @@ class _TypeSheetState extends ConsumerState<_TypeSheet> {
       primaryAction: VeloraPrimaryButton(
         label: "Ko'rsatish",
         onPressed: () {
+          final committed =
+              (_selected.isEmpty || _selected.containsAll(_allTypes))
+                  ? <LedgerEntryType>{}
+                  : {..._selected};
           ref
               .read(transactionFilterProvider.notifier)
-              .update((f) => f.copyWith(types: {..._selected}));
+              .update((f) => f.copyWith(types: committed));
           Navigator.of(context).pop();
         },
       ),

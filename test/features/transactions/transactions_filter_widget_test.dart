@@ -110,4 +110,80 @@ void main() {
     expect(find.text('Sanadan'), findsOneWidget);
     expect(find.text("O'tgan hafta"), findsWidgets);
   });
+
+  testWidgets(
+      'Operatsiya turi sheet shows every type checked when no type filter is active',
+      (tester) async {
+    final db = AppDatabase(NativeDatabase.memory());
+    addTearDown(db.close);
+    final container = ProviderContainer(overrides: [
+      databaseProvider.overrideWithValue(db),
+      transactionFilterProvider.overrideWith((ref) => const TransactionFilter()),
+    ]);
+    addTearDown(container.dispose);
+    final accId = await container.read(accountRepositoryProvider).create(
+        name: 'Naqd',
+        type: AccountType.cash,
+        openingBalance: const Money(1000000, uzs),
+        icon: 'w');
+    await container.read(ledgerRepositoryProvider).addExpense(
+        accountId: accId,
+        amount: const Money(250000, uzs),
+        categoryId: 1,
+        occurredAt: DateTime(2026, 7, 18));
+
+    await tester.pumpWidget(UncontrolledProviderScope(
+      container: container,
+      child: const MaterialApp(home: TransactionsScreen()),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('filter-chip-type')));
+    await tester.pumpAndSettle();
+
+    final tiles = tester
+        .widgetList<CheckboxListTile>(find.byType(CheckboxListTile))
+        .toList();
+    expect(tiles, hasLength(3));
+    for (final tile in tiles) {
+      expect(tile.value, isTrue);
+    }
+  });
+
+  testWidgets(
+      'selecting all type groups commits an empty (un-narrowed) types filter',
+      (tester) async {
+    final db = AppDatabase(NativeDatabase.memory());
+    addTearDown(db.close);
+    final container = ProviderContainer(overrides: [
+      databaseProvider.overrideWithValue(db),
+      transactionFilterProvider.overrideWith((ref) => const TransactionFilter()),
+    ]);
+    addTearDown(container.dispose);
+    final accId = await container.read(accountRepositoryProvider).create(
+        name: 'Naqd',
+        type: AccountType.cash,
+        openingBalance: const Money(1000000, uzs),
+        icon: 'w');
+    await container.read(ledgerRepositoryProvider).addExpense(
+        accountId: accId,
+        amount: const Money(250000, uzs),
+        categoryId: 1,
+        occurredAt: DateTime(2026, 7, 18));
+
+    await tester.pumpWidget(UncontrolledProviderScope(
+      container: container,
+      child: const MaterialApp(home: TransactionsScreen()),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('filter-chip-type')));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text("Ko'rsatish"));
+    await tester.pumpAndSettle();
+
+    expect(container.read(transactionFilterProvider).types, isEmpty);
+    expect(find.text('Operatsiya turi'), findsOneWidget);
+  });
 }
