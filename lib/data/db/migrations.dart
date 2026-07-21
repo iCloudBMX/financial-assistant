@@ -93,6 +93,21 @@ MigrationStrategy buildMigration(AppDatabase db) => MigrationStrategy(
           await m.createTable(db.mortgagesTable);
           await m.createTable(db.mortgagePaymentsTable);
         }
+        if (from < 6) {
+          // v5 -> v6: add the account budget `role` column. Additive with a
+          // 'spending' default. Guarded by _hasColumn because a collapsed
+          // v1->v6 pass may have built accounts_table with today's full column
+          // set already (this codebase can't use drift's versioned schema CLI —
+          // see the class doc — so createTable has no historical snapshot).
+          if (!await _hasColumn(m, 'accounts_table', 'role')) {
+            await m.addColumn(db.accountsTable, db.accountsTable.role);
+          }
+          // Default mapping: existing savings-type cards become the savings role;
+          // every other row keeps the column's 'spending' default.
+          await m.database.customStatement(
+            "UPDATE accounts_table SET role = 'savings' WHERE type = 'savings'",
+          );
+        }
       },
       beforeOpen: (details) async {
         await db.customStatement('PRAGMA foreign_keys = ON');

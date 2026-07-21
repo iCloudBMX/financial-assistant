@@ -13,7 +13,7 @@ import 'package:financial_assistant/core/money/money.dart';
 class _FailingUpgradeDb extends AppDatabase {
   _FailingUpgradeDb(super.e);
   @override
-  int get schemaVersion => 6; // stay ahead of the real version (now 5)
+  int get schemaVersion => 7; // stay ahead of the real version (now 6)
   @override
   MigrationStrategy get migration => MigrationStrategy(
         onUpgrade: (m, from, to) async => throw Exception('boom'),

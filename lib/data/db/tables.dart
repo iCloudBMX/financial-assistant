@@ -52,6 +52,7 @@ class AccountsTable extends Table {
       integer().withDefault(const Constant(0))();
   TextColumn get currencyCode => text().withDefault(const Constant('UZS'))();
   TextColumn get icon => text().withDefault(const Constant('wallet'))();
+  TextColumn get role => text().withDefault(const Constant('spending'))(); // AccountRole.name
   BoolColumn get archived => boolean().withDefault(const Constant(false))();
   IntColumn get sortOrder => integer().withDefault(const Constant(0))();
   DateTimeColumn get createdAt =>
