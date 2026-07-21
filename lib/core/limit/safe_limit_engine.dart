@@ -1,49 +1,23 @@
 import '../money/money.dart';
-import '../time/financial_period.dart';
-
-/// All the figures the safe-limit computation needs (§11.2).
-///
-/// Ownership contract: [totalAvailable] is cash derived directly from the
-/// ledger, before [minReserve], [goalReserves], or [unpaidMandatory] are
-/// deducted. This engine owns those three deductions so no provider should
-/// pre-subtract them.
-class SafeLimitInputs {
-  final Money variableBudget;
-  final Money variableSpent;
-  final Money manualBuffer;
-  final Money totalAvailable; // full ledger cash before reserve deductions
-  final Money minReserve;
-  final Money goalReserves;
-  final Money unpaidMandatory;
-  final Money todaySpent;
-  final FinancialPeriod period;
-  final DateTime asOf;
-  const SafeLimitInputs({
-    required this.variableBudget,
-    required this.variableSpent,
-    required this.manualBuffer,
-    required this.totalAvailable,
-    required this.minReserve,
-    required this.goalReserves,
-    required this.unpaidMandatory,
-    required this.todaySpent,
-    required this.period,
-    required this.asOf,
-  });
-}
 
 class SafeLimit {
-  final Money spendable; // remaining variable budget after the free-balance cap
+  final Money spendable; // the spending pool, floored at zero
   final Money perDay;
   final int daysLeft;
   final Money todaySpent;
   final Money todayRemaining; // perDay − todaySpent
+  // Whether at least one non-archived Sarf-role card exists. Lets Home/SP-C
+  // tell "no spending cards" (show "Sarf kartasi belgilang") apart from
+  // "spending cards summing to zero" — never inferred from spendable <= 0.
+  // Defaulted true so existing value-widget SafeLimit literals stay valid.
+  final bool hasSpendingAccounts;
   const SafeLimit({
     required this.spendable,
     required this.perDay,
     required this.daysLeft,
     required this.todaySpent,
     required this.todayRemaining,
+    this.hasSpendingAccounts = true,
   });
   bool get isOver => todayRemaining.minorUnits < 0;
 }
@@ -61,36 +35,36 @@ class WeeklySafeLimit {
 
 int _max0(int v) => v < 0 ? 0 : v;
 
-/// §11.2 core formula:
-///   remainingVariable = max(0, variableBudget − variableSpent − manualBuffer)
-///   freeBalance       = totalAvailable − minReserve − goalReserves − unpaidMandatory
-///   spendable         = max(0, min(remainingVariable, freeBalance))
-///   perDay            = spendable ÷ daysLeft   (integer floor)
-/// `daysLeft` counts whole days from the start of [asOf]'s day to the period's
-/// exclusive end, floored at 1.
-SafeLimit dailySafeLimit(SafeLimitInputs i) {
-  final c = i.variableBudget.currency;
-  final remainingVariable = _max0(i.variableBudget.minorUnits -
-      i.variableSpent.minorUnits -
-      i.manualBuffer.minorUnits);
-  final freeBalance = i.totalAvailable.minorUnits -
-      i.minReserve.minorUnits -
-      i.goalReserves.minorUnits -
-      i.unpaidMandatory.minorUnits;
-  final cap = remainingVariable < freeBalance ? remainingVariable : freeBalance;
-  final spendable = _max0(cap);
-
-  final today = DateTime(i.asOf.year, i.asOf.month, i.asOf.day);
-  final rawDays = i.period.endExclusive.difference(today).inDays;
-  final daysLeft = rawDays < 1 ? 1 : rawDays;
-
-  final perDay = spendable ~/ daysLeft;
+/// Model-A daily spend limit: the whole spendable pool — the summed balance
+/// of the Sarf-role (spending) cards — split evenly across the days left in
+/// the current financial period.
+///
+///   spendable = max(0, spendablePool)
+///   perDay    = spendable ÷ daysLeft        (integer floor)
+///
+/// [daysLeft] is floored at 1 so the last day of a period never divides by
+/// zero. [todaySpent] only drives the "today remaining" figure; it does not
+/// reduce the pool. Reserve / Kredit / Jamg'arma balances are already
+/// excluded upstream by role, so there is no reserve subtraction here.
+/// [hasSpendingAccounts] is passed straight through to the result so callers
+/// can show an "add a spending card" empty state without inspecting figures.
+SafeLimit dailySpendLimit({
+  required Money spendablePool,
+  required int daysLeft,
+  required Money todaySpent,
+  bool hasSpendingAccounts = true,
+}) {
+  final c = spendablePool.currency;
+  final days = daysLeft < 1 ? 1 : daysLeft;
+  final spendable = _max0(spendablePool.minorUnits);
+  final perDay = spendable ~/ days;
   return SafeLimit(
     spendable: Money(spendable, c),
     perDay: Money(perDay, c),
-    daysLeft: daysLeft,
-    todaySpent: i.todaySpent,
-    todayRemaining: Money(perDay - i.todaySpent.minorUnits, c),
+    daysLeft: days,
+    todaySpent: todaySpent,
+    todayRemaining: Money(perDay - todaySpent.minorUnits, c),
+    hasSpendingAccounts: hasSpendingAccounts,
   );
 }
 
