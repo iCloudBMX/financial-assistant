@@ -184,6 +184,7 @@ const _accounts = [
     openingBalance: Money(12500000, CurrencyRegistry.uzs),
     icon: 'credit_card',
     archived: false,
+    role: AccountRole.spending,
   ),
   Account(
     id: 2,
@@ -192,6 +193,7 @@ const _accounts = [
     openingBalance: Money(2400000, CurrencyRegistry.uzs),
     icon: 'payments',
     archived: false,
+    role: AccountRole.spending,
   ),
 ];
 

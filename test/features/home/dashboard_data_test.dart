@@ -11,7 +11,7 @@ void main() {
   test('buildDashboard aggregates balance, month totals, today, undistributed', () {
     final now = DateTime(2026, 7, 18, 12);
     const acc = Account(id: 1, name: 'A', type: AccountType.cash,
-        openingBalance: Money(1000000, uzs), icon: 'w', archived: false);
+        openingBalance: Money(1000000, uzs), icon: 'w', archived: false, role: AccountRole.spending);
     final entries = [
       LedgerEntry(id: 1, accountId: 1, type: LedgerEntryType.income,
           amount: const Money(5000000, uzs), allocated: const Money(0, uzs),
@@ -40,7 +40,7 @@ void main() {
       'unallocated remainder, ignoring fully-allocated ones', () {
     final now = DateTime(2026, 7, 18, 12);
     const acc = Account(id: 1, name: 'A', type: AccountType.cash,
-        openingBalance: Money(0, uzs), icon: 'w', archived: false);
+        openingBalance: Money(0, uzs), icon: 'w', archived: false, role: AccountRole.spending);
     final entries = [
       // Fully allocated — must not be picked even though it occurred later.
       LedgerEntry(id: 1, accountId: 1, type: LedgerEntryType.income,
@@ -70,7 +70,7 @@ void main() {
       'gross amount, when the winning entry is partially allocated', () {
     final now = DateTime(2026, 7, 18, 12);
     const acc = Account(id: 1, name: 'A', type: AccountType.cash,
-        openingBalance: Money(0, uzs), icon: 'w', archived: false);
+        openingBalance: Money(0, uzs), icon: 'w', archived: false, role: AccountRole.spending);
     final entries = [
       // The most recent unallocated entry is itself PARTIALLY allocated:
       // gross 5,000,000 with 2,000,000 already allocated → remainder
@@ -92,7 +92,7 @@ void main() {
       'summary unchanged', () {
     final now = DateTime(2026, 7, 18, 12);
     const acc = Account(id: 1, name: 'A', type: AccountType.cash,
-        openingBalance: Money(0, uzs), icon: 'w', archived: false);
+        openingBalance: Money(0, uzs), icon: 'w', archived: false, role: AccountRole.spending);
     const goal = PrimaryGoalSummary(
       id: 7,
       name: 'Zaxira',

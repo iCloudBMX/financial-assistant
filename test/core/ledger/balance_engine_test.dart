@@ -17,6 +17,7 @@ void main() {
         openingBalance: Money(opening, c),
         icon: 'wallet',
         archived: false,
+        role: AccountRole.spending,
       );
 
   LedgerEntry entry(int accountId, LedgerEntryType type, int minor) => LedgerEntry(

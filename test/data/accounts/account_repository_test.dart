@@ -50,4 +50,33 @@ void main() {
     final names = (await repo.list()).map((e) => e.name).toList();
     expect(names, ['B', 'A']);
   });
+
+  test('create defaults role to spending; round-trips role', () async {
+    final id = await repo.create(
+        name: 'Naqd',
+        type: AccountType.cash,
+        openingBalance: const Money(0, uzs),
+        icon: 'wallet');
+    expect((await repo.byId(id))!.role, AccountRole.spending);
+
+    final id2 = await repo.create(
+        name: 'Zaxira',
+        type: AccountType.bankCard,
+        openingBalance: const Money(0, uzs),
+        icon: 'wallet',
+        role: AccountRole.reserve);
+    expect((await repo.byId(id2))!.role, AccountRole.reserve);
+  });
+
+  test('setRole updates the stored role', () async {
+    final id = await repo.create(
+        name: 'A',
+        type: AccountType.cash,
+        openingBalance: const Money(0, uzs),
+        icon: 'w');
+    await repo.setRole(id, AccountRole.credit);
+    expect((await repo.byId(id))!.role, AccountRole.credit);
+    // list() reads role too
+    expect((await repo.list()).single.role, AccountRole.credit);
+  });
 }

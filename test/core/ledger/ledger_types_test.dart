@@ -16,6 +16,7 @@ void main() {
       openingBalance: Money(500000, uzs),
       icon: 'wallet',
       archived: false,
+      role: AccountRole.spending,
     );
     expect(acc.currency, uzs);
     expect(acc.type, AccountType.cash);

@@ -61,9 +61,11 @@ void main() {
 
   test('totalsByCurrency sums balances per currency', () {
     const a1 = Account(id: 1, name: 'A', type: AccountType.cash,
-        openingBalance: Money(1000000, uzs), icon: 'w', archived: false);
+        openingBalance: Money(1000000, uzs), icon: 'w', archived: false,
+        role: AccountRole.spending);
     const a2 = Account(id: 2, name: 'B', type: AccountType.bankCard,
-        openingBalance: Money(200, usd), icon: 'c', archived: false);
+        openingBalance: Money(200, usd), icon: 'c', archived: false,
+        role: AccountRole.spending);
     final es = [
       e(1, LedgerEntryType.expense, -300000, DateTime(2026, 7, 18)),
       e(2, LedgerEntryType.income, 50, DateTime(2026, 7, 18), c: usd),

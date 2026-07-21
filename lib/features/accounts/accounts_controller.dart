@@ -38,9 +38,14 @@ class AccountsController extends AsyncNotifier<List<AccountWithBalance>> {
     required AccountType type,
     required Money openingBalance,
     required String icon,
+    AccountRole role = AccountRole.spending,
   }) async {
     final id = await ref.read(accountRepositoryProvider).create(
-        name: name, type: type, openingBalance: openingBalance, icon: icon);
+        name: name,
+        type: type,
+        openingBalance: openingBalance,
+        icon: icon,
+        role: role);
     await _invalidate();
     return id;
   }

@@ -16,6 +16,7 @@ void main() {
       openingBalance: Money(1250000, CurrencyRegistry.uzs),
       icon: 'credit_card',
       archived: false,
+      role: AccountRole.spending,
     ),
     Account(
       id: 2,
@@ -24,6 +25,7 @@ void main() {
       openingBalance: Money(480000, CurrencyRegistry.uzs),
       icon: 'payments',
       archived: false,
+      role: AccountRole.spending,
     ),
     Account(
       id: 3,
@@ -32,6 +34,7 @@ void main() {
       openingBalance: Money(30000, CurrencyRegistry.uzs),
       icon: 'savings',
       archived: true,
+      role: AccountRole.spending,
     ),
   ];
   const availableBalances = <int, Money>{
