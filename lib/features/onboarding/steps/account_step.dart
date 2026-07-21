@@ -55,6 +55,7 @@ class _AccountStepBodyState extends ConsumerState<_AccountStepBody> {
   final _balanceCtrl = TextEditingController();
   Money? _opening;
   AccountType _type = AccountType.cash;
+  AccountRole _role = AccountRole.spending;
   bool _saving = false;
 
   /// Whether an account was already created this onboarding session. Sourced
@@ -83,6 +84,7 @@ class _AccountStepBodyState extends ConsumerState<_AccountStepBody> {
               type: _type,
               openingBalance: _opening ?? Money.zero(currency),
               icon: 'wallet',
+              role: _role,
             );
     if (!mounted) return;
     widget.controller.markAccountCreated(id);
@@ -133,6 +135,29 @@ class _AccountStepBodyState extends ConsumerState<_AccountStepBody> {
                     _created ? null : (_) => setState(() => _type = type),
               ),
           ],
+        ),
+        const SizedBox(height: VeloraSpacing.lg),
+        const Text('Byudjet roli'),
+        const SizedBox(height: VeloraSpacing.sm),
+        Wrap(
+          spacing: VeloraSpacing.sm,
+          runSpacing: VeloraSpacing.sm,
+          children: [
+            for (final role in accountRolesInDisplayOrder)
+              ChoiceChip(
+                key: Key('onboarding-account-role-${role.name}'),
+                label: Text(accountRoleLabel(role)),
+                selected: _role == role,
+                showCheckmark: false,
+                onSelected:
+                    _created ? null : (_) => setState(() => _role = role),
+              ),
+          ],
+        ),
+        const SizedBox(height: VeloraSpacing.sm),
+        Text(
+          accountRoleHelper(_role),
+          style: Theme.of(context).textTheme.bodySmall,
         ),
         const SizedBox(height: VeloraSpacing.lg),
         if (_created)

@@ -101,6 +101,9 @@ void main() {
       '500000',
     );
     await tester.pump();
+    await tester.ensureVisible(
+      find.byKey(const Key('onboarding_account_create_button')),
+    );
     await tester.tap(find.byKey(const Key('onboarding_account_create_button')));
     await tester.pumpAndSettle();
 
@@ -138,6 +141,9 @@ void main() {
     }
     expect(find.text('Birinchi hisobingiz'), findsOneWidget);
 
+    await tester.ensureVisible(
+      find.byKey(const Key('onboarding_account_create_button')),
+    );
     await tester.tap(find.byKey(const Key('onboarding_account_create_button')));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('onboarding_account_created_badge')),
