@@ -10,10 +10,10 @@ String categoryKindLabel(CategoryKind k) => switch (k) {
     };
 
 String budgetStatusLabel(CategoryLimitStatus s) => switch (s) {
-      CategoryLimitStatus.noLimit => 'limitsiz',
+      CategoryLimitStatus.noLimit => 'rejasiz',
       CategoryLimitStatus.safe => 'xavfsiz',
-      CategoryLimitStatus.near => 'limitga yaqin',
-      CategoryLimitStatus.over => 'limitdan oshgan',
+      CategoryLimitStatus.near => 'rejaga yaqin',
+      CategoryLimitStatus.over => 'rejadan oshgan',
     };
 
 /// Maps a category budget status onto the shared Velora status visuals

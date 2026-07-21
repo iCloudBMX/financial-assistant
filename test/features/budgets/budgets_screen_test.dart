@@ -143,8 +143,26 @@ void main() {
     ));
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('limitdan oshgan'), findsOneWidget);
+    expect(find.textContaining('rejadan oshgan'), findsOneWidget);
     expect(find.byIcon(Icons.warning_amber), findsOneWidget);
+  });
+
+  testWidgets('the category section renders under a "Rejalar" header with '
+      'the seeded categories', (tester) async {
+    final db = AppDatabase(NativeDatabase.memory());
+    addTearDown(db.close);
+    final container = ProviderContainer(
+        overrides: [databaseProvider.overrideWithValue(db)]);
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(UncontrolledProviderScope(
+      container: container,
+      child: const MaterialApp(home: BudgetsScreen()),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Rejalar'), findsOneWidget);
+    expect(find.text('Oziq-ovqat'), findsOneWidget); // seeded category #1
   });
 
   testWidgets(

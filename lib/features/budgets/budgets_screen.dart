@@ -56,6 +56,23 @@ class BudgetsScreen extends ConsumerWidget {
                   child: BudgetSummaryCard(limit: l),
                 ),
               ),
+              const SizedBox(height: VeloraSpacing.sm),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text('Rejalar',
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w700)),
+                  ),
+                  TextButton.icon(
+                    key: const Key('budgets-manage'),
+                    onPressed: () {/* Task 4 wires manage mode */},
+                    icon: const Icon(Icons.tune, size: 18),
+                    label: const Text('Boshqarish'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: VeloraSpacing.sm),
               for (final v in list)
                 Padding(
                   padding: const EdgeInsets.only(bottom: VeloraSpacing.md),
@@ -110,7 +127,7 @@ class _PlanHeader extends StatelessWidget {
               ),
               const SizedBox(height: VeloraSpacing.xs),
               Text(
-                'Kategoriya limitlari',
+                'Kategoriya rejalari',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: theme.textTheme.bodyMedium
