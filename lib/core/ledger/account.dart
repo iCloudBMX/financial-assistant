@@ -3,6 +3,8 @@ import '../money/money.dart';
 
 enum AccountType { bankCard, cash, savings, other }
 
+enum AccountRole { spending, reserve, credit, savings }
+
 class Account {
   final int id;
   final String name;
@@ -10,6 +12,7 @@ class Account {
   final Money openingBalance;
   final String icon;
   final bool archived;
+  final AccountRole role;
 
   const Account({
     required this.id,
@@ -18,6 +21,7 @@ class Account {
     required this.openingBalance,
     required this.icon,
     required this.archived,
+    required this.role,
   });
 
   Currency get currency => openingBalance.currency;
