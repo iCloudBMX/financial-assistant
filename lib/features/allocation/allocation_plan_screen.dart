@@ -43,26 +43,43 @@ class AllocationPlanScreen extends ConsumerWidget {
   }
 }
 
-class _PlanBody extends ConsumerWidget {
+class _PlanBody extends ConsumerStatefulWidget {
   const _PlanBody({required this.plan, required this.accounts});
   final AllocationPlan plan;
   final List<AccountWithBalance> accounts;
 
+  @override
+  ConsumerState<_PlanBody> createState() => _PlanBodyState();
+}
+
+class _PlanBodyState extends ConsumerState<_PlanBody> {
+  bool _sourceDefaultScheduled = false;
+
   Money? _sourceBalance() {
-    for (final a in accounts) {
-      if (a.account.id == plan.sourceAccountId) return a.balance;
+    for (final a in widget.accounts) {
+      if (a.account.id == widget.plan.sourceAccountId) return a.balance;
     }
     return null;
   }
 
-  Future<void> _apply(BuildContext context, WidgetRef ref) async {
-    final sourceId = plan.sourceAccountId;
+  // The first card the source picker will actually show (same selectability as
+  // the picker: non-archived, same-currency balance).
+  int? _firstSelectableSourceId() {
+    for (final a in widget.accounts) {
+      final acc = a.account;
+      if (!acc.archived && a.balance.currency == acc.currency) return acc.id;
+    }
+    return null;
+  }
+
+  Future<void> _apply(BuildContext context) async {
+    final sourceId = widget.plan.sourceAccountId;
     final balance = _sourceBalance();
     if (sourceId == null || balance == null) return;
     final result =
-        computePlanTransfers(sourceBalance: balance, rules: plan.rules);
+        computePlanTransfers(sourceBalance: balance, rules: widget.plan.rules);
     final destNames = {
-      for (final a in accounts) a.account.id: a.account.name,
+      for (final a in widget.accounts) a.account.id: a.account.name,
     };
     final sourceName = destNames[sourceId] ?? 'Manba';
     final ok = await showApplyPlanSheet(context,
@@ -82,46 +99,64 @@ class _PlanBody extends ConsumerWidget {
     );
   }
 
-  Future<void> _addRule(BuildContext context, WidgetRef ref) async {
-    final sourceId = plan.sourceAccountId;
+  Future<void> _addRule(BuildContext context) async {
+    final sourceId = widget.plan.sourceAccountId;
     if (sourceId == null) return;
     final picked =
         await showAllocationRuleSheet(context, ref, sourceAccountId: sourceId);
     if (picked == null) return;
     final next = [
-      ...plan.rules,
+      ...widget.plan.rules,
       AllocationRule(
           destinationAccountId: picked.destinationAccountId,
           amount: picked.amount,
-          sortOrder: plan.rules.length),
+          sortOrder: widget.plan.rules.length),
     ];
     await ref.read(allocationPlanControllerProvider).saveRules(next);
   }
 
-  Future<void> _editRule(
-      BuildContext context, WidgetRef ref, int index) async {
-    final sourceId = plan.sourceAccountId;
+  Future<void> _editRule(BuildContext context, int index) async {
+    final sourceId = widget.plan.sourceAccountId;
     if (sourceId == null) return;
-    final r = plan.rules[index];
+    final r = widget.plan.rules[index];
     final picked = await showAllocationRuleSheet(context, ref,
         sourceAccountId: sourceId,
         initial: (destinationAccountId: r.destinationAccountId, amount: r.amount));
     if (picked == null) return;
-    final next = [...plan.rules];
+    final next = [...widget.plan.rules];
     next[index] = r.copyWith(
         destinationAccountId: picked.destinationAccountId, amount: picked.amount);
     await ref.read(allocationPlanControllerProvider).saveRules(next);
   }
 
-  Future<void> _deleteRule(WidgetRef ref, int index) async {
-    final next = [...plan.rules]..removeAt(index);
+  Future<void> _deleteRule(int index) async {
+    final next = [...widget.plan.rules]..removeAt(index);
     await ref.read(allocationPlanControllerProvider).saveRules(next);
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final plan = widget.plan;
+    final accounts = widget.accounts;
     final sourceId = plan.sourceAccountId;
+
+    // Default the source to the first card the picker shows so the user need
+    // not tap it. Persist once (guarded against re-entry during the async
+    // revision bump). setSource only records the allocation source; it does
+    // not feed the daily-limit calculation.
+    if (sourceId == null && !_sourceDefaultScheduled) {
+      final firstId = _firstSelectableSourceId();
+      if (firstId != null) {
+        _sourceDefaultScheduled = true;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            ref.read(allocationPlanControllerProvider).setSource(firstId);
+          }
+        });
+      }
+    }
+
     final balances = {for (final a in accounts) a.account.id: a.balance};
     final nameOf = {for (final a in accounts) a.account.id: a.account.name};
     final accountById = {for (final a in accounts) a.account.id: a.account};
@@ -160,7 +195,7 @@ class _PlanBody extends ConsumerWidget {
                     key: const Key('plan-add-rule'),
                     onPressed: sourceId == null
                         ? null
-                        : () => _addRule(context, ref),
+                        : () => _addRule(context),
                     icon: const Icon(Icons.add, size: 18),
                     label: const Text('Yangi qator'),
                   ),
@@ -186,7 +221,7 @@ class _PlanBody extends ConsumerWidget {
                   Padding(
                     padding: const EdgeInsets.only(bottom: VeloraSpacing.sm),
                     child: VeloraCard(
-                      onTap: () => _editRule(context, ref, i),
+                      onTap: () => _editRule(context, i),
                       child: Row(
                         children: [
                           if (accountById[plan.rules[i].destinationAccountId] !=
@@ -220,7 +255,7 @@ class _PlanBody extends ConsumerWidget {
                             key: Key('plan-delete-rule-$i'),
                             icon: const Icon(Icons.remove_circle_outline,
                                 color: VeloraColors.critical),
-                            onPressed: () => _deleteRule(ref, i),
+                            onPressed: () => _deleteRule(i),
                           ),
                         ],
                       ),
@@ -241,7 +276,7 @@ class _PlanBody extends ConsumerWidget {
               child: VeloraPrimaryButton(
                 key: const Key('plan-apply'),
                 label: 'Rejani qo\'llash',
-                onPressed: canApply ? () => _apply(context, ref) : null,
+                onPressed: canApply ? () => _apply(context) : null,
               ),
             ),
           ),

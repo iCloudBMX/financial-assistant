@@ -83,6 +83,29 @@ class _RuleSheetBodyState extends ConsumerState<_RuleSheetBody> {
               if (a.account.id != widget.sourceAccountId) a.account
           ];
           final balances = {for (final a in list) a.account.id: a.balance};
+          // The card picker is controlled and does not self-select its initial
+          // page, so default the destination to the first card it will actually
+          // show (same selectability rules: non-archived, same-currency
+          // balance). Without this, Saqlash stays disabled until the user taps
+          // a card even though one is already displayed.
+          if (_destId == null) {
+            int? firstShown;
+            for (final a in dests) {
+              final bal = balances[a.id];
+              if (!a.archived && bal != null && bal.currency == a.currency) {
+                firstShown = a.id;
+                break;
+              }
+            }
+            if (firstShown != null) {
+              final id = firstShown;
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted && _destId == null) {
+                  setState(() => _destId = id);
+                }
+              });
+            }
+          }
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [

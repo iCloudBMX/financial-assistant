@@ -34,18 +34,24 @@ void main() {
     return (db, container, src, dst);
   }
 
-  testWidgets('shows a hint until a source is chosen', (tester) async {
-    final (_, container, _, _) = await seed();
+  testWidgets('auto-selects the first source card on open', (tester) async {
+    final (_, container, src, _) = await seed();
     await tester.pumpWidget(UncontrolledProviderScope(
       container: container,
       child: const MaterialApp(home: AllocationPlanScreen()),
     ));
     await tester.pumpAndSettle();
-    expect(find.text('Avval manba kartani tanlang.'), findsOneWidget);
-    // Add-rule button disabled with no source chosen.
+    // With cards available, the first card is auto-selected as the source: the
+    // "choose a source" hint is gone and the add-rule button is enabled.
+    expect(find.text('Avval manba kartani tanlang.'), findsNothing);
+    expect(find.text('Hali qator yo\'q. "Yangi qator" bilan qo\'shing.'),
+        findsOneWidget);
     final addBtn = tester.widget<TextButton>(
         find.byKey(const Key('plan-add-rule')));
-    expect(addBtn.onPressed, isNull);
+    expect(addBtn.onPressed, isNotNull);
+    // The source was persisted (first inserted account).
+    final plan = await container.read(allocationPlanProvider.future);
+    expect(plan.sourceAccountId, src);
   });
 
   testWidgets('applying a saved rule moves money off the source card',
