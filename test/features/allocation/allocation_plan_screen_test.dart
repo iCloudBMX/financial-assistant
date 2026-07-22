@@ -54,6 +54,30 @@ void main() {
     expect(plan.sourceAccountId, src);
   });
 
+  testWidgets('a ledger-revision bump does not flash the whole screen to a '
+      'spinner (source picker survives)', (tester) async {
+    final (_, container, _, _) = await seed();
+    await tester.pumpWidget(UncontrolledProviderScope(
+      container: container,
+      child: const MaterialApp(home: AllocationPlanScreen()),
+    ));
+    await tester.pumpAndSettle();
+    // Baseline: the source picker is on screen, no spinner.
+    expect(find.byKey(const Key('plan-source-picker')), findsOneWidget);
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+
+    // A swipe persists the new source, which bumps the ledger revision. The
+    // picker's host must keep showing the last data during the reload instead
+    // of collapsing to a full-screen spinner (which would kill the PageView
+    // mid-swipe).
+    container.read(ledgerRevisionProvider.notifier).state++;
+    await tester.pump();
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+    expect(find.byKey(const Key('plan-source-picker')), findsOneWidget);
+
+    await tester.pumpAndSettle();
+  });
+
   testWidgets('applying a saved rule moves money off the source card',
       (tester) async {
     final (db, container, src, dst) = await seed();

@@ -29,10 +29,16 @@ class AllocationPlanScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Taqsimlash rejasi')),
+      // Every source-card swipe persists the selection, which bumps the global
+      // ledger revision and reloads both providers. skipLoadingOnReload keeps
+      // the last data on screen during those reloads so the picker's PageView
+      // is never torn down and rebuilt mid-swipe (a full-screen spinner flash).
       body: planAsync.when(
+        skipLoadingOnReload: true,
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (_, _) => const Center(child: Text('Xatolik yuz berdi')),
         data: (plan) => accountsAsync.when(
+          skipLoadingOnReload: true,
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (_, _) => const Center(child: Text('Xatolik yuz berdi')),
           data: (accounts) =>
