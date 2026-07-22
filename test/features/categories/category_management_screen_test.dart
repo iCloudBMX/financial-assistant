@@ -1,4 +1,5 @@
 import 'package:drift/native.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -20,6 +21,23 @@ void main() {
     ));
     await tester.pumpAndSettle();
     return container;
+  }
+
+  // `ReorderableDragStartListener` (the default drag handle used by
+  // `ReorderableListView`) starts its drag from a long press, then tracks
+  // pointer movement until release — all as ONE continuous pointer gesture.
+  // `tester.longPress()` followed by a separate `tester.drag()` performs two
+  // independent down/up sequences and never registers as a drag, so this
+  // helper keeps a single `TestGesture` down across the long-press wait and
+  // the move, mirroring the pattern Flutter's own reorderable-list tests use.
+  Future<void> longPressDrag(
+      WidgetTester tester, Offset start, Offset moveBy) async {
+    final gesture = await tester.startGesture(start);
+    await tester.pump(kLongPressTimeout + kPressTimeout);
+    await gesture.moveBy(moveBy);
+    await tester.pump(kPressTimeout);
+    await gesture.up();
+    await tester.pumpAndSettle();
   }
 
   testWidgets('lists active categories and can archive one', (tester) async {
@@ -62,5 +80,57 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('category-edit-name')), findsOneWidget);
+  });
+
+  testWidgets(
+      'drag-reordering a category persists the post-removal index the way '
+      'onReorderItem hands it back', (tester) async {
+    final container = await pumpScreen(tester);
+
+    final before = await container.read(categoriesProvider.future);
+    final beforeIds = [for (final c in before) if (!c.archived) c.id];
+    // The default-category seed guarantees at least 4 active rows, which is
+    // enough room to drag past two neighbours in each direction.
+    expect(beforeIds.length, greaterThanOrEqualTo(4));
+
+    final itemHeight =
+        tester.getSize(find.byKey(ValueKey(beforeIds[0]))).height;
+
+    // Drag the first row down, past the following two rows. Empirically,
+    // `ReorderableListView`'s swap threshold needs more than N full row
+    // heights of travel to register N swaps (it's based on where the
+    // dragged proxy's center crosses a sibling's midpoint, not a clean
+    // per-row multiple), so 3.5x rows is calibrated to reliably land 2
+    // swaps below without overshooting to 3.
+    await longPressDrag(
+      tester,
+      tester.getCenter(find.byKey(ValueKey(beforeIds[0]))),
+      Offset(0, itemHeight * 3.5),
+    );
+
+    final afterDown = await container.read(categoriesProvider.future);
+    final afterDownIds = [for (final c in afterDown) if (!c.archived) c.id];
+
+    // A drag from index 0 past two rows below should land the moved item at
+    // index 2 in the final (post-removal) order: [1, 2, 0, 3, 4, ...].
+    final expectedDown = [...beforeIds]..removeAt(0);
+    expectedDown.insert(2, beforeIds[0]);
+    expect(afterDownIds, expectedDown,
+        reason: 'downward drag of ${beforeIds[0]} did not land at the '
+            'expected post-removal index; got $afterDownIds');
+
+    // Drag the same category back up, past the two rows now above it, and
+    // confirm it returns to its original slot.
+    await longPressDrag(
+      tester,
+      tester.getCenter(find.byKey(ValueKey(beforeIds[0]))),
+      Offset(0, -itemHeight * 3.5),
+    );
+
+    final afterUp = await container.read(categoriesProvider.future);
+    final afterUpIds = [for (final c in afterUp) if (!c.archived) c.id];
+    expect(afterUpIds, beforeIds,
+        reason: 'upward drag of ${beforeIds[0]} did not restore the '
+            'original order; got $afterUpIds');
   });
 }

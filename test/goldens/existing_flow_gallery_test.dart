@@ -5,7 +5,7 @@
 // (expense, income, recurring, accounts, history), Task 4 (category editor)
 // and Task 5 (mortgage setup, goal completion) touched but never captured a
 // golden for, and adds the loading/empty/error states the main-screen
-// golden files (home/plan-budget/goals-mortgage/onboarding-settings-lock)
+// golden files (home/goals-mortgage/onboarding-settings-lock)
 // didn't exercise.
 //
 // Every `testWidgets` asserts `tester.takeException()` is null before
