@@ -17,7 +17,10 @@ PlanApplyResult computePlanTransfers({
   final shortfalls = <PlanShortfall>[];
   var moved = 0;
 
-  for (final rule in rules) {
+  // Sort rules by sortOrder priority before processing (do not mutate caller's list)
+  final ordered = [...rules]..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+
+  for (final rule in ordered) {
     final requested = rule.amount.minorUnits;
     final available = remaining < 0 ? 0 : remaining;
     final funded = requested > available ? available : requested;

@@ -68,4 +68,19 @@ void main() {
     expect(r.sourceRemaining, m(-50000));
     expect(r.shortfalls.single.funded, m(0));
   });
+
+  test('honors sortOrder even when rules arrive out of order', () {
+    // Rule with sortOrder 0 (priority) is passed second in the list.
+    final r = computePlanTransfers(sourceBalance: m(600000), rules: [
+      rule(3, 500000, 1),
+      rule(2, 500000, 0),
+    ]);
+    // sortOrder 0 (dest 2) funds fully first (500k); dest 3 gets the 100k left.
+    expect(r.transfers[0].destinationAccountId, 2);
+    expect(r.transfers[0].amount, m(500000));
+    expect(r.transfers[1].destinationAccountId, 3);
+    expect(r.transfers[1].amount, m(100000));
+    expect(r.shortfalls.single.destinationAccountId, 3);
+    expect(r.shortfalls.single.shortBy, m(400000));
+  });
 }
