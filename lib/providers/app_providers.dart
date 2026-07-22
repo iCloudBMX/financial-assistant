@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import '../core/allocation/allocation_plan.dart';
-import '../core/budget/category_budget_engine.dart';
 import '../core/goal/goal_engine.dart';
 import '../core/ledger/account.dart';
 import '../core/ledger/summary_engine.dart';
@@ -10,10 +9,8 @@ import '../core/money/currency.dart';
 import '../core/money/money.dart';
 import '../core/mortgage/mortgage_engine.dart';
 import '../core/time/financial_period.dart';
-import '../core/time/weekday.dart';
 import '../data/accounts/account_repository.dart';
 import '../data/allocation/allocation_plan_repository.dart';
-import '../data/budget/budget_repository.dart';
 import '../data/categories/category_model.dart';
 import '../data/categories/category_repository.dart';
 import '../data/db/app_database.dart';
@@ -167,10 +164,6 @@ MortgageSummaryView? _selectMortgageSummary(
   );
 }
 
-final budgetRepositoryProvider = Provider<BudgetRepository>(
-  (ref) => DriftBudgetRepository(ref.watch(databaseProvider)),
-);
-
 final allocationPlanRepositoryProvider = Provider<AllocationPlanRepository>(
   (ref) => DriftAllocationPlanRepository(
     ref.watch(databaseProvider),
@@ -301,68 +294,6 @@ final mortgagePaymentsProvider =
     FutureProvider.family<List<MortgagePayment>, int>((ref, mortgageId) async {
   ref.watch(ledgerRevisionProvider);
   return ref.watch(mortgageRepositoryProvider).payments(mortgageId);
-});
-
-/// A category with its spend and status for the month and the week.
-class CategoryBudgetView {
-  final Category category;
-  final Money monthSpent;
-  final Money weekSpent;
-  final CategoryLimitStatus monthStatus;
-  final CategoryLimitStatus weekStatus;
-  const CategoryBudgetView({
-    required this.category,
-    required this.monthSpent,
-    required this.weekSpent,
-    required this.monthStatus,
-    required this.weekStatus,
-  });
-}
-
-final categoryBudgetsProvider =
-    FutureProvider<List<CategoryBudgetView>>((ref) async {
-  ref.watch(ledgerRevisionProvider);
-  final settings = await ref.watch(settingsProvider.future);
-  final currency = settings.primaryCurrency;
-  final cats = await ref.watch(budgetRepositoryProvider).categoriesWithBudgets();
-  final entries = await ref.watch(ledgerRepositoryProvider).allEntries();
-  final now = DateTime.now();
-  final period = FinancialPeriod.containing(now, settings.periodStartDay);
-  final weekStart = startOfWeek(now, settings.weekStartIso);
-  final weekEnd = weekStart.add(const Duration(days: 7));
-
-  final monthByCat = categorySpent(entries, period, currency);
-  final weekByCat = categorySpent(
-    entries,
-    FinancialPeriod(weekStart, weekEnd, settings.periodStartDay),
-    currency,
-  );
-
-  Money zero() => Money.zero(currency);
-  Money? asMoney(int? minor) => minor == null ? null : Money(minor, currency);
-
-  return cats.map((c) {
-    final ms = monthByCat[c.id] ?? zero();
-    final ws = weekByCat[c.id] ?? zero();
-    return CategoryBudgetView(
-      category: c,
-      monthSpent: ms,
-      weekSpent: ws,
-      monthStatus: categoryStatus(ms, asMoney(c.monthlyLimitMinor)),
-      weekStatus: categoryStatus(ws, asMoney(c.weeklyLimitMinor)),
-    );
-  }).toList();
-});
-
-/// Archived (removed) categories, for the Budget page's "Olib tashlangan"
-/// restore view. History is preserved: removal is `archived = true`, never a
-/// delete, so these can be restored.
-final archivedCategoriesProvider = FutureProvider<List<Category>>((ref) async {
-  ref.watch(ledgerRevisionProvider);
-  final cats = await ref
-      .watch(budgetRepositoryProvider)
-      .categoriesWithBudgets(includeArchived: true);
-  return cats.where((c) => c.archived).toList(growable: false);
 });
 
 final safeLimitProvider = FutureProvider<SafeLimit>((ref) async {
