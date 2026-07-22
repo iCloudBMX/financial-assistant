@@ -38,7 +38,6 @@ import 'package:financial_assistant/data/recurring/recurring_model.dart';
 import 'package:financial_assistant/features/accounts/accounts_controller.dart';
 import 'package:financial_assistant/features/accounts/accounts_screen.dart';
 import 'package:financial_assistant/features/accounts/transfer_sheet.dart';
-import 'package:financial_assistant/features/budgets/budgets_screen.dart';
 import 'package:financial_assistant/features/budgets/category_edit_sheet.dart';
 import 'package:financial_assistant/features/expense_entry/expense_entry_sheet.dart';
 import 'package:financial_assistant/features/goals/goal_completed_dialog.dart';
@@ -987,47 +986,6 @@ void main() {
       await expectLater(
         find.byType(HomeScreen),
         matchesGoldenFile('baselines/home-error-light-390.png'),
-      );
-    });
-  });
-
-  group('Plan/Budget -- gap states', () {
-    testWidgets('loading state shows the centered spinner', (tester) async {
-      final (_, baseContainer) = await _freshContainer(tester);
-      final container = ProviderContainer(overrides: [
-        databaseProvider.overrideWithValue(baseContainer.read(databaseProvider)),
-        categoryBudgetsProvider.overrideWith((ref) => _never()),
-      ]);
-      addTearDown(container.dispose);
-      await _pumpLoading(tester,
-          child: UncontrolledProviderScope(
-              container: container, child: const BudgetsScreen()),
-          size: phone390);
-      expect(tester.takeException(), isNull);
-      await expectLater(
-        find.byType(BudgetsScreen),
-        matchesGoldenFile('baselines/plan-budget-loading-light-390.png'),
-      );
-    });
-
-    testWidgets('error state shows the approved inline error text',
-        (tester) async {
-      final (_, baseContainer) = await _freshContainer(tester);
-      final container = ProviderContainer(overrides: [
-        databaseProvider.overrideWithValue(baseContainer.read(databaseProvider)),
-        categoryBudgetsProvider.overrideWith((ref) => _boom()),
-      ]);
-      addTearDown(container.dispose);
-      await pumpVelora(
-        tester,
-        child: UncontrolledProviderScope(
-            container: container, child: const BudgetsScreen()),
-        size: phone390,
-      );
-      expect(tester.takeException(), isNull);
-      await expectLater(
-        find.byType(BudgetsScreen),
-        matchesGoldenFile('baselines/plan-budget-error-light-390.png'),
       );
     });
   });

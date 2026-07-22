@@ -14,7 +14,7 @@ class AppShell extends StatelessWidget {
     ),
     NavigationDestination(
       icon: Icon(Icons.account_tree_outlined),
-      label: 'Reja',
+      label: 'Taqsimlash',
     ),
     NavigationDestination(icon: Icon(Icons.flag_outlined), label: 'Maqsad'),
     NavigationDestination(icon: Icon(Icons.insights_outlined), label: 'Tahlil'),

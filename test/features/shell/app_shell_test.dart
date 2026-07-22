@@ -11,7 +11,7 @@ void main() {
   testWidgets('shows approved labels and preserves tab state', (tester) async {
     await _pumpShell(tester);
 
-    for (final label in ['Bugun', 'Tarix', 'Reja', 'Maqsad', 'Tahlil']) {
+    for (final label in ['Bugun', 'Tarix', 'Taqsimlash', 'Maqsad', 'Tahlil']) {
       expect(find.text(label), findsOneWidget);
     }
     expect(find.byType(IndexedStack), findsOneWidget);

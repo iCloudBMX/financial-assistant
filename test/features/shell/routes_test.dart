@@ -71,10 +71,10 @@ void main() {
       ),
     );
 
-    await tester.tap(find.text('Reja'));
+    await tester.tap(find.text('Taqsimlash'));
     await tester.pumpAndSettle();
     expect(router.routeInformationProvider.value.uri.path, '/plan');
-    expect(find.text('Budjet'), findsOneWidget);
+    expect(find.text('Taqsimlash rejasi'), findsOneWidget); // AllocationPlanScreen AppBar
 
     router.pushNamed(RouteNames.settings);
     await tester.pumpAndSettle();
@@ -84,11 +84,11 @@ void main() {
     router.pop();
     await tester.pumpAndSettle();
     expect(router.routeInformationProvider.value.uri.path, '/plan');
-    expect(find.text('Budjet'), findsOneWidget);
+    expect(find.text('Taqsimlash rejasi'), findsOneWidget); // AllocationPlanScreen AppBar
     expect(
-      tester.getSemantics(find.text('Reja')),
+      tester.getSemantics(find.text('Taqsimlash')),
       matchesSemantics(
-        label: 'Reja\nTab 3 of 5',
+        label: 'Taqsimlash\nTab 3 of 5',
         isFocusable: true,
         isSelected: true,
         isButton: true,

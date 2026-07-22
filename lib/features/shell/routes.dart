@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../accounts/accounts_screen.dart';
-import '../budgets/budgets_screen.dart';
+import '../allocation/allocation_plan_screen.dart';
 import '../goals/goals_screen.dart';
 import '../home/home_screen.dart';
 import '../onboarding/onboarding_screen.dart';
@@ -89,7 +89,7 @@ GoRouter buildRouter({required bool onboardingComplete}) => GoRouter(
               path: RoutePaths.plan,
               builder: (_, _) => const KeyedSubtree(
                 key: PageStorageKey('plan-tab'),
-                child: BudgetsScreen(),
+                child: AllocationPlanScreen(),
               ),
             ),
           ],
