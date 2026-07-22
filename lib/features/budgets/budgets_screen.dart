@@ -9,7 +9,7 @@ import '../../ui/components/category_icons.dart';
 import '../../ui/components/velora_button.dart';
 import '../../ui/components/velora_card.dart';
 import '../../ui/components/velora_sheet.dart';
-import '../allocation/allocation_template_screen.dart';
+import '../allocation/allocation_plan_screen.dart';
 import 'budget_labels.dart';
 import 'budgets_controller.dart';
 import 'category_edit_sheet.dart';
@@ -50,7 +50,7 @@ class _BudgetsScreenState extends ConsumerState<BudgetsScreen> {
                 onOpenCategories: () => showCategoryEditSheet(context),
                 onOpenAllocation: () => Navigator.of(context).push(
                   MaterialPageRoute(
-                      builder: (_) => const AllocationTemplateScreen()),
+                      builder: (_) => const AllocationPlanScreen()),
                 ),
               ),
               const SizedBox(height: VeloraSpacing.lg),

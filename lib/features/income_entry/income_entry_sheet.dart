@@ -14,12 +14,10 @@ import '../../ui/components/velora_button.dart';
 import '../../ui/components/velora_money_field.dart';
 import '../../ui/components/velora_sheet.dart';
 import '../accounts/accounts_controller.dart';
-import '../allocation/income_allocation_prompt.dart';
 import 'income_entry_controller.dart';
 
 /// Income entry (Velora design §6.4): the same money input, account picker,
-/// and optional-detail pattern as quick expense. After save the user chooses
-/// how to allocate the income.
+/// and optional-detail pattern as quick expense.
 Future<void> showIncomeEntrySheet(BuildContext context, WidgetRef ref) async {
   final settings = await ref.read(settingsProvider.future);
   final currency = settings.primaryCurrency;
@@ -34,7 +32,7 @@ Future<void> showIncomeEntrySheet(BuildContext context, WidgetRef ref) async {
   final defaultAccountId = accounts.first.id;
   if (!context.mounted) return;
 
-  final saved = await showModalBottomSheet<({int incomeId, Money amount})>(
+  await showModalBottomSheet<({int incomeId, Money amount})>(
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
@@ -43,11 +41,6 @@ Future<void> showIncomeEntrySheet(BuildContext context, WidgetRef ref) async {
       defaultAccountId: defaultAccountId,
     ),
   );
-
-  if (saved != null && context.mounted) {
-    await showAllocationChoice(context, ref,
-        incomeId: saved.incomeId, amount: saved.amount);
-  }
 }
 
 const _incomeTypeLabels = {
