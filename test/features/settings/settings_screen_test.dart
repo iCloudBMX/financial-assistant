@@ -38,7 +38,11 @@ void main() {
     // Sanity: the list tile shows the formatted (symbol-bearing) value.
     expect(find.text('500 000 so\u2018m'), findsOneWidget);
 
-    // Open the "Minimal zaxira" editor.
+    // Open the "Minimal zaxira" editor. The new "Kategoriyalar" row above it
+    // in the financial-preferences group pushes it below the default test
+    // viewport's fold, so it must be scrolled into view first.
+    await tester.ensureVisible(find.text('Minimal zaxira'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Minimal zaxira'));
     await tester.pumpAndSettle();
 

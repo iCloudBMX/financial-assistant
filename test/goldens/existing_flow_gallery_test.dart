@@ -38,7 +38,7 @@ import 'package:financial_assistant/data/recurring/recurring_model.dart';
 import 'package:financial_assistant/features/accounts/accounts_controller.dart';
 import 'package:financial_assistant/features/accounts/accounts_screen.dart';
 import 'package:financial_assistant/features/accounts/transfer_sheet.dart';
-import 'package:financial_assistant/features/budgets/category_edit_sheet.dart';
+import 'package:financial_assistant/features/categories/category_edit_sheet.dart';
 import 'package:financial_assistant/features/expense_entry/expense_entry_sheet.dart';
 import 'package:financial_assistant/features/goals/goal_completed_dialog.dart';
 import 'package:financial_assistant/features/goals/goal_controller.dart';
@@ -700,7 +700,7 @@ void main() {
       final (_, baseContainer) = await _freshContainer(tester);
       final container = ProviderContainer(overrides: [
         databaseProvider.overrideWithValue(baseContainer.read(databaseProvider)),
-        categoryBudgetsProvider.overrideWith((ref) => _never()),
+        categoriesProvider.overrideWith((ref) => _never()),
       ]);
       addTearDown(container.dispose);
       // The trigger screen itself has no spinner -- only the sheet it opens
@@ -742,7 +742,7 @@ void main() {
       final (_, baseContainer) = await _freshContainer(tester);
       final container = ProviderContainer(overrides: [
         databaseProvider.overrideWithValue(baseContainer.read(databaseProvider)),
-        categoryBudgetsProvider.overrideWith((ref) => _boom()),
+        categoriesProvider.overrideWith((ref) => _boom()),
       ]);
       addTearDown(container.dispose);
       await pumpVelora(tester,

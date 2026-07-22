@@ -4,6 +4,7 @@ import '../../core/money/currency.dart';
 import '../../core/money/money.dart';
 import '../../core/theme/velora_tokens.dart';
 import '../../data/settings/settings_model.dart';
+import '../categories/category_management_screen.dart';
 import 'settings_controller.dart';
 
 /// A group header for the grouped Settings layout (design spec sec. 6.12):
@@ -277,6 +278,17 @@ class SettingsScreen extends ConsumerWidget {
               const _SectionHeader('Moliyaviy sozlamalar'),
               _SettingsGroup(
                 children: [
+                  ListTile(
+                    key: const Key('settings-categories'),
+                    leading: const _RowIcon(Icons.category_outlined),
+                    title: const Text('Kategoriyalar'),
+                    trailing: const Icon(Icons.chevron_right,
+                        color: VeloraColors.muted),
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                          builder: (_) => const CategoryManagementScreen()),
+                    ),
+                  ),
                   ListTile(
                     leading: const _RowIcon(Icons.payments_outlined),
                     title: const Text('Valyuta'),
