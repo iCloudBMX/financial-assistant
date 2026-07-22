@@ -108,6 +108,18 @@ MigrationStrategy buildMigration(AppDatabase db) => MigrationStrategy(
             "UPDATE accounts_table SET role = 'savings' WHERE type = 'savings'",
           );
         }
+        if (from < 7) {
+          // v6 -> v7: add the allocation_plan_rules table and the settings
+          // source-account column for the manual card-based allocation plan.
+          // Additive only — the old bucket tables are dropped in a later
+          // migration once the new plan is fully wired up.
+          await m.createTable(db.allocationPlanRulesTable);
+          if (!await _hasColumn(
+              m, 'app_settings_table', 'allocation_source_account_id')) {
+            await m.addColumn(db.appSettingsTable,
+                db.appSettingsTable.allocationSourceAccountId);
+          }
+        }
       },
       beforeOpen: (details) async {
         await db.customStatement('PRAGMA foreign_keys = ON');

@@ -27,6 +27,7 @@ class AppSettingsTable extends Table {
       integer().withDefault(const Constant(0))();
   IntColumn get safetyBufferMinor =>
       integer().withDefault(const Constant(0))();
+  IntColumn get allocationSourceAccountId => integer().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -116,6 +117,14 @@ class IncomeAllocationsTable extends Table {
       integer().references(TransactionsTable, #id)();
   TextColumn get bucketKey => text()();
   IntColumn get amountMinor => integer()();
+}
+
+class AllocationPlanRulesTable extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get destinationAccountId =>
+      integer().references(AccountsTable, #id)();
+  IntColumn get amountMinor => integer()();
+  IntColumn get sortOrder => integer().withDefault(const Constant(0))();
 }
 
 class GoalsTable extends Table {
