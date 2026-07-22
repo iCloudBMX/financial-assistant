@@ -11,7 +11,6 @@ import '../../ui/components/velora_card.dart';
 import '../../ui/components/velora_sheet.dart';
 import '../allocation/allocation_template_screen.dart';
 import 'budget_labels.dart';
-import 'budget_summary_card.dart';
 import 'budgets_controller.dart';
 import 'category_edit_sheet.dart';
 
@@ -32,7 +31,6 @@ class _BudgetsScreenState extends ConsumerState<BudgetsScreen> {
   @override
   Widget build(BuildContext context) {
     final views = ref.watch(categoryBudgetsProvider);
-    final safeLimit = ref.watch(safeLimitProvider);
     final controller = ref.read(budgetsControllerProvider);
 
     return Scaffold(
@@ -56,14 +54,6 @@ class _BudgetsScreenState extends ConsumerState<BudgetsScreen> {
                 ),
               ),
               const SizedBox(height: VeloraSpacing.lg),
-              safeLimit.maybeWhen(
-                orElse: () => const SizedBox.shrink(),
-                data: (l) => Padding(
-                  padding: const EdgeInsets.only(bottom: VeloraSpacing.md),
-                  child: BudgetSummaryCard(limit: l),
-                ),
-              ),
-              const SizedBox(height: VeloraSpacing.sm),
               Row(
                 children: [
                   Expanded(
