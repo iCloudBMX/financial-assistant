@@ -109,6 +109,7 @@ class _HomeBody extends ConsumerWidget {
           onToggleHidden: () =>
               ref.read(balanceVisibilityProvider.notifier).update((v) => !v),
           onOpenAccounts: () => context.pushNamed(RouteNames.accounts),
+          onOpenSettings: () => context.pushNamed(RouteNames.settings),
         ),
         const SizedBox(height: VeloraSpacing.lg),
         if (d.safeLimit != null) ...[

@@ -15,6 +15,7 @@ class HomeHeader extends StatelessWidget {
     required this.hidden,
     required this.onToggleHidden,
     required this.onOpenAccounts,
+    required this.onOpenSettings,
   });
 
   /// The user's preferred name (may be empty before onboarding sets it).
@@ -25,6 +26,7 @@ class HomeHeader extends StatelessWidget {
   final bool hidden;
   final VoidCallback onToggleHidden;
   final VoidCallback onOpenAccounts;
+  final VoidCallback onOpenSettings;
 
   @override
   Widget build(BuildContext context) {
@@ -59,6 +61,13 @@ class HomeHeader extends StatelessWidget {
                 ),
               ),
             ),
+            _HeaderIconButton(
+              key: const Key('settings-open'),
+              icon: Icons.settings_outlined,
+              tooltip: 'Sozlamalar',
+              onPressed: onOpenSettings,
+            ),
+            const SizedBox(width: VeloraSpacing.sm),
             _HeaderIconButton(
               key: const Key('balance-privacy-toggle'),
               icon: hidden ? Icons.visibility_off : Icons.visibility,
