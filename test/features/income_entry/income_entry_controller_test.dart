@@ -54,7 +54,7 @@ void main() {
   const uzs = CurrencyRegistry.uzs;
   const usd = CurrencyRegistry.usd;
 
-  test('income is recorded undistributed and shows on the dashboard', () async {
+  test('income is recorded and shows on the dashboard', () async {
     final db = AppDatabase(NativeDatabase.memory());
     addTearDown(db.close);
     final c = ProviderContainer(overrides: [databaseProvider.overrideWithValue(db)]);
@@ -69,7 +69,6 @@ void main() {
 
     final data = await c.read(dashboardProvider.future);
     expect(data.monthIncome, const Money(5000000, uzs));
-    expect(data.undistributedFunds, const Money(5000000, uzs));
   });
 
   test('a recurring income also creates an active plan, returned in the result',

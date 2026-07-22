@@ -52,13 +52,6 @@ void main() {
     expect(m[2], const Money(50000, uzs));
   });
 
-  test('undistributed is income minus allocated', () {
-    final es = [
-      e(1, LedgerEntryType.income, 5000000, DateTime(2026, 7, 5), allocated: 2000000),
-    ];
-    expect(undistributed(es, uzs), const Money(3000000, uzs));
-  });
-
   test('totalsByCurrency sums balances per currency', () {
     const a1 = Account(id: 1, name: 'A', type: AccountType.cash,
         openingBalance: Money(1000000, uzs), icon: 'w', archived: false,

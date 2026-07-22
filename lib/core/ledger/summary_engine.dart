@@ -68,13 +68,3 @@ Map<int, Money> categorySpent(
   }
   return out;
 }
-
-Money undistributed(Iterable<LedgerEntry> entries, Currency currency) {
-  var sum = 0;
-  for (final e in entries) {
-    if (e.type != LedgerEntryType.income) continue;
-    if (e.amount.currency != currency) continue;
-    sum += e.amount.minorUnits - e.allocated.minorUnits;
-  }
-  return Money(sum, currency);
-}

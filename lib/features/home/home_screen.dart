@@ -6,7 +6,6 @@ import '../../core/theme/velora_tokens.dart';
 import '../../providers/app_providers.dart';
 import '../../ui/components/velora_async_state.dart';
 import '../accounts/transfer_sheet.dart';
-import '../allocation/allocation_plan_screen.dart';
 import '../expense_entry/expense_entry_sheet.dart';
 import '../goals/goal_contribute_sheet.dart';
 import '../goals/goal_detail_screen.dart';
@@ -81,9 +80,6 @@ class _HomeBody extends ConsumerWidget {
     final d = data;
     final hidden = ref.watch(balanceVisibilityProvider);
     final name = ref.watch(settingsProvider).asData?.value.name ?? '';
-    final hasUnallocated =
-        d.unallocatedEntryId != null &&
-        (d.unallocatedEntryAmount?.minorUnits ?? 0) > 0;
 
     final total =
         d.totals[d.primaryCurrency] ?? Money(0, d.primaryCurrency);
@@ -126,13 +122,6 @@ class _HomeBody extends ConsumerWidget {
           key: const Key('quick-actions-row'),
           onExpense: () => showExpenseEntrySheet(context, ref),
           onIncome: () => showIncomeEntrySheet(context, ref),
-          onAllocate: hasUnallocated
-              ? () => Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => const AllocationPlanScreen(),
-                  ),
-                )
-              : null,
           onGoalContribution: () => d.primaryGoal == null
               ? showGoalEditSheet(context, ref)
               : showGoalContributeSheet(
@@ -148,18 +137,6 @@ class _HomeBody extends ConsumerWidget {
                 )
               : showMortgagePaymentSheet(context, ref, d.mortgageSummary!.id),
         ),
-        if (hasUnallocated) ...[
-          const SizedBox(height: VeloraSpacing.md),
-          UnallocatedAlertCard(
-            key: const Key('unallocated-alert'),
-            amount: d.unallocatedEntryAmount!,
-            onAllocate: () => Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) => const AllocationPlanScreen(),
-              ),
-            ),
-          ),
-        ],
         const SizedBox(height: VeloraSpacing.md),
         BalanceCard(
           total: total,

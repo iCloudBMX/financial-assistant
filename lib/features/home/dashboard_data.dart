@@ -53,15 +53,7 @@ class DashboardData {
   final Money monthIncome;
   final Money monthExpense;
   final Money todaySpent;
-  final Money undistributedFunds; // unallocated income, all entries, summed
   final Currency primaryCurrency;
-
-  /// The most recently occurred income entry that still has an unallocated
-  /// remainder, if any. Drives the unallocated-income alert CTA and the
-  /// "allocation" quick action without HomeScreen touching the ledger
-  /// repository directly.
-  final int? unallocatedEntryId;
-  final Money? unallocatedEntryAmount;
 
   /// Safe-limit view model, resolved by `dashboardProvider` so the Home
   /// cards consume immutable values instead of watching providers directly.
@@ -81,10 +73,7 @@ class DashboardData {
     required this.monthIncome,
     required this.monthExpense,
     required this.todaySpent,
-    required this.undistributedFunds,
     required this.primaryCurrency,
-    this.unallocatedEntryId,
-    this.unallocatedEntryAmount,
     this.safeLimit,
     this.overspendCategories = const [],
     this.primaryGoal,
@@ -104,42 +93,15 @@ DashboardData buildDashboard({
   MortgageSummaryView? mortgageSummary,
 }) {
   final period = FinancialPeriod.containing(now, periodStartDay);
-  final latest = _latestUnallocatedIncome(entries, primaryCurrency);
   return DashboardData(
     totals: totalsByCurrency(accounts, entries),
     monthIncome: periodIncome(entries, period, primaryCurrency),
     monthExpense: periodExpense(entries, period, primaryCurrency),
     todaySpent: spentOn(now, entries, primaryCurrency),
-    undistributedFunds: undistributed(entries, primaryCurrency),
     primaryCurrency: primaryCurrency,
     safeLimit: safeLimit,
     overspendCategories: overspendCategories,
-    unallocatedEntryId: latest?.id,
-    // The remaining unallocated amount (amount − allocated), NOT the gross
-    // entry amount: this drives the Home "unallocated income" alert/quick
-    // action, which now opens AllocationPlanScreen rather than rebuilding a
-    // per-entry allocation.
-    unallocatedEntryAmount: latest == null
-        ? null
-        : Money(latest.amount.minorUnits - latest.allocated.minorUnits,
-            latest.amount.currency),
     primaryGoal: primaryGoal,
     mortgageSummary: mortgageSummary,
   );
-}
-
-/// The most recent income entry whose amount exceeds what has been
-/// allocated, i.e. `amount − allocated > 0`. Ties broken by insertion order
-/// (later entries in the iterable win) since `occurredAt` alone is not a
-/// stable tiebreaker.
-LedgerEntry? _latestUnallocatedIncome(
-    Iterable<LedgerEntry> entries, Currency currency) {
-  LedgerEntry? best;
-  for (final e in entries) {
-    if (e.type != LedgerEntryType.income) continue;
-    if (e.amount.currency != currency) continue;
-    if (e.amount.minorUnits - e.allocated.minorUnits <= 0) continue;
-    if (best == null || !e.occurredAt.isBefore(best.occurredAt)) best = e;
-  }
-  return best;
 }

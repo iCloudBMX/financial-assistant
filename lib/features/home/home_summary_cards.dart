@@ -1,30 +1,24 @@
 import 'package:flutter/material.dart';
 
-import '../../core/money/money.dart';
 import '../../core/theme/velora_tokens.dart';
-import '../../ui/components/velora_card.dart';
-import '../../ui/components/velora_status.dart';
 import 'dashboard_data.dart';
 
-/// One horizontal row of the five Home quick actions (§6.2 step 3): expense,
-/// income, allocation, goal contribution, mortgage payment. The first
-/// (expense) is the single coral primary action from the mockup; the rest use
-/// the soft plum tint. Callbacks are nullable so an action can be
-/// omitted/disabled when the destination has no meaningful target yet (e.g.
-/// nothing left to allocate).
+/// One horizontal row of the four Home quick actions (§6.2 step 3): expense,
+/// income, goal contribution, mortgage payment. The first (expense) is the
+/// single coral primary action from the mockup; the rest use the soft plum
+/// tint. Callbacks are nullable so an action can be omitted/disabled when the
+/// destination has no meaningful target yet.
 class QuickActionsRow extends StatelessWidget {
   const QuickActionsRow({
     super.key,
     required this.onExpense,
     required this.onIncome,
-    required this.onAllocate,
     required this.onGoalContribution,
     required this.onMortgagePayment,
   });
 
   final VoidCallback onExpense;
   final VoidCallback onIncome;
-  final VoidCallback? onAllocate;
   final VoidCallback onGoalContribution;
   final VoidCallback onMortgagePayment;
 
@@ -34,7 +28,6 @@ class QuickActionsRow extends StatelessWidget {
       _QuickAction(
           'expense', Icons.remove, 'Chiqim', onExpense, primary: true),
       _QuickAction('income', Icons.add, 'Kirim', onIncome),
-      _QuickAction('allocate', Icons.pie_chart_outline, 'Taqsimlash', onAllocate),
       _QuickAction('goal-contribution', Icons.flag_outlined, 'Maqsadga',
           onGoalContribution),
       _QuickAction('mortgage-payment', Icons.account_balance_outlined, "To'lov",
@@ -119,55 +112,6 @@ class _QuickActionButton extends StatelessWidget {
             ),
           ),
         ),
-      ),
-    );
-  }
-}
-
-/// The unallocated-income alert (§6.2 step 4). Shown by the caller only when
-/// the amount is non-zero — a constructive nudge, not an error, so it uses
-/// the "near" status tone rather than red (§ global constraints).
-class UnallocatedAlertCard extends StatelessWidget {
-  const UnallocatedAlertCard({
-    super.key,
-    required this.amount,
-    required this.onAllocate,
-  });
-
-  final Money amount;
-  final VoidCallback onAllocate;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    // A Column — not a Row — around the badge: `VeloraStatusBadge` sizes to
-    // its label's natural (unwrapped) width when a Row hands it unbounded
-    // space, which overflowed at 200% text scale. A Column bounds its width
-    // to the card, so the badge's own internal `Flexible` can wrap/ellipsize
-    // correctly.
-    return VeloraCard(
-      onTap: onAllocate,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const VeloraStatusBadge(
-            color: VeloraColors.apricot,
-            icon: Icons.info_outline,
-            label: 'Taqsimlanmagan',
-          ),
-          const SizedBox(height: VeloraSpacing.sm),
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  "${amount.format()} taqsimlanmagan",
-                  style: theme.textTheme.bodyMedium,
-                ),
-              ),
-              Icon(Icons.chevron_right, color: theme.colorScheme.outline),
-            ],
-          ),
-        ],
       ),
     );
   }

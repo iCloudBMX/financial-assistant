@@ -34,7 +34,7 @@ void main() {
 
   testWidgets(
       'renders the approved hierarchy: balance -> safe limit -> quick '
-      'actions -> unallocated alert -> goal -> mortgage', (t) async {
+      'actions -> goal -> mortgage', (t) async {
     final db = AppDatabase(NativeDatabase.memory());
     addTearDown(db.close);
     final container =
@@ -44,7 +44,6 @@ void main() {
     final accountId = await container.read(accountRepositoryProvider).create(
         name: 'Naqd', type: AccountType.cash,
         openingBalance: const Money(1000000, CurrencyRegistry.uzs), icon: 'w');
-    // An unallocated income entry so the unallocated-income alert renders.
     await container.read(ledgerRepositoryProvider).addIncome(
           accountId: accountId,
           amount: const Money(500000, CurrencyRegistry.uzs),
@@ -89,16 +88,14 @@ void main() {
     expect(find.byKey(const Key('balance-card')), findsOneWidget);
     expect(find.byKey(const Key('safe-limit-hero')), findsOneWidget);
     expect(find.byKey(const Key('quick-actions-row')), findsOneWidget);
-    expect(find.byKey(const Key('unallocated-alert')), findsOneWidget);
     expect(find.byKey(const Key('goal-summary-card')), findsOneWidget);
     expect(find.byKey(const Key('mortgage-summary-card')), findsOneWidget);
 
     // Velora redesign order: the safe-to-spend hero leads as the dominant
-    // decision card; the merged Balans card sits below quick actions and the
-    // unallocated alert, above the goal and mortgage cards.
+    // decision card; the merged Balans card sits below quick actions, above
+    // the goal and mortgage cards.
     expect(top('safe-limit-hero'), lessThan(top('quick-actions-row')));
-    expect(top('quick-actions-row'), lessThan(top('unallocated-alert')));
-    expect(top('unallocated-alert'), lessThan(top('balance-card')));
+    expect(top('quick-actions-row'), lessThan(top('balance-card')));
     expect(top('balance-card'), lessThan(top('goal-summary-card')));
     expect(top('goal-summary-card'), lessThan(top('mortgage-summary-card')));
 
