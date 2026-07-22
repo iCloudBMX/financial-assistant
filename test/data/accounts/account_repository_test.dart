@@ -79,4 +79,16 @@ void main() {
     // list() reads role too
     expect((await repo.list()).single.role, AccountRole.credit);
   });
+
+  test('setType updates the stored type', () async {
+    final id = await repo.create(
+        name: 'A',
+        type: AccountType.cash,
+        openingBalance: const Money(0, uzs),
+        icon: 'w');
+    await repo.setType(id, AccountType.bankCard);
+    expect((await repo.byId(id))!.type, AccountType.bankCard);
+    // list() reads type too
+    expect((await repo.list()).single.type, AccountType.bankCard);
+  });
 }

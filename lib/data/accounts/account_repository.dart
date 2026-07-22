@@ -16,6 +16,7 @@ abstract class AccountRepository {
   Future<void> rename(int id, String name);
   Future<void> setIcon(int id, String icon);
   Future<void> setRole(int id, AccountRole role);
+  Future<void> setType(int id, AccountType type);
   Future<void> setArchived(int id, bool archived);
   Future<void> reorder(List<int> orderedIds);
   Future<List<Account>> list({bool includeArchived = false});
@@ -76,6 +77,12 @@ class DriftAccountRepository implements AccountRepository {
   Future<void> setRole(int id, AccountRole role) async {
     await (db.update(db.accountsTable)..where((t) => t.id.equals(id)))
         .write(AccountsTableCompanion(role: Value(role.name)));
+  }
+
+  @override
+  Future<void> setType(int id, AccountType type) async {
+    await (db.update(db.accountsTable)..where((t) => t.id.equals(id)))
+        .write(AccountsTableCompanion(type: Value(type.name)));
   }
 
   @override
