@@ -101,7 +101,34 @@ void main() {
     expect(after, moreOrLessEquals(before, epsilon: 0.5));
   });
 
-  testWidgets('tapping an account tile opens the balance-adjust sheet',
+  testWidgets('tapping an account tile opens the full edit sheet', (tester) async {
+    final db = AppDatabase(NativeDatabase.memory());
+    addTearDown(db.close);
+    final container = ProviderContainer(
+        overrides: [databaseProvider.overrideWithValue(db)]);
+    addTearDown(container.dispose);
+    await container.read(accountsControllerProvider.notifier).createAccount(
+        name: 'Naqd', type: AccountType.cash,
+        openingBalance: const Money(500000, CurrencyRegistry.uzs), icon: 'wallet');
+
+    await tester.pumpWidget(UncontrolledProviderScope(
+      container: container,
+      child: const MaterialApp(home: AccountsScreen()),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Naqd'));
+    await tester.pumpAndSettle();
+
+    // Edit-mode title, and the balance field prefilled with the current
+    // balance (grouped, symbol-less — Money.formatNumber()).
+    expect(find.text('Hisobni tahrirlash'), findsOneWidget);
+    expect(
+        find.text(const Money(500000, CurrencyRegistry.uzs).formatNumber()),
+        findsOneWidget);
+  });
+
+  testWidgets('editing an account name from the tile updates the list',
       (tester) async {
     final db = AppDatabase(NativeDatabase.memory());
     addTearDown(db.close);
@@ -121,6 +148,12 @@ void main() {
     await tester.tap(find.text('Naqd'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Haqiqiy balansni kiriting'), findsOneWidget);
+    // The name field is the first TextField in the sheet.
+    await tester.enterText(find.byType(TextField).first, 'Karta');
+    await tester.tap(find.text('Saqlash'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Karta'), findsOneWidget);
+    expect(find.text('Naqd'), findsNothing);
   });
 }

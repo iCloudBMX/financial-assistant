@@ -5,7 +5,6 @@ import '../../ui/components/velora_async_state.dart';
 import 'account_edit_sheet.dart';
 import 'account_labels.dart';
 import 'accounts_controller.dart';
-import 'balance_adjust_sheet.dart';
 import 'transfer_sheet.dart';
 
 class AccountsScreen extends ConsumerWidget {
@@ -77,8 +76,8 @@ class AccountsScreen extends ConsumerWidget {
                   return _AccountCard(
                     key: Key('account_${it.account.id}'),
                     item: it,
-                    onTap: () =>
-                        showBalanceAdjustSheet(context, ref, it.account.id),
+                    onTap: () => showAccountEditSheet(context, ref,
+                        accountId: it.account.id),
                     onArchive: () => ref
                         .read(accountsControllerProvider.notifier)
                         .archive(it.account.id),
