@@ -76,4 +76,37 @@ void main() {
     final list = await c.read(accountsControllerProvider.future);
     expect(list.single.balance, const Money(950000, uzs));
   });
+
+  test('edit updates name, type and role together', () async {
+    final c = makeContainer();
+    final a = await add(c, 'Old', 1000000);
+    await c.read(accountsControllerProvider.notifier).edit(
+        id: a, name: 'New', type: AccountType.bankCard, role: AccountRole.reserve);
+    final acc = (await c.read(accountsControllerProvider.future)).single.account;
+    expect(acc.name, 'New');
+    expect(acc.type, AccountType.bankCard);
+    expect(acc.role, AccountRole.reserve);
+  });
+
+  test('edit with realBalance adjusts the balance to the real value', () async {
+    final c = makeContainer();
+    final a = await add(c, 'A', 1000000);
+    await c.read(accountsControllerProvider.notifier)
+        .edit(id: a, realBalance: const Money(950000, uzs));
+    final list = await c.read(accountsControllerProvider.future);
+    expect(list.single.balance, const Money(950000, uzs));
+  });
+
+  test('edit without realBalance adds no ledger entry', () async {
+    final c = makeContainer();
+    final a = await add(c, 'A', 1000000);
+    final before =
+        (await c.read(ledgerRepositoryProvider).allEntries()).length;
+    await c.read(accountsControllerProvider.notifier).edit(id: a, name: 'B');
+    final after =
+        (await c.read(ledgerRepositoryProvider).allEntries()).length;
+    expect(after, before);
+    final list = await c.read(accountsControllerProvider.future);
+    expect(list.single.balance, const Money(1000000, uzs));
+  });
 }

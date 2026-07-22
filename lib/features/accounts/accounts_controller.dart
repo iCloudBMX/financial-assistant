@@ -79,6 +79,27 @@ class AccountsController extends AsyncNotifier<List<AccountWithBalance>> {
         accountId: accountId, realBalance: realBalance, occurredAt: DateTime.now());
     await _invalidate();
   }
+
+  /// Applies a partial edit to an account. Only the non-null fields are
+  /// written, so unchanged fields cause no DB write and an untouched balance
+  /// creates no "Balans tuzatish" ledger entry. Invalidates once at the end.
+  Future<void> edit({
+    required int id,
+    String? name,
+    AccountType? type,
+    AccountRole? role,
+    Money? realBalance,
+  }) async {
+    final repo = ref.read(accountRepositoryProvider);
+    if (name != null) await repo.rename(id, name);
+    if (type != null) await repo.setType(id, type);
+    if (role != null) await repo.setRole(id, role);
+    if (realBalance != null) {
+      await ref.read(ledgerRepositoryProvider).adjustBalance(
+          accountId: id, realBalance: realBalance, occurredAt: DateTime.now());
+    }
+    await _invalidate();
+  }
 }
 
 final accountsControllerProvider =
