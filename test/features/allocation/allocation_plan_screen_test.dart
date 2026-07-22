@@ -121,4 +121,72 @@ void main() {
     await tester.pump(const Duration(seconds: 5));
     await tester.pumpAndSettle();
   });
+
+  testWidgets('swiping a rule row deletes it', (tester) async {
+    final (_, container, src, dst) = await seed();
+    await container.read(allocationPlanControllerProvider).setSource(src);
+    await container.read(allocationPlanControllerProvider).saveRules([
+      AllocationRule(
+          destinationAccountId: dst,
+          amount: const Money(1000000, uzs),
+          sortOrder: 0),
+    ]);
+
+    await tester.pumpWidget(UncontrolledProviderScope(
+      container: container,
+      child: const MaterialApp(home: AllocationPlanScreen()),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.text('Kredit'), findsWidgets);
+
+    // Swipe the row left to delete it.
+    await tester.drag(
+        find.byKey(const Key('plan-rule-0')), const Offset(-500, 0));
+    await tester.pumpAndSettle();
+
+    // The row is gone and the empty-rules hint is back; the shorter list
+    // was persisted.
+    expect(find.text('Hali qator yo\'q. "Yangi qator" bilan qo\'shing.'),
+        findsOneWidget);
+    final plan = await container.read(allocationPlanProvider.future);
+    expect(plan.rules, isEmpty);
+
+    // Let the undo snackbar's backstop timer elapse.
+    await tester.pump(const Duration(seconds: 5));
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('undo restores a swiped rule', (tester) async {
+    final (_, container, src, dst) = await seed();
+    await container.read(allocationPlanControllerProvider).setSource(src);
+    await container.read(allocationPlanControllerProvider).saveRules([
+      AllocationRule(
+          destinationAccountId: dst,
+          amount: const Money(1000000, uzs),
+          sortOrder: 0),
+    ]);
+
+    await tester.pumpWidget(UncontrolledProviderScope(
+      container: container,
+      child: const MaterialApp(home: AllocationPlanScreen()),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.drag(
+        find.byKey(const Key('plan-rule-0')), const Offset(-500, 0));
+    await tester.pumpAndSettle();
+    expect(find.text('Bekor qilish'), findsOneWidget);
+    final afterDelete = await container.read(allocationPlanProvider.future);
+    expect(afterDelete.rules, isEmpty);
+
+    // Tap undo -> the rule comes back, persisted.
+    await tester.tap(find.text('Bekor qilish'));
+    await tester.pumpAndSettle();
+    final restored = await container.read(allocationPlanProvider.future);
+    expect(restored.rules.length, 1);
+    expect(restored.rules.first.destinationAccountId, dst);
+
+    await tester.pump(const Duration(seconds: 5));
+    await tester.pumpAndSettle();
+  });
 }

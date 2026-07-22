@@ -61,6 +61,21 @@ class _PlanBody extends ConsumerStatefulWidget {
 class _PlanBodyState extends ConsumerState<_PlanBody> {
   bool _sourceDefaultScheduled = false;
 
+  // Rows the user has swiped away but whose async delete has not yet landed in
+  // the reloaded plan. Hidden from the build immediately so the dismissed
+  // Dismissible leaves the tree this frame (otherwise Flutter asserts that a
+  // dismissed widget is still present). Reconciled in didUpdateWidget once the
+  // shorter (or restored) list arrives.
+  final Set<int> _pendingDelete = {};
+
+  @override
+  void didUpdateWidget(covariant _PlanBody oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.plan.rules.length != widget.plan.rules.length) {
+      _pendingDelete.clear();
+    }
+  }
+
   Money? _sourceBalance() {
     for (final a in widget.accounts) {
       if (a.account.id == widget.plan.sourceAccountId) return a.balance;
@@ -135,9 +150,26 @@ class _PlanBodyState extends ConsumerState<_PlanBody> {
     await ref.read(allocationPlanControllerProvider).saveRules(next);
   }
 
-  Future<void> _deleteRule(int index) async {
-    final next = [...widget.plan.rules]..removeAt(index);
+  // Swipe-to-delete. The row is already hidden via _pendingDelete; persist the
+  // shorter list, then offer an Undo that re-saves the exact prior list.
+  Future<void> _deleteRuleWithUndo(BuildContext context, int index) async {
+    final previous = [...widget.plan.rules];
+    final next = [...previous]..removeAt(index);
+    // Hide the row this frame so the dismissed Dismissible leaves the tree
+    // before its next build (the async save + reload lands a frame later).
+    setState(() => _pendingDelete.add(index));
     await ref.read(allocationPlanControllerProvider).saveRules(next);
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showAutoDismissSnackBar(
+      SnackBar(
+        content: const Text('Qator o\'chirildi'),
+        action: SnackBarAction(
+          label: 'Bekor qilish',
+          onPressed: () =>
+              ref.read(allocationPlanControllerProvider).saveRules(previous),
+        ),
+      ),
+    );
   }
 
   @override
@@ -224,49 +256,64 @@ class _PlanBodyState extends ConsumerState<_PlanBody> {
                 )
               else
                 for (var i = 0; i < plan.rules.length; i++)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: VeloraSpacing.sm),
-                    child: VeloraCard(
-                      onTap: () => _editRule(context, i),
-                      child: Row(
-                        children: [
-                          if (accountById[plan.rules[i].destinationAccountId] !=
-                              null)
-                            Padding(
-                              padding: const EdgeInsets.only(
-                                  right: VeloraSpacing.sm),
-                              child: Icon(
-                                accountTypeIcon(
-                                  accountById[plan.rules[i].destinationAccountId]!
-                                      .type,
-                                  icon: accountById[
-                                          plan.rules[i].destinationAccountId]!
-                                      .icon,
+                  if (!_pendingDelete.contains(i))
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: VeloraSpacing.sm),
+                      // Swipe left to delete (mobile-native affordance; there is
+                      // no ⊖ button). Undo is offered via a snackbar.
+                      child: Dismissible(
+                        key: Key('plan-rule-$i'),
+                        direction: DismissDirection.endToStart,
+                        onDismissed: (_) => _deleteRuleWithUndo(context, i),
+                        background: Container(
+                          alignment: Alignment.centerRight,
+                          padding: const EdgeInsets.only(right: VeloraSpacing.lg),
+                          decoration: BoxDecoration(
+                            color: VeloraColors.critical,
+                            borderRadius:
+                                BorderRadius.circular(VeloraRadii.card),
+                          ),
+                          child: const Icon(Icons.delete_outline,
+                              color: Colors.white),
+                        ),
+                        child: VeloraCard(
+                          onTap: () => _editRule(context, i),
+                          child: Row(
+                            children: [
+                              if (accountById[
+                                      plan.rules[i].destinationAccountId] !=
+                                  null)
+                                Padding(
+                                  padding: const EdgeInsets.only(
+                                      right: VeloraSpacing.sm),
+                                  child: Icon(
+                                    accountTypeIcon(
+                                      accountById[plan
+                                              .rules[i].destinationAccountId]!
+                                          .type,
+                                      icon: accountById[plan
+                                              .rules[i].destinationAccountId]!
+                                          .icon,
+                                    ),
+                                    color: VeloraColors.muted,
+                                  ),
                                 ),
-                                color: VeloraColors.muted,
+                              Expanded(
+                                child: Text(
+                                  nameOf[plan.rules[i].destinationAccountId] ??
+                                      'O\'chirilgan karta',
+                                  style: theme.textTheme.titleMedium,
+                                ),
                               ),
-                            ),
-                          Expanded(
-                            child: Text(
-                              nameOf[plan.rules[i].destinationAccountId] ??
-                                  'O\'chirilgan karta',
-                              style: theme.textTheme.titleMedium,
-                            ),
+                              Text(plan.rules[i].amount.format(),
+                                  style: theme.textTheme.titleMedium?.copyWith(
+                                      color: VeloraColors.plum,
+                                      fontWeight: FontWeight.w800)),
+                            ],
                           ),
-                          Text(plan.rules[i].amount.format(),
-                              style: theme.textTheme.titleMedium?.copyWith(
-                                  color: VeloraColors.plum,
-                                  fontWeight: FontWeight.w800)),
-                          IconButton(
-                            key: Key('plan-delete-rule-$i'),
-                            icon: const Icon(Icons.remove_circle_outline,
-                                color: VeloraColors.critical),
-                            onPressed: () => _deleteRule(i),
-                          ),
-                        ],
+                        ),
                       ),
                     ),
-                  ),
             ],
           ),
         ),
