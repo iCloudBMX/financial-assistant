@@ -19,6 +19,7 @@ class AppSettings {
   final SavingsRolloverMode savingsRolloverMode;
   final Money variableBudget;
   final Money safetyBuffer;
+  final int? allocationSourceAccountId;
 
   const AppSettings({
     required this.name,
@@ -34,6 +35,7 @@ class AppSettings {
     required this.savingsRolloverMode,
     this.variableBudget = const Money(0, CurrencyRegistry.uzs),
     this.safetyBuffer = const Money(0, CurrencyRegistry.uzs),
+    this.allocationSourceAccountId,
   });
 
   AppSettings copyWith({
@@ -50,6 +52,7 @@ class AppSettings {
     SavingsRolloverMode? savingsRolloverMode,
     Money? variableBudget,
     Money? safetyBuffer,
+    int? allocationSourceAccountId,
   }) =>
       AppSettings(
         name: name ?? this.name,
@@ -65,5 +68,7 @@ class AppSettings {
         savingsRolloverMode: savingsRolloverMode ?? this.savingsRolloverMode,
         variableBudget: variableBudget ?? this.variableBudget,
         safetyBuffer: safetyBuffer ?? this.safetyBuffer,
+        allocationSourceAccountId:
+            allocationSourceAccountId ?? this.allocationSourceAccountId,
       );
 }

@@ -84,6 +84,14 @@ void main() {
     await db.close();
   });
 
+  test('allocationSourceAccountId round-trips (and defaults to null)', () async {
+    final base = await repo.read();
+    expect(base.allocationSourceAccountId, null);
+    await repo.write(base.copyWith(allocationSourceAccountId: 7));
+    final back = await repo.read();
+    expect(back.allocationSourceAccountId, 7);
+  });
+
   test('write() preserves the untracked notificationFlagsJson column', () async {
     // Seed a non-default value directly in the DB, then perform a normal write().
     await (db.update(db.appSettingsTable)..where((t) => t.id.equals(0))).write(

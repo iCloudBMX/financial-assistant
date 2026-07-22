@@ -41,6 +41,7 @@ class DriftSettingsRepository implements SettingsRepository {
         row.safetyBufferMinor,
         CurrencyRegistry.byCode(row.primaryCurrency),
       ),
+      allocationSourceAccountId: row.allocationSourceAccountId,
     );
   }
 
@@ -63,6 +64,7 @@ class DriftSettingsRepository implements SettingsRepository {
         savingsRolloverMode: Value(s.savingsRolloverMode.name),
         variableBudgetMinor: Value(s.variableBudget.minorUnits),
         safetyBufferMinor: Value(s.safetyBuffer.minorUnits),
+        allocationSourceAccountId: Value(s.allocationSourceAccountId),
       ),
     );
   }
