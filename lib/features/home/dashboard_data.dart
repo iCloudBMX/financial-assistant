@@ -61,10 +61,6 @@ class DashboardData {
   /// safe-limit engine); always populated when assembled by the provider.
   final SafeLimit? safeLimit;
 
-  /// Names of variable categories over their monthly limit — the offenders
-  /// line under the safe-limit hero when it is over.
-  final List<String> overspendCategories;
-
   final PrimaryGoalSummary? primaryGoal;
   final MortgageSummaryView? mortgageSummary;
 
@@ -75,7 +71,6 @@ class DashboardData {
     required this.todaySpent,
     required this.primaryCurrency,
     this.safeLimit,
-    this.overspendCategories = const [],
     this.primaryGoal,
     this.mortgageSummary,
   });
@@ -88,7 +83,6 @@ DashboardData buildDashboard({
   required int periodStartDay,
   required DateTime now,
   SafeLimit? safeLimit,
-  List<String> overspendCategories = const [],
   PrimaryGoalSummary? primaryGoal,
   MortgageSummaryView? mortgageSummary,
 }) {
@@ -100,7 +94,6 @@ DashboardData buildDashboard({
     todaySpent: spentOn(now, entries, primaryCurrency),
     primaryCurrency: primaryCurrency,
     safeLimit: safeLimit,
-    overspendCategories: overspendCategories,
     primaryGoal: primaryGoal,
     mortgageSummary: mortgageSummary,
   );

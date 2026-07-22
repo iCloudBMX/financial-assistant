@@ -112,10 +112,7 @@ class _HomeBody extends ConsumerWidget {
         ),
         const SizedBox(height: VeloraSpacing.lg),
         if (d.safeLimit != null) ...[
-          SafeLimitCard(
-            limit: d.safeLimit!,
-            overspendCategories: d.overspendCategories,
-          ),
+          SafeLimitCard(limit: d.safeLimit!),
           const SizedBox(height: VeloraSpacing.md),
         ],
         QuickActionsRow(

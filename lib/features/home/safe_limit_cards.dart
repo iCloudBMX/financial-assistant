@@ -8,18 +8,16 @@ import '../../core/theme/velora_tokens.dart';
 /// The approved mockup makes this the one filled plum hero on Home: white
 /// amount on Velora Plum, an apricot progress track showing how much of the
 /// day's limit is left, and a plain-language note. A pure value widget: it
-/// renders the already-resolved [limit] and [overspendCategories] that
-/// `dashboardProvider` folded into `DashboardData`, per the "widgets consume
-/// immutable values, not providers" boundary.
+/// renders the already-resolved [limit] that `dashboardProvider` folded into
+/// `DashboardData`, per the "widgets consume immutable values, not
+/// providers" boundary.
 class SafeLimitCard extends StatelessWidget {
   const SafeLimitCard({
     super.key,
     required this.limit,
-    this.overspendCategories = const [],
   });
 
   final SafeLimit limit;
-  final List<String> overspendCategories;
 
   @override
   Widget build(BuildContext context) {
@@ -109,14 +107,6 @@ class SafeLimitCard extends StatelessWidget {
                 valueColor:
                     const AlwaysStoppedAnimation(VeloraColors.apricot),
               ),
-            ),
-          ],
-          if (status == VeloraStatus.over && overspendCategories.isNotEmpty) ...[
-            const SizedBox(height: VeloraSpacing.sm),
-            Text(
-              'Limitdan chiqqan: ${overspendCategories.join(', ')}',
-              style: theme.textTheme.bodySmall
-                  ?.copyWith(color: VeloraColors.apricot),
             ),
           ],
         ],

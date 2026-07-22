@@ -72,29 +72,6 @@ void main() {
     expect(find.textContaining('BUGUN QOLDI'), findsOneWidget);
   });
 
-  testWidgets('over-limit card renders the offenders line', (tester) async {
-    const uzs = CurrencyRegistry.uzs;
-    // A limit already over for today (todayRemaining negative → status over).
-    const limit = SafeLimit(
-      spendable: Money(0, uzs),
-      perDay: Money(50000, uzs),
-      daysLeft: 5,
-      todaySpent: Money(80000, uzs),
-      todayRemaining: Money(-30000, uzs),
-    );
-
-    await tester.pumpWidget(
-      const MaterialApp(
-        home: Scaffold(
-          body: SafeLimitCard(limit: limit, overspendCategories: ['Oziq']),
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    expect(find.textContaining('Limitdan chiqqan: Oziq'), findsOneWidget);
-  });
-
   testWidgets('over-limit hero shows zero left and plain-language overage',
       (tester) async {
     const uzs = CurrencyRegistry.uzs;
