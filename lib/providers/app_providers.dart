@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import '../core/allocation/allocation_models.dart';
+import '../core/allocation/allocation_plan.dart';
 import '../core/budget/category_budget_engine.dart';
 import '../core/goal/goal_engine.dart';
 import '../core/ledger/account.dart';
@@ -12,6 +13,7 @@ import '../core/mortgage/mortgage_engine.dart';
 import '../core/time/financial_period.dart';
 import '../core/time/weekday.dart';
 import '../data/accounts/account_repository.dart';
+import '../data/allocation/allocation_plan_repository.dart';
 import '../data/allocation/allocation_repository.dart';
 import '../data/budget/budget_repository.dart';
 import '../data/categories/category_model.dart';
@@ -188,6 +190,18 @@ final allocationRepositoryProvider = Provider<AllocationRepository>(
 final allocationTemplateProvider = FutureProvider<AllocationTemplate>((ref) {
   ref.watch(ledgerRevisionProvider);
   return ref.watch(allocationRepositoryProvider).template();
+});
+
+final allocationPlanRepositoryProvider = Provider<AllocationPlanRepository>(
+  (ref) => DriftAllocationPlanRepository(
+    ref.watch(databaseProvider),
+    ref.watch(accountRepositoryProvider),
+  ),
+);
+
+final allocationPlanProvider = FutureProvider<AllocationPlan>((ref) {
+  ref.watch(ledgerRevisionProvider);
+  return ref.watch(allocationPlanRepositoryProvider).plan();
 });
 
 final goalRepositoryProvider = Provider<GoalRepository>(
