@@ -126,6 +126,42 @@ void main() {
     expect(
         find.text(const Money(500000, CurrencyRegistry.uzs).formatNumber()),
         findsOneWidget);
+
+    // Edit mode pre-selects the account's current type and role chips.
+    expect(
+        tester.widget<ChoiceChip>(find.byKey(const Key('account-type-cash'))).selected,
+        isTrue);
+    expect(
+        tester.widget<ChoiceChip>(find.byKey(const Key('account-role-spending'))).selected,
+        isTrue);
+  });
+
+  testWidgets('clearing the name and saving leaves the account name unchanged',
+      (tester) async {
+    final db = AppDatabase(NativeDatabase.memory());
+    addTearDown(db.close);
+    final container = ProviderContainer(
+        overrides: [databaseProvider.overrideWithValue(db)]);
+    addTearDown(container.dispose);
+    await container.read(accountsControllerProvider.notifier).createAccount(
+        name: 'Naqd', type: AccountType.cash,
+        openingBalance: const Money(500000, CurrencyRegistry.uzs), icon: 'wallet');
+
+    await tester.pumpWidget(UncontrolledProviderScope(
+      container: container,
+      child: const MaterialApp(home: AccountsScreen()),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Naqd'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byKey(const Key('account-name-field')), '');
+    await tester.tap(find.text('Saqlash'));
+    await tester.pumpAndSettle();
+
+    // Empty name is treated as unchanged — the account keeps its name.
+    expect(find.text('Naqd'), findsOneWidget);
   });
 
   testWidgets('editing an account name from the tile updates the list',
@@ -148,8 +184,7 @@ void main() {
     await tester.tap(find.text('Naqd'));
     await tester.pumpAndSettle();
 
-    // The name field is the first TextField in the sheet.
-    await tester.enterText(find.byType(TextField).first, 'Karta');
+    await tester.enterText(find.byKey(const Key('account-name-field')), 'Karta');
     await tester.tap(find.text('Saqlash'));
     await tester.pumpAndSettle();
 

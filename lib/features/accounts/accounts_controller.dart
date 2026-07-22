@@ -71,15 +71,6 @@ class AccountsController extends AsyncNotifier<List<AccountWithBalance>> {
     return r;
   }
 
-  Future<void> adjust({
-    required int accountId,
-    required Money realBalance,
-  }) async {
-    await ref.read(ledgerRepositoryProvider).adjustBalance(
-        accountId: accountId, realBalance: realBalance, occurredAt: DateTime.now());
-    await _invalidate();
-  }
-
   /// Applies a partial edit to an account. Only the non-null fields are
   /// written, so unchanged fields cause no DB write and an untouched balance
   /// creates no "Balans tuzatish" ledger entry. Invalidates once at the end.

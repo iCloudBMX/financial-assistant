@@ -119,6 +119,7 @@ class _AccountEditSheetBodyState extends ConsumerState<_AccountEditSheetBody> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           TextField(
+            key: const Key('account-name-field'),
             controller: _nameCtrl,
             decoration: const InputDecoration(labelText: 'Nomi'),
           ),

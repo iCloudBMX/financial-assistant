@@ -68,15 +68,6 @@ void main() {
     expect(bal('B'), const Money(300000, uzs));
   });
 
-  test('adjust makes the balance equal the real value', () async {
-    final c = makeContainer();
-    final a = await add(c, 'A', 1000000);
-    await c.read(accountsControllerProvider.notifier)
-        .adjust(accountId: a, realBalance: const Money(950000, uzs));
-    final list = await c.read(accountsControllerProvider.future);
-    expect(list.single.balance, const Money(950000, uzs));
-  });
-
   test('edit updates name, type and role together', () async {
     final c = makeContainer();
     final a = await add(c, 'Old', 1000000);
