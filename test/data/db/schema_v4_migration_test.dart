@@ -20,8 +20,6 @@ class _V3AppDatabase extends AppDatabase {
           await m.createTable(categoriesTable);
           await m.createTable(transactionsTable);
           await m.createTable(recurringIncomePlansTable);
-          await m.createTable(allocationDirectionsTable);
-          await m.createTable(incomeAllocationsTable);
           await into(appSettingsTable)
               .insert(const AppSettingsTableCompanion(id: Value(0)));
         },

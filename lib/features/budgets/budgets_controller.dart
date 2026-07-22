@@ -12,11 +12,11 @@ class BudgetsController {
       ref.read(ledgerRevisionProvider.notifier).update((n) => n + 1);
 
   /// Sets `settings.variableBudget`, the numerator of the daily safe limit.
-  /// The budget page no longer has its own variable-budget editor, but the
-  /// allocation flow still writes this (see
-  /// `allocation/variable_budget_offer.dart`'s post-confirm "update variable
-  /// budget?" prompt), so this stays even though the rest of Task 7 removed
-  /// its sibling budget-page settings methods.
+  /// The budget page no longer has its own variable-budget editor, and the
+  /// old bucket-allocation flow that used to write this via a post-confirm
+  /// prompt was removed in Task 9. Kept even though it is currently unused
+  /// (see the settings field itself, which stays deliberately) — it is
+  /// out of scope to chase removing it.
   Future<void> setVariableBudget(Money value) async {
     final repo = ref.read(settingsRepositoryProvider);
     final current = await repo.read();

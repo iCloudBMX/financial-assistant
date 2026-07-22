@@ -1,6 +1,5 @@
 import 'package:drift/drift.dart';
 import 'app_database.dart';
-import 'default_allocation.dart';
 import 'default_categories.dart';
 
 /// Stepwise migrations. Each future schema bump adds a `from: N` branch.
@@ -29,7 +28,6 @@ MigrationStrategy buildMigration(AppDatabase db) => MigrationStrategy(
             .into(db.appSettingsTable)
             .insert(const AppSettingsTableCompanion(id: Value(0)));
         await _seedDefaultCategories(db);
-        await seedDefaultAllocationTemplate(db);
       },
       onUpgrade: (Migrator m, int from, int to) async {
         if (from < 2) {
@@ -43,8 +41,10 @@ MigrationStrategy buildMigration(AppDatabase db) => MigrationStrategy(
           await _seedDefaultCategories(db);
         }
         if (from < 3) {
-          // v2 -> v3: category budget columns, variable budget + safety buffer
-          // settings, and the two allocation tables.
+          // v2 -> v3: category budget columns and variable budget + safety
+          // buffer settings. (This branch originally also created the two
+          // bucket-allocation tables; those were dropped in v7 along with the
+          // rest of the abstract-bucket system — see the `from < 7` branch.)
           //
           // Each `addColumn` is guarded by `_hasColumn`: when this branch
           // runs in the same `onUpgrade` pass as `from < 2` (e.g. a v1
@@ -75,9 +75,6 @@ MigrationStrategy buildMigration(AppDatabase db) => MigrationStrategy(
             await m.addColumn(
                 db.appSettingsTable, db.appSettingsTable.safetyBufferMinor);
           }
-          await m.createTable(db.allocationDirectionsTable);
-          await m.createTable(db.incomeAllocationsTable);
-          await seedDefaultAllocationTemplate(db);
         }
         if (from < 4) {
           // v3 -> v4: goals + goal_contributions. Both tables are new in v4, so
@@ -110,15 +107,21 @@ MigrationStrategy buildMigration(AppDatabase db) => MigrationStrategy(
         }
         if (from < 7) {
           // v6 -> v7: add the allocation_plan_rules table and the settings
-          // source-account column for the manual card-based allocation plan.
-          // Additive only — the old bucket tables are dropped in a later
-          // migration once the new plan is fully wired up.
+          // source-account column for the manual card-based allocation plan,
+          // then drop the two old bucket-allocation tables now that the new
+          // plan fully replaces them (Task 9). Raw `customStatement` with the
+          // literal snake_case table names — not a table accessor — because
+          // the Dart table classes no longer exist to generate one.
           await m.createTable(db.allocationPlanRulesTable);
           if (!await _hasColumn(
               m, 'app_settings_table', 'allocation_source_account_id')) {
             await m.addColumn(db.appSettingsTable,
                 db.appSettingsTable.allocationSourceAccountId);
           }
+          await m.database
+              .customStatement('DROP TABLE IF EXISTS income_allocations_table');
+          await m.database.customStatement(
+              'DROP TABLE IF EXISTS allocation_directions_table');
         }
       },
       beforeOpen: (details) async {

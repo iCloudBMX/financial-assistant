@@ -64,17 +64,6 @@ void main() {
     expect(find.text('Batafsil'), findsOneWidget);
   });
 
-  testWidgets('saving offers the allocation choice sheet', (tester) async {
-    await pumpSheet(tester);
-
-    await tester.enterText(find.byType(VeloraMoneyField), '5000000');
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Saqlash'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Hozir taqsimlash'), findsOneWidget);
-  });
-
   testWidgets('Saqlash stays disabled until a positive amount is entered',
       (tester) async {
     // The money field is bound to the account's currency, so a currency

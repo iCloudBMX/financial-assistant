@@ -11,8 +11,6 @@ part 'app_database.g.dart';
   CategoriesTable,
   TransactionsTable,
   RecurringIncomePlansTable,
-  AllocationDirectionsTable,
-  IncomeAllocationsTable,
   AllocationPlanRulesTable,
   GoalsTable,
   GoalContributionsTable,

@@ -116,10 +116,9 @@ DashboardData buildDashboard({
     overspendCategories: overspendCategories,
     unallocatedEntryId: latest?.id,
     // The remaining unallocated amount (amount − allocated), NOT the gross
-    // entry amount: this flows into showAllocationChoice →
-    // AllocationRepository.allocateIncome, which rebuilds the entry's
-    // allocation against this base. Passing the gross amount for an already
-    // partially-allocated entry would discard the prior partial allocation.
+    // entry amount: this drives the Home "unallocated income" alert/quick
+    // action, which now opens AllocationPlanScreen rather than rebuilding a
+    // per-entry allocation.
     unallocatedEntryAmount: latest == null
         ? null
         : Money(latest.amount.minorUnits - latest.allocated.minorUnits,

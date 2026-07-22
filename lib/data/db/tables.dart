@@ -102,23 +102,6 @@ class RecurringIncomePlansTable extends Table {
   BoolColumn get active => boolean().withDefault(const Constant(true))();
 }
 
-class AllocationDirectionsTable extends Table {
-  IntColumn get id => integer().autoIncrement()();
-  TextColumn get bucketKey => text()();
-  TextColumn get method => text()(); // AllocationMethod.name
-  IntColumn get valueMinor => integer().nullable()(); // fixedAmount
-  IntColumn get percentBp => integer().nullable()(); // percentage, basis points
-  IntColumn get sortOrder => integer().withDefault(const Constant(0))();
-}
-
-class IncomeAllocationsTable extends Table {
-  IntColumn get id => integer().autoIncrement()();
-  IntColumn get incomeTransactionId =>
-      integer().references(TransactionsTable, #id)();
-  TextColumn get bucketKey => text()();
-  IntColumn get amountMinor => integer()();
-}
-
 class AllocationPlanRulesTable extends Table {
   IntColumn get id => integer().autoIncrement()();
   IntColumn get destinationAccountId =>

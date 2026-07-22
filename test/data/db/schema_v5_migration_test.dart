@@ -20,8 +20,6 @@ class _V4AppDatabase extends AppDatabase {
           await m.createTable(categoriesTable);
           await m.createTable(transactionsTable);
           await m.createTable(recurringIncomePlansTable);
-          await m.createTable(allocationDirectionsTable);
-          await m.createTable(incomeAllocationsTable);
           await m.createTable(goalsTable);
           await m.createTable(goalContributionsTable);
           await into(appSettingsTable)

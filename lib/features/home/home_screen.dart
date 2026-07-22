@@ -6,7 +6,7 @@ import '../../core/theme/velora_tokens.dart';
 import '../../providers/app_providers.dart';
 import '../../ui/components/velora_async_state.dart';
 import '../accounts/transfer_sheet.dart';
-import '../allocation/income_allocation_prompt.dart';
+import '../allocation/allocation_plan_screen.dart';
 import '../expense_entry/expense_entry_sheet.dart';
 import '../goals/goal_contribute_sheet.dart';
 import '../goals/goal_detail_screen.dart';
@@ -127,11 +127,10 @@ class _HomeBody extends ConsumerWidget {
           onExpense: () => showExpenseEntrySheet(context, ref),
           onIncome: () => showIncomeEntrySheet(context, ref),
           onAllocate: hasUnallocated
-              ? () => showAllocationChoice(
-                  context,
-                  ref,
-                  incomeId: d.unallocatedEntryId!,
-                  amount: d.unallocatedEntryAmount!,
+              ? () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const AllocationPlanScreen(),
+                  ),
                 )
               : null,
           onGoalContribution: () => d.primaryGoal == null
@@ -154,11 +153,10 @@ class _HomeBody extends ConsumerWidget {
           UnallocatedAlertCard(
             key: const Key('unallocated-alert'),
             amount: d.unallocatedEntryAmount!,
-            onAllocate: () => showAllocationChoice(
-              context,
-              ref,
-              incomeId: d.unallocatedEntryId!,
-              amount: d.unallocatedEntryAmount!,
+            onAllocate: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => const AllocationPlanScreen(),
+              ),
             ),
           ),
         ],

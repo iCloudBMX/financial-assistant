@@ -75,15 +75,6 @@ void main() {
     db.close();
   });
 
-  test('fresh v3 open seeds the default allocation template', () async {
-    final db = AppDatabase(NativeDatabase.memory());
-    final dirs = await db.select(db.allocationDirectionsTable).get();
-    expect(dirs, isNotEmpty);
-    // income_allocations table exists and is queryable
-    expect(await db.select(db.incomeAllocationsTable).get(), isEmpty);
-    await db.close();
-  });
-
   test('categories carry the SP2 columns with defaults on a fresh open', () async {
     final db = AppDatabase(NativeDatabase.memory());
     final cats = await db.select(db.categoriesTable).get();
@@ -92,7 +83,7 @@ void main() {
     await db.close();
   });
 
-  test('real v2 -> v3 onUpgrade adds columns, creates tables, seeds template', () async {
+  test('real v2 -> v3 onUpgrade adds columns', () async {
     final tmp = await Directory.systemTemp.createTemp('schema_v3_upgrade');
     final dbPath = '${tmp.path}/app.db';
 
@@ -106,9 +97,6 @@ void main() {
     final cats = await v3db.select(v3db.categoriesTable).get();
     expect(cats.single.name, 'Oziq-ovqat');
     expect(cats.single.kind, 'variable');
-    // New tables now exist; template seeded.
-    expect(await v3db.select(v3db.allocationDirectionsTable).get(), isNotEmpty);
-    expect(await v3db.select(v3db.incomeAllocationsTable).get(), isEmpty);
     // Settings gained the new columns with defaults.
     final s = await v3db.select(v3db.appSettingsTable).getSingle();
     expect(s.variableBudgetMinor, 0);

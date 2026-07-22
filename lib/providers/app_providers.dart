@@ -1,6 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
-import '../core/allocation/allocation_models.dart';
 import '../core/allocation/allocation_plan.dart';
 import '../core/budget/category_budget_engine.dart';
 import '../core/goal/goal_engine.dart';
@@ -14,7 +13,6 @@ import '../core/time/financial_period.dart';
 import '../core/time/weekday.dart';
 import '../data/accounts/account_repository.dart';
 import '../data/allocation/allocation_plan_repository.dart';
-import '../data/allocation/allocation_repository.dart';
 import '../data/budget/budget_repository.dart';
 import '../data/categories/category_model.dart';
 import '../data/categories/category_repository.dart';
@@ -182,15 +180,6 @@ MortgageSummaryView? _selectMortgageSummary(
 final budgetRepositoryProvider = Provider<BudgetRepository>(
   (ref) => DriftBudgetRepository(ref.watch(databaseProvider)),
 );
-
-final allocationRepositoryProvider = Provider<AllocationRepository>(
-  (ref) => DriftAllocationRepository(ref.watch(databaseProvider)),
-);
-
-final allocationTemplateProvider = FutureProvider<AllocationTemplate>((ref) {
-  ref.watch(ledgerRevisionProvider);
-  return ref.watch(allocationRepositoryProvider).template();
-});
 
 final allocationPlanRepositoryProvider = Provider<AllocationPlanRepository>(
   (ref) => DriftAllocationPlanRepository(
