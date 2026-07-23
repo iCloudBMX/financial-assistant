@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../core/theme/velora_tokens.dart';
@@ -118,16 +120,46 @@ class _LockScreenState extends State<_LockScreen> {
   final List<int> _digits = [];
   String? _error;
   bool _checking = false;
+  Duration _lockout = Duration.zero;
+  Timer? _lockTimer;
 
   @override
   void initState() {
     super.initState();
+    _refreshLockout();
     if (widget.biometricEnabled) {
       // Exactly once per lock entry, and only after the first frame is up
       // (never from `build`) -- calling this from `build` would re-launch
       // the native prompt on every unrelated rebuild.
       WidgetsBinding.instance.addPostFrameCallback((_) => _tryBiometric());
     }
+  }
+
+  @override
+  void dispose() {
+    _lockTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _refreshLockout() async {
+    final remaining = await widget.controller.lockoutRemaining();
+    if (!mounted) return;
+    setState(() => _lockout = remaining);
+    _lockTimer?.cancel();
+    if (remaining > Duration.zero) {
+      _lockTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+        if (!mounted) return;
+        final next = _lockout - const Duration(seconds: 1);
+        setState(() => _lockout = next > Duration.zero ? next : Duration.zero);
+        if (_lockout == Duration.zero) _lockTimer?.cancel();
+      });
+    }
+  }
+
+  String _formatLockout(Duration d) {
+    final m = d.inMinutes.remainder(60).toString().padLeft(2, '0');
+    final s = d.inSeconds.remainder(60).toString().padLeft(2, '0');
+    return '$m:$s';
   }
 
   Future<void> _tryBiometric() async {
@@ -158,10 +190,11 @@ class _LockScreenState extends State<_LockScreen> {
       _digits.clear();
       _error = "PIN kod noto'g'ri";
     });
+    _refreshLockout();
   }
 
   void _onDigit(int d) {
-    if (_checking || _digits.length >= 4) return;
+    if (_checking || _lockout > Duration.zero || _digits.length >= 4) return;
     setState(() {
       _digits.add(d);
       _error = null;
@@ -252,12 +285,24 @@ class _LockScreenState extends State<_LockScreen> {
                 ),
                 const SizedBox(height: VeloraSpacing.xl),
                 PinKeypad(
-                  enabled: !_checking,
+                  enabled: !_checking && _lockout == Duration.zero,
                   onDigit: _onDigit,
                   onBackspace: _onBackspace,
                   showBiometric: widget.biometricEnabled,
-                  onBiometricRetry: _tryBiometric,
+                  onBiometricRetry:
+                      _lockout == Duration.zero ? _tryBiometric : () {},
                 ),
+                if (_lockout > Duration.zero) ...[
+                  const SizedBox(height: VeloraSpacing.lg),
+                  Text(
+                    'Juda ko\'p urinish. Qayta urinib ko\'ring: '
+                    '${_formatLockout(_lockout)}',
+                    key: const Key('app_lock_lockout'),
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.bodyMedium
+                        ?.copyWith(color: colorScheme.error),
+                  ),
+                ],
                 if (widget.biometricEnabled) ...[
                   const SizedBox(height: VeloraSpacing.lg),
                   Text(

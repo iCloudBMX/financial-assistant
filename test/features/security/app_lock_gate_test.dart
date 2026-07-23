@@ -22,12 +22,16 @@ class _FakeAppLockController extends AppLockController {
 
   int biometricCalls = 0;
   bool biometricResult = false;
+  Duration lockout = Duration.zero;
 
   @override
   Future<bool> authenticateBiometric() async {
     biometricCalls++;
     return biometricResult;
   }
+
+  @override
+  Future<Duration> lockoutRemaining() async => lockout;
 }
 
 Future<void> _tapDigits(WidgetTester tester, String digits) async {
@@ -176,6 +180,21 @@ void main() {
     expect(find.text('Unlocked home'), findsOneWidget);
     expect(find.byType(AlertDialog), findsNothing);
     expect(find.byType(Dialog), findsNothing);
+  });
+
+  testWidgets(
+      'while locked out, the keypad is disabled, a countdown shows, and the '
+      'correct PIN does not unlock', (tester) async {
+    controller.lockout = const Duration(seconds: 45);
+    await pumpGate(tester);
+    await tester.pump();
+
+    expect(find.byKey(const Key('app_lock_lockout')), findsOneWidget);
+
+    // Digit keys are disabled (no unlock even with the correct PIN).
+    await _tapDigits(tester, '1234');
+    await tester.pumpAndSettle();
+    expect(find.text('Unlocked home'), findsNothing);
   });
 
   testWidgets(
