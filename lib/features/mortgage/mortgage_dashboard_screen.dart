@@ -9,8 +9,6 @@ import '../../ui/components/velora_button.dart';
 import 'mortgage_edit_sheet.dart';
 import 'mortgage_payment_sheet.dart';
 import 'mortgage_extra_payment_sheet.dart';
-import 'mortgage_recommendations.dart';
-import 'mortgage_scenarios_screen.dart';
 
 // The lighter plum the approved mockup uses for the hero's diagonal gradient
 // (linear-gradient(145deg,#5B3A6E,#744D83)). A one-off shade, so it lives here
@@ -65,8 +63,21 @@ class MortgageDashboardScreen extends ConsumerWidget {
               _fabClearance,
             ),
             children: [
-              Text(m.mortgage.name,
-                  style: Theme.of(context).textTheme.headlineSmall),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(m.mortgage.name,
+                        style: Theme.of(context).textTheme.headlineSmall),
+                  ),
+                  IconButton(
+                    key: const Key('mortgage-edit'),
+                    icon: const Icon(Icons.edit_outlined),
+                    tooltip: 'Tahrirlash',
+                    onPressed: () => showMortgageEditSheet(context, ref,
+                        existing: m.mortgage),
+                  ),
+                ],
+              ),
               const SizedBox(height: VeloraSpacing.md),
               _MortgageHero(
                 principal: money(m.currentPrincipalMinor),
@@ -86,8 +97,6 @@ class MortgageDashboardScreen extends ConsumerWidget {
                 amount: money(m.mortgage.mandatoryPaymentMinor),
                 date: m.mortgage.nextPaymentDate.toString().split(' ').first,
               ),
-              const SizedBox(height: VeloraSpacing.lg),
-              MortgageRecommendations(item: m),
               const SizedBox(height: VeloraSpacing.lg),
               // Coral is the single primary CTA on this screen (§ pay action).
               SizedBox(
@@ -109,13 +118,6 @@ class MortgageDashboardScreen extends ConsumerWidget {
                 onPressed: () =>
                     showMortgageExtraPaymentSheet(context, ref, m.mortgage.id),
                 child: const Text('Qo\'shimcha to\'lov'),
-              ),
-              const SizedBox(height: VeloraSpacing.sm),
-              OutlinedButton(
-                onPressed: () => Navigator.of(context).push(MaterialPageRoute(
-                    builder: (_) =>
-                        MortgageScenariosScreen(mortgageId: m.mortgage.id))),
-                child: const Text('Ssenariylar'),
               ),
             ],
           );

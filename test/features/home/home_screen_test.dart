@@ -11,9 +11,48 @@ import 'package:financial_assistant/data/db/app_database.dart';
 import 'package:financial_assistant/data/goals/goal_model.dart';
 import 'package:financial_assistant/data/mortgage/mortgage_model.dart';
 import 'package:financial_assistant/providers/app_providers.dart';
+import 'package:financial_assistant/core/limit/safe_limit_engine.dart';
+import 'package:financial_assistant/features/home/dashboard_data.dart';
 import 'package:financial_assistant/features/home/home_screen.dart';
 
 void main() {
+  testWidgets('a net-negative total balance renders without crashing', (t) async {
+    const uzs = CurrencyRegistry.uzs;
+    final db = AppDatabase(NativeDatabase.memory());
+    addTearDown(db.close);
+    final container = ProviderContainer(overrides: [
+      databaseProvider.overrideWithValue(db),
+      // Credit debt outweighs cash -> total is negative, but a spending
+      // account still yields a safe limit. This drove clamp(0, negative) to
+      // throw ArgumentError(0) while building _HomeBody.
+      dashboardProvider.overrideWith((ref) async => DashboardData(
+            totals: {uzs: const Money(-5000000, uzs)},
+            monthIncome: const Money(0, uzs),
+            monthExpense: const Money(0, uzs),
+            todaySpent: const Money(0, uzs),
+            primaryCurrency: uzs,
+            safeLimit: const SafeLimit(
+              spendable: Money(1000000, uzs),
+              perDay: Money(100000, uzs),
+              daysLeft: 10,
+              todaySpent: Money(0, uzs),
+              todayRemaining: Money(100000, uzs),
+            ),
+          )),
+    ]);
+    addTearDown(container.dispose);
+
+    await t.pumpWidget(UncontrolledProviderScope(
+      container: container,
+      child: const MaterialApp(home: HomeScreen()),
+    ));
+    await t.pumpAndSettle();
+
+    expect(t.takeException(), isNull);
+    expect(find.byKey(const Key('balance-card')), findsOneWidget);
+    expect(find.textContaining('5 000 000'), findsWidgets); // negative total shown
+  });
+
   testWidgets('shows the total balance card', (tester) async {
     final db = AppDatabase(NativeDatabase.memory());
     addTearDown(db.close);

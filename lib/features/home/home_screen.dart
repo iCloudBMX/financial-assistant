@@ -88,10 +88,15 @@ class _HomeBody extends ConsumerWidget {
     // total − free, floored at zero. Both stay null until a safe limit
     // exists so the minis show an em dash rather than an invented split.
     final free = d.safeLimit?.spendable;
+    // A net-negative total (credit debt exceeding cash) has nothing to
+    // reserve — and clamp(0, total) would throw when total < 0. Floor to 0.
     final reserved = free == null
         ? null
         : Money(
-            (total.minorUnits - free.minorUnits).clamp(0, total.minorUnits),
+            total.minorUnits <= 0
+                ? 0
+                : (total.minorUnits - free.minorUnits)
+                    .clamp(0, total.minorUnits),
             d.primaryCurrency,
           );
 

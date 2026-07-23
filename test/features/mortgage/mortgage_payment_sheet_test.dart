@@ -8,7 +8,9 @@ import 'package:financial_assistant/core/money/money.dart';
 import 'package:financial_assistant/core/mortgage/mortgage_engine.dart';
 import 'package:financial_assistant/data/db/app_database.dart';
 import 'package:financial_assistant/data/mortgage/mortgage_model.dart';
+import 'package:financial_assistant/features/accounts/accounts_controller.dart';
 import 'package:financial_assistant/features/mortgage/mortgage_payment_sheet.dart';
+import 'package:financial_assistant/ui/components/account_card_picker.dart';
 import 'package:financial_assistant/providers/app_providers.dart';
 
 void main() {
@@ -48,105 +50,7 @@ void main() {
   }
 
   testWidgets(
-      'Auto mode derives the split from the plan and enables save with only '
-      'the total entered', (t) async {
-    final db = AppDatabase(NativeDatabase.memory());
-    addTearDown(db.close);
-    final container =
-        ProviderContainer(overrides: [databaseProvider.overrideWithValue(db)]);
-    addTearDown(container.dispose);
-    final id = await openMortgage(t, container);
-    container.read(ledgerRevisionProvider.notifier).update((n) => n + 1);
-    await container.read(mortgagesProvider.future);
-
-    await openSheet(t, container, id);
-
-    // Auto is the default mode; both split labels are visible even though
-    // they're derived, not typed.
-    expect(find.text('Asosiy qarzga'), findsOneWidget);
-    expect(find.text('Foiz to‘lovi'), findsOneWidget);
-
-    await t.enterText(find.byKey(const Key('payment-total')), '5000000');
-    await t.pumpAndSettle();
-
-    // monthlyInterestMinor(100000000, 1800bp) = 1,500,000 -> principal 3,500,000.
-    expect(find.textContaining('1 500 000'), findsWidgets);
-    expect(find.textContaining('3 500 000'), findsWidgets);
-
-    final button =
-        t.widget<FilledButton>(find.byKey(const Key('payment-save')));
-    expect(button.onPressed, isNotNull);
-
-    await t.tap(find.byKey(const Key('payment-save')));
-    await t.pumpAndSettle();
-
-    final payments =
-        await container.read(mortgageRepositoryProvider).payments(id);
-    expect(payments.single.principalPortionMinor, 3500000);
-    expect(payments.single.interestPortionMinor, 1500000);
-  });
-
-  testWidgets(
-      'Auto mode disables save when the total exceeds payoff (over-payment '
-      'cannot drive the balance negative)', (t) async {
-    final db = AppDatabase(NativeDatabase.memory());
-    addTearDown(db.close);
-    final container =
-        ProviderContainer(overrides: [databaseProvider.overrideWithValue(db)]);
-    addTearDown(container.dispose);
-    final id = await openMortgage(t, container);
-    container.read(ledgerRevisionProvider.notifier).update((n) => n + 1);
-    await container.read(mortgagesProvider.future);
-
-    await openSheet(t, container, id);
-
-    // Outstanding is 100,000,000; a 200,000,000 total is a gross over-payoff.
-    await t.enterText(find.byKey(const Key('payment-total')), '200000000');
-    await t.pumpAndSettle();
-
-    expect(
-        t.widget<FilledButton>(find.byKey(const Key('payment-save'))).onPressed,
-        isNull);
-    expect(find.textContaining('oshib ketdi'), findsOneWidget);
-    expect(
-        await container.read(mortgageRepositoryProvider).payments(id), isEmpty);
-  });
-
-  testWidgets(
-      'Manual mode shows both explicit portions and an unbalanced split '
-      'disables save', (t) async {
-    final db = AppDatabase(NativeDatabase.memory());
-    addTearDown(db.close);
-    final container =
-        ProviderContainer(overrides: [databaseProvider.overrideWithValue(db)]);
-    addTearDown(container.dispose);
-    final id = await openMortgage(t, container);
-    container.read(ledgerRevisionProvider.notifier).update((n) => n + 1);
-    await container.read(mortgagesProvider.future);
-
-    await openSheet(t, container, id);
-
-    await t.tap(find.byKey(const Key('payment-mode-manual')));
-    await t.pumpAndSettle();
-
-    expect(find.text('Asosiy qarzga'), findsOneWidget);
-    expect(find.text('Foiz to‘lovi'), findsOneWidget);
-
-    await t.enterText(find.byKey(const Key('payment-total')), '5000000');
-    await t.enterText(find.byKey(const Key('payment-principal')), '3000000');
-    await t.enterText(
-        find.byKey(const Key('payment-interest')), '1000000'); // 4M != 5M
-    await t.pumpAndSettle();
-
-    expect(
-        t.widget<FilledButton>(find.byKey(const Key('payment-save'))).onPressed,
-        isNull);
-
-    expect(
-        await container.read(mortgageRepositoryProvider).payments(id), isEmpty);
-  });
-
-  testWidgets('Manual mode with a balanced split saves and closes the sheet',
+      'entering principal and interest saves the split; total is their sum',
       (t) async {
     final db = AppDatabase(NativeDatabase.memory());
     addTearDown(db.close);
@@ -159,13 +63,19 @@ void main() {
 
     await openSheet(t, container, id);
 
-    await t.tap(find.byKey(const Key('payment-mode-manual')));
-    await t.pumpAndSettle();
+    // Two explicit portions, no total field, no Auto/Manual toggle, plus a
+    // card picker for the source account.
+    expect(find.text('Qaysi kartadan?'), findsOneWidget);
+    expect(find.byType(AccountCardPicker), findsOneWidget);
+    expect(find.text('Asosiy qarzga (tani)'), findsOneWidget);
+    expect(find.text('Foiz to‘lovi'), findsOneWidget);
 
-    await t.enterText(find.byKey(const Key('payment-total')), '5000000');
     await t.enterText(find.byKey(const Key('payment-principal')), '3500000');
     await t.enterText(find.byKey(const Key('payment-interest')), '1500000');
     await t.pumpAndSettle();
+
+    // Derived total is shown as 3.5M + 1.5M = 5M.
+    expect(find.textContaining('5 000 000'), findsWidgets);
 
     expect(
         t.widget<FilledButton>(find.byKey(const Key('payment-save'))).onPressed,
@@ -175,15 +85,18 @@ void main() {
     await t.pumpAndSettle();
 
     expect(find.byKey(const Key('payment-save')), findsNothing); // popped
-    expect(
-        (await container.read(mortgageRepositoryProvider).payments(id))
-            .length,
-        1);
+    final payments =
+        await container.read(mortgageRepositoryProvider).payments(id);
+    expect(payments.single.principalPortionMinor, 3500000);
+    expect(payments.single.interestPortionMinor, 1500000);
+    expect(payments.single.totalMinor, 5000000);
+
+    // The payment was drawn from the (auto-selected) card: 500M - 5M = 495M.
+    final accounts = await container.read(accountsControllerProvider.future);
+    expect(accounts.single.balance.minorUnits, 495000000);
   });
 
-  testWidgets(
-      'switching back to Auto after editing Manual fields recomputes the '
-      'derived split instead of keeping the stale manual numbers', (t) async {
+  testWidgets('interest-only payment saves with zero principal', (t) async {
     final db = AppDatabase(NativeDatabase.memory());
     addTearDown(db.close);
     final container =
@@ -195,18 +108,68 @@ void main() {
 
     await openSheet(t, container, id);
 
-    await t.enterText(find.byKey(const Key('payment-total')), '5000000');
-    await t.tap(find.byKey(const Key('payment-mode-manual')));
-    await t.pumpAndSettle();
-    await t.enterText(find.byKey(const Key('payment-principal')), '1000000');
-    await t.enterText(find.byKey(const Key('payment-interest')), '1000000');
+    await t.enterText(find.byKey(const Key('payment-interest')), '1500000');
     await t.pumpAndSettle();
 
-    await t.tap(find.byKey(const Key('payment-mode-auto')));
+    await t.tap(find.byKey(const Key('payment-save')));
     await t.pumpAndSettle();
 
-    expect(find.textContaining('1 500 000'), findsWidgets);
-    expect(find.textContaining('3 500 000'), findsWidgets);
+    final payments =
+        await container.read(mortgageRepositoryProvider).payments(id);
+    expect(payments.single.principalPortionMinor, 0);
+    expect(payments.single.interestPortionMinor, 1500000);
+  });
+
+  testWidgets('a payment exceeding the card balance is blocked', (t) async {
+    final db = AppDatabase(NativeDatabase.memory());
+    addTearDown(db.close);
+    final container =
+        ProviderContainer(overrides: [databaseProvider.overrideWithValue(db)]);
+    addTearDown(container.dispose);
+    final id = await openMortgage(t, container); // Karta balance = 500,000,000
+    container.read(ledgerRevisionProvider.notifier).update((n) => n + 1);
+    await container.read(mortgagesProvider.future);
+
+    await openSheet(t, container, id);
+
+    // Total 600M > 500M on the card.
+    await t.enterText(find.byKey(const Key('payment-principal')), '600000000');
+    await t.pumpAndSettle();
+
+    expect(find.text('Kartada yetarli mablag\' yo\'q'), findsOneWidget);
+    expect(
+        t.widget<FilledButton>(find.byKey(const Key('payment-save'))).onPressed,
+        isNull);
+
+    // Back within balance -> save re-enables.
+    await t.enterText(find.byKey(const Key('payment-principal')), '400000000');
+    await t.pumpAndSettle();
+    expect(
+        t.widget<FilledButton>(find.byKey(const Key('payment-save'))).onPressed,
+        isNotNull);
+  });
+
+  testWidgets('save stays disabled until at least one portion is entered',
+      (t) async {
+    final db = AppDatabase(NativeDatabase.memory());
+    addTearDown(db.close);
+    final container =
+        ProviderContainer(overrides: [databaseProvider.overrideWithValue(db)]);
+    addTearDown(container.dispose);
+    final id = await openMortgage(t, container);
+    container.read(ledgerRevisionProvider.notifier).update((n) => n + 1);
+    await container.read(mortgagesProvider.future);
+
+    await openSheet(t, container, id);
+
+    // Nothing typed → save disabled.
+    expect(
+        t.widget<FilledButton>(find.byKey(const Key('payment-save'))).onPressed,
+        isNull);
+
+    await t.enterText(find.byKey(const Key('payment-principal')), '3000000');
+    await t.pumpAndSettle();
+
     expect(
         t.widget<FilledButton>(find.byKey(const Key('payment-save'))).onPressed,
         isNotNull);

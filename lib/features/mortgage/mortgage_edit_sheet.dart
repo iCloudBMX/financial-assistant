@@ -53,6 +53,7 @@ class _MortgageEditSheetState extends ConsumerState<_MortgageEditSheet> {
   late final TextEditingController _mandatory;
   PaymentType _type = PaymentType.annuity;
   PayoffStrategy _strategy = PayoffStrategy.unclear;
+  late DateTime _nextPayment;
   String? _error;
 
   static const _uzs = CurrencyRegistry.uzs;
@@ -75,6 +76,17 @@ class _MortgageEditSheetState extends ConsumerState<_MortgageEditSheet> {
         text: e == null ? '' : m(e.mandatoryPaymentMinor).formatNumber());
     _type = e?.paymentType ?? PaymentType.annuity;
     _strategy = e?.payoffStrategy ?? PayoffStrategy.unclear;
+    _nextPayment = e?.nextPaymentDate ?? DateTime.now();
+  }
+
+  Future<void> _pickDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _nextPayment,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+    );
+    if (picked != null) setState(() => _nextPayment = picked);
   }
 
   @override
@@ -109,7 +121,7 @@ class _MortgageEditSheetState extends ConsumerState<_MortgageEditSheet> {
       startDate: e?.startDate ?? DateTime.now(),
       endDate: e?.endDate,
       mandatoryPaymentMinor: mandatory.minorUnits,
-      nextPaymentDate: e?.nextPaymentDate ?? DateTime.now(),
+      nextPaymentDate: _nextPayment,
       paymentType: _type,
       payoffStrategy: _strategy,
       currencyCode: e?.currencyCode ?? 'UZS',
@@ -176,6 +188,18 @@ class _MortgageEditSheetState extends ConsumerState<_MortgageEditSheet> {
                   value: PaymentType.custom, child: Text('Individual')),
             ],
             onChanged: (v) => setState(() => _type = v ?? _type),
+          ),
+          const SizedBox(height: VeloraSpacing.md),
+          InkWell(
+            key: const Key('mortgage-date'),
+            onTap: _pickDate,
+            child: InputDecorator(
+              decoration: const InputDecoration(
+                labelText: 'Keyingi to\'lov sanasi',
+                suffixIcon: Icon(Icons.event_outlined),
+              ),
+              child: Text(_nextPayment.toString().split(' ').first),
+            ),
           ),
           if (_error != null)
             Padding(

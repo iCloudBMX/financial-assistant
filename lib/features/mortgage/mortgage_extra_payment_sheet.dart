@@ -6,9 +6,11 @@ import '../../core/money/money.dart';
 import '../../core/mortgage/mortgage_engine.dart';
 import '../../core/theme/velora_tokens.dart';
 import '../../providers/app_providers.dart';
+import '../../ui/components/account_card_picker.dart';
 import '../../ui/components/velora_button.dart';
 import '../../ui/components/velora_money_field.dart';
 import '../../ui/components/velora_sheet.dart';
+import '../accounts/accounts_controller.dart';
 import 'mortgage_controller.dart';
 
 Future<void> showMortgageExtraPaymentSheet(
@@ -32,6 +34,7 @@ class _ExtraSheet extends ConsumerStatefulWidget {
 
 class _ExtraSheetState extends ConsumerState<_ExtraSheet> {
   final _amount = TextEditingController();
+  int? _accountId;
   String? _error;
   static const _uzs = CurrencyRegistry.uzs;
 
@@ -52,16 +55,14 @@ class _ExtraSheetState extends ConsumerState<_ExtraSheet> {
 
   Future<void> _save() async {
     final amount = Money.tryParse(_amount.text, _uzs);
-    final accounts = await ref.read(accountRepositoryProvider).list();
-    if (!mounted) return;
-    if (amount == null || amount.minorUnits <= 0 || accounts.isEmpty) {
-      setState(() => _error = 'Summani kiriting');
+    if (amount == null || amount.minorUnits <= 0 || _accountId == null) {
+      setState(() => _error = 'Summa va kartani tanlang');
       return;
     }
     final res = await ref.read(mortgageControllerProvider).recordExtraPayment(
           mortgageId: widget.mortgageId,
           amount: amount,
-          accountId: accounts.first.id,
+          accountId: _accountId!,
         );
     if (!mounted) return;
     if (!res.isOk) {
@@ -109,6 +110,16 @@ class _ExtraSheetState extends ConsumerState<_ExtraSheet> {
           'Tejalgan foiz: ${Money(interestSaved, _uzs).format()}'
           '${after.isApproximate ? ' (taxminiy hisob-kitob)' : ''}';
     }
+    final accountsAsync = ref.watch(accountsControllerProvider);
+    final balances = {
+      for (final a in (accountsAsync.value ?? const <AccountWithBalance>[]))
+        a.account.id: a.balance.minorUnits,
+    };
+    final selectedBalance = _accountId == null ? null : balances[_accountId];
+    // The extra payment can't draw more than the chosen card holds.
+    final exceedsBalance = amount != null &&
+        selectedBalance != null &&
+        amount.minorUnits > selectedBalance;
     return VeloraSheetScaffold(
       title: 'Qo\'shimcha to\'lov',
       body: Column(
@@ -131,6 +142,36 @@ class _ExtraSheetState extends ConsumerState<_ExtraSheet> {
             const SizedBox(height: VeloraSpacing.md),
             _PreviewCard(body: preview),
           ],
+          const SizedBox(height: VeloraSpacing.lg),
+          Text('Qaysi kartadan?', style: theme.textTheme.labelLarge),
+          const SizedBox(height: VeloraSpacing.sm),
+          accountsAsync.when(
+            data: (accts) {
+              if (_accountId == null && accts.isNotEmpty) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (mounted) {
+                    setState(() => _accountId = accts.first.account.id);
+                  }
+                });
+              }
+              return AccountCardPicker(
+                accounts: [for (final a in accts) a.account],
+                availableBalances: {
+                  for (final a in accts) a.account.id: a.balance,
+                },
+                selectedId: _accountId,
+                onSelected: (id) => setState(() => _accountId = id),
+              );
+            },
+            loading: () => const SizedBox(height: 116),
+            error: (_, _) => const Text('Hisoblarni yuklab bo\'lmadi'),
+          ),
+          if (exceedsBalance)
+            Padding(
+              padding: const EdgeInsets.only(top: VeloraSpacing.sm),
+              child: Text('Kartada yetarli mablag\' yo\'q',
+                  style: TextStyle(color: theme.colorScheme.error)),
+            ),
           if (_error != null)
             Padding(
               padding: const EdgeInsets.only(top: VeloraSpacing.sm),
@@ -142,7 +183,7 @@ class _ExtraSheetState extends ConsumerState<_ExtraSheet> {
       primaryAction: VeloraPrimaryButton(
         key: const Key('extra-save'),
         label: 'Saqlash',
-        onPressed: _save,
+        onPressed: exceedsBalance ? null : _save,
       ),
     );
   }
