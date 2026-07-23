@@ -42,6 +42,7 @@ class DriftSettingsRepository implements SettingsRepository {
         CurrencyRegistry.byCode(row.primaryCurrency),
       ),
       allocationSourceAccountId: row.allocationSourceAccountId,
+      lastClosedPeriodStart: row.lastClosedPeriodStart,
     );
   }
 
@@ -65,6 +66,7 @@ class DriftSettingsRepository implements SettingsRepository {
         variableBudgetMinor: Value(s.variableBudget.minorUnits),
         safetyBufferMinor: Value(s.safetyBuffer.minorUnits),
         allocationSourceAccountId: Value(s.allocationSourceAccountId),
+        lastClosedPeriodStart: Value(s.lastClosedPeriodStart),
       ),
     );
   }

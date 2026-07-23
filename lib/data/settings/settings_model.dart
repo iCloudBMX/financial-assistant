@@ -20,6 +20,7 @@ class AppSettings {
   final Money variableBudget;
   final Money safetyBuffer;
   final int? allocationSourceAccountId;
+  final DateTime? lastClosedPeriodStart;
 
   const AppSettings({
     required this.name,
@@ -36,6 +37,7 @@ class AppSettings {
     this.variableBudget = const Money(0, CurrencyRegistry.uzs),
     this.safetyBuffer = const Money(0, CurrencyRegistry.uzs),
     this.allocationSourceAccountId,
+    this.lastClosedPeriodStart,
   });
 
   AppSettings copyWith({
@@ -53,6 +55,7 @@ class AppSettings {
     Money? variableBudget,
     Money? safetyBuffer,
     int? allocationSourceAccountId,
+    DateTime? lastClosedPeriodStart,
   }) =>
       AppSettings(
         name: name ?? this.name,
@@ -70,5 +73,7 @@ class AppSettings {
         safetyBuffer: safetyBuffer ?? this.safetyBuffer,
         allocationSourceAccountId:
             allocationSourceAccountId ?? this.allocationSourceAccountId,
+        lastClosedPeriodStart:
+            lastClosedPeriodStart ?? this.lastClosedPeriodStart,
       );
 }

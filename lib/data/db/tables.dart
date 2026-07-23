@@ -28,6 +28,7 @@ class AppSettingsTable extends Table {
   IntColumn get safetyBufferMinor =>
       integer().withDefault(const Constant(0))();
   IntColumn get allocationSourceAccountId => integer().nullable()();
+  DateTimeColumn get lastClosedPeriodStart => dateTime().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};

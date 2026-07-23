@@ -123,6 +123,16 @@ MigrationStrategy buildMigration(AppDatabase db) => MigrationStrategy(
           await m.database.customStatement(
               'DROP TABLE IF EXISTS allocation_directions_table');
         }
+        if (from < 8) {
+          // v7 -> v8: month-close marker. Additive, nullable. Guarded because a
+          // collapsed v1->v8 pass may have built app_settings_table with the
+          // full column set already (no drift versioned-schema CLI here).
+          if (!await _hasColumn(
+              m, 'app_settings_table', 'last_closed_period_start')) {
+            await m.addColumn(db.appSettingsTable,
+                db.appSettingsTable.lastClosedPeriodStart);
+          }
+        }
       },
       beforeOpen: (details) async {
         await db.customStatement('PRAGMA foreign_keys = ON');
