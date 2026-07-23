@@ -1,12 +1,12 @@
 import 'dart:io';
 import 'package:drift/native.dart';
-import 'package:drift/drift.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqlite3/sqlite3.dart';
 import 'package:financial_assistant/core/result/failure.dart';
 import 'package:financial_assistant/data/db/app_database.dart';
 import 'package:financial_assistant/data/backup/backup_service.dart';
 import 'package:financial_assistant/data/backup/backup_preview.dart';
+import 'package:financial_assistant/data/meta/meta_repository.dart';
 
 Future<void> _seedOneAccount(AppDatabase db) => db.into(db.accountsTable).insert(
       AccountsTableCompanion.insert(name: 'Cash', type: 'cash'),
@@ -153,6 +153,33 @@ void main() {
             .getSingle())
         .read<int>('n');
     expect(n, 2); // target now holds the backup's data, not its own
+    await reopened.close();
+    await tmp.delete(recursive: true);
+  });
+
+  test('factoryReset deletes the DB so it reopens empty and pre-onboarding',
+      () async {
+    final tmp = await Directory.systemTemp.createTemp('bk');
+    final dbPath = '${tmp.path}/app.db';
+    final db = AppDatabase(NativeDatabase(File(dbPath)));
+    await _seedOneAccount(db);
+    await DriftMetaRepository(db).markOnboardingComplete();
+    final service = BackupService(db, dbPath);
+
+    final r = await service.factoryReset();
+    expect(r.isOk, isTrue);
+    expect(await File(dbPath).exists(), isFalse);
+
+    // Reopening recreates a fresh DB via onCreate: no accounts, onboarding not
+    // complete — the app is back to its first-run state.
+    final reopened = AppDatabase(NativeDatabase(File(dbPath)));
+    final n = (await reopened
+            .customSelect('SELECT count(*) AS n FROM accounts_table')
+            .getSingle())
+        .read<int>('n');
+    expect(n, 0);
+    final meta = await DriftMetaRepository(reopened).read();
+    expect(meta.onboardingComplete, isFalse);
     await reopened.close();
     await tmp.delete(recursive: true);
   });

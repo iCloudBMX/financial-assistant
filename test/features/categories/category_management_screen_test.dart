@@ -45,7 +45,8 @@ void main() {
 
     expect(find.byKey(const Key('category-reorder-list')), findsOneWidget);
 
-    await tester.tap(find.byKey(const Key('category-archive-1')));
+    // Archive is swipe-driven now: swipe the row left (endToStart).
+    await tester.drag(find.byKey(const ValueKey(1)), const Offset(-500, 0));
     await tester.pumpAndSettle();
 
     // The seeded category list is long enough that the archived section
@@ -71,12 +72,9 @@ void main() {
   testWidgets('opens the create sheet from the add FAB', (tester) async {
     await pumpScreen(tester);
 
-    // The FAB opens the same searchable editor sheet used elsewhere
-    // (`showCategoryEditSheet(context)` with no categoryId), which lands on
-    // the search list first; "Yangi kategoriya" is the actual create entry.
+    // The FAB opens the create form directly (createNew: true), skipping the
+    // searchable list — landing straight on the name field.
     await tester.tap(find.byKey(const Key('category-add')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('category-edit-new')));
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('category-edit-name')), findsOneWidget);

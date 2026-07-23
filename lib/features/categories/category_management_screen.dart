@@ -21,7 +21,7 @@ class CategoryManagementScreen extends ConsumerWidget {
       appBar: AppBar(title: const Text('Kategoriyalar')),
       floatingActionButton: FloatingActionButton.extended(
         key: const Key('category-add'),
-        onPressed: () => showCategoryEditSheet(context),
+        onPressed: () => showCategoryEditSheet(context, createNew: true),
         icon: const Icon(Icons.add),
         label: const Text('Yangi'),
       ),
@@ -29,8 +29,14 @@ class CategoryManagementScreen extends ConsumerWidget {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (_, _) => const Center(child: Text('Xatolik yuz berdi')),
         data: (cats) {
-          final active = [for (final c in cats) if (!c.archived) c];
-          final archived = [for (final c in cats) if (c.archived) c];
+          final active = [
+            for (final c in cats)
+              if (!c.archived) c,
+          ];
+          final archived = [
+            for (final c in cats)
+              if (c.archived) c,
+          ];
           return ListView(
             padding: const EdgeInsets.all(VeloraSpacing.lg),
             children: [
@@ -46,25 +52,34 @@ class CategoryManagementScreen extends ConsumerWidget {
                 },
                 children: [
                   for (final c in active)
-                    ListTile(
+                    Dismissible(
+                      // Key lives on the Dismissible so it doubles as the
+                      // ReorderableListView child key. Swipe left = archive.
                       key: ValueKey(c.id),
-                      leading: Icon(categoryIcon(c.icon)),
-                      title: Text(c.name),
-                      onTap: () =>
-                          showCategoryEditSheet(context, categoryId: c.id),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          IconButton(
-                            key: Key('category-archive-${c.id}'),
-                            icon: const Icon(Icons.remove_circle_outline,
-                                color: VeloraColors.critical),
-                            tooltip: 'Olib tashlash',
-                            onPressed: () =>
-                                controller.setCategoryArchived(c.id, true),
-                          ),
-                          const Icon(Icons.drag_handle),
-                        ],
+                      direction: DismissDirection.endToStart,
+                      background: Container(
+                        alignment: Alignment.centerRight,
+                        color: VeloraColors.critical,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: VeloraSpacing.lg,
+                        ),
+                        child: const Icon(
+                          Icons.remove_circle_outline,
+                          color: Colors.white,
+                        ),
+                      ),
+                      // Archive is async; the provider rebuild drops the row.
+                      // Return false so Dismissible never enters the "removed
+                      // but still in tree" state that would assert.
+                      confirmDismiss: (_) async {
+                        await controller.setCategoryArchived(c.id, true);
+                        return false;
+                      },
+                      child: ListTile(
+                        leading: Icon(categoryIcon(c.icon)),
+                        title: Text(c.name),
+                        onTap: () =>
+                            showCategoryEditSheet(context, categoryId: c.id),
                       ),
                     ),
                 ],
@@ -74,9 +89,9 @@ class CategoryManagementScreen extends ConsumerWidget {
                 Text(
                   'Olib tashlangan',
                   style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: VeloraColors.muted,
-                        fontWeight: FontWeight.w800,
-                      ),
+                    color: VeloraColors.muted,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
                 const SizedBox(height: VeloraSpacing.sm),
                 for (final c in archived)

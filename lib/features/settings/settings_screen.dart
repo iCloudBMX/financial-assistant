@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/money/currency.dart';
-import '../../core/money/money.dart';
 import '../../core/result/failure_messages.dart';
 import '../../core/result/result.dart';
 import '../../core/theme/velora_tokens.dart';
@@ -27,21 +26,21 @@ class _SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(
-          VeloraSpacing.xs,
-          VeloraSpacing.md,
-          VeloraSpacing.xs,
-          VeloraSpacing.sm,
-        ),
-        child: Text(
-          label,
-          style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                color: VeloraColors.muted,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 0.6,
-              ),
-        ),
-      );
+    padding: const EdgeInsets.fromLTRB(
+      VeloraSpacing.xs,
+      VeloraSpacing.md,
+      VeloraSpacing.xs,
+      VeloraSpacing.sm,
+    ),
+    child: Text(
+      label,
+      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+        color: VeloraColors.muted,
+        fontWeight: FontWeight.w800,
+        letterSpacing: 0.6,
+      ),
+    ),
+  );
 }
 
 /// Wraps a section's rows in one rounded 22px card with a 1px `line` border
@@ -86,23 +85,24 @@ class _RowIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        width: 36,
-        height: 36,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: VeloraColors.plumTint,
-          borderRadius: BorderRadius.circular(VeloraRadii.control),
-        ),
-        child: Icon(icon, size: 18, color: VeloraColors.plum),
-      );
+    width: 36,
+    height: 36,
+    alignment: Alignment.center,
+    decoration: BoxDecoration(
+      color: VeloraColors.plumTint,
+      borderRadius: BorderRadius.circular(VeloraRadii.control),
+    ),
+    child: Icon(icon, size: 18, color: VeloraColors.plum),
+  );
 }
 
 /// The plum profile hero at the top of Settings (design spec sec. 6.12): an
 /// apricot initials avatar, the user's name, and a "local-only" reassurance,
 /// echoing the mockup's profile card.
 class _ProfileHero extends StatelessWidget {
-  const _ProfileHero({required this.name});
+  const _ProfileHero({required this.name, required this.onTap});
   final String name;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -111,63 +111,68 @@ class _ProfileHero extends StatelessWidget {
     final initials = trimmed.isEmpty
         ? '•'
         : trimmed
-            .split(RegExp(r'\s+'))
-            .where((w) => w.isNotEmpty)
-            .take(2)
-            .map((w) => w.substring(0, 1).toUpperCase())
-            .join();
-    return Container(
-      padding: const EdgeInsets.all(VeloraSpacing.md),
-      decoration: BoxDecoration(
-        color: VeloraColors.plum,
-        borderRadius: BorderRadius.circular(VeloraRadii.card),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 44,
-            height: 44,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: VeloraColors.apricot,
-              borderRadius: BorderRadius.circular(VeloraRadii.control),
-            ),
-            child: Text(
-              initials,
-              maxLines: 1,
-              textScaler: TextScaler.noScaling,
-              style: theme.textTheme.titleMedium?.copyWith(
-                color: VeloraColors.inkberry,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ),
-          const SizedBox(width: VeloraSpacing.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  trimmed.isEmpty ? 'Velora' : trimmed,
+              .split(RegExp(r'\s+'))
+              .where((w) => w.isNotEmpty)
+              .take(2)
+              .map((w) => w.substring(0, 1).toUpperCase())
+              .join();
+    final radius = BorderRadius.circular(VeloraRadii.card);
+    return Material(
+      color: VeloraColors.plum,
+      borderRadius: radius,
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(VeloraSpacing.md),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: VeloraColors.apricot,
+                  borderRadius: BorderRadius.circular(VeloraRadii.control),
+                ),
+                child: Text(
+                  initials,
                   maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                  textScaler: TextScaler.noScaling,
                   style: theme.textTheme.titleMedium?.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w700,
+                    color: VeloraColors.inkberry,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
-                const SizedBox(height: VeloraSpacing.xs),
-                Text(
-                  "Mahalliy profil · ma'lumot faqat qurilmangizda",
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: Colors.white.withValues(alpha: 0.72),
-                  ),
+              ),
+              const SizedBox(width: VeloraSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      trimmed.isEmpty ? 'Velora' : trimmed,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: VeloraSpacing.xs),
+                    Text(
+                      "Mahalliy profil · ma'lumot faqat qurilmangizda",
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: Colors.white.withValues(alpha: 0.72),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -193,29 +198,27 @@ class _DropdownField<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 150),
-        child: DropdownButton<T>(
-          value: value,
-          isExpanded: true,
-          items: items,
-          onChanged: onChanged,
-        ),
-      );
+    constraints: const BoxConstraints(maxWidth: 150),
+    child: DropdownButton<T>(
+      value: value,
+      isExpanded: true,
+      items: items,
+      onChanged: onChanged,
+    ),
+  );
 }
 
-DropdownMenuItem<T> _dropdownItem<T>(T value, String label) =>
-    DropdownMenuItem(
-      value: value,
-      child: Text(label, overflow: TextOverflow.ellipsis),
-    );
+DropdownMenuItem<T> _dropdownItem<T>(T value, String label) => DropdownMenuItem(
+  value: value,
+  child: Text(label, overflow: TextOverflow.ellipsis),
+);
 
 Future<bool> _confirmDisableLock(BuildContext context) async {
   final result = await showDialog<bool>(
     context: context,
     builder: (ctx) => AlertDialog(
       title: const Text('Ilova qulfini o\'chirasizmi?'),
-      content: const Text(
-          'PIN kod o\'chiriladi va ilova qulfsiz ochiladi.'),
+      content: const Text('PIN kod o\'chiriladi va ilova qulfsiz ochiladi.'),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(ctx).pop(false),
@@ -240,32 +243,11 @@ class SettingsScreen extends ConsumerWidget {
     CurrencyRegistry.eur,
   ];
 
-  static const _dateFormats = [
-    'dd.MM.yyyy',
-    'yyyy-MM-dd',
-    'MM/dd/yyyy',
-  ];
-
-  static const _weekdayNames = [
-    'Dushanba',
-    'Seshanba',
-    'Chorshanba',
-    'Payshanba',
-    'Juma',
-    'Shanba',
-    'Yakshanba',
-  ];
-
   static String _themeLabel(ThemeModeSetting mode) => switch (mode) {
-        ThemeModeSetting.system => 'Tizim',
-        ThemeModeSetting.light => 'Yorug\'',
-        ThemeModeSetting.dark => 'Qorong\'i',
-      };
-
-  static String _dailyLimitLabel(DailyLimitMethod method) => switch (method) {
-        DailyLimitMethod.evenSplit => 'Tekis taqsimlash',
-        DailyLimitMethod.fixedDaily => 'Belgilangan kunlik summa',
-      };
+    ThemeModeSetting.system => 'Tizim',
+    ThemeModeSetting.light => 'Yorug\'',
+    ThemeModeSetting.dark => 'Qorong\'i',
+  };
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -292,18 +274,10 @@ class SettingsScreen extends ConsumerWidget {
               VeloraSpacing.xl,
             ),
             children: [
-              _ProfileHero(name: s.name),
               const _SectionHeader('Profil'),
-              _SettingsGroup(
-                children: [
-                  ListTile(
-                    leading: const _RowIcon(Icons.person_outline),
-                    title: const Text('Ism'),
-                    subtitle: Text(s.name),
-                    trailing: const Icon(Icons.edit, color: VeloraColors.muted),
-                    onTap: () => _editName(context, s.name, save, s),
-                  ),
-                ],
+              _ProfileHero(
+                name: s.name,
+                onTap: () => _editName(context, s.name, save, s),
               ),
               const _SectionHeader('Moliyaviy sozlamalar'),
               _SettingsGroup(
@@ -312,11 +286,14 @@ class SettingsScreen extends ConsumerWidget {
                     key: const Key('settings-categories'),
                     leading: const _RowIcon(Icons.category_outlined),
                     title: const Text('Kategoriyalar'),
-                    trailing: const Icon(Icons.chevron_right,
-                        color: VeloraColors.muted),
+                    trailing: const Icon(
+                      Icons.chevron_right,
+                      color: VeloraColors.muted,
+                    ),
                     onTap: () => Navigator.of(context).push(
                       MaterialPageRoute(
-                          builder: (_) => const CategoryManagementScreen()),
+                        builder: (_) => const CategoryManagementScreen(),
+                      ),
                     ),
                   ),
                   ListTile(
@@ -330,25 +307,11 @@ class SettingsScreen extends ConsumerWidget {
                       ],
                       onChanged: (code) {
                         if (code == null) return;
-                        final currency = CurrencyRegistry.byCode(code);
-                        save(s.copyWith(
-                          primaryCurrency: currency,
-                          minReserve: Money.zero(currency),
-                        ));
-                      },
-                    ),
-                  ),
-                  ListTile(
-                    leading: const _RowIcon(Icons.event_note_outlined),
-                    title: const Text('Sana formati'),
-                    trailing: _DropdownField<String>(
-                      value: s.dateFormat,
-                      items: [
-                        for (final f in _dateFormats) _dropdownItem(f, f),
-                      ],
-                      onChanged: (f) {
-                        if (f == null) return;
-                        save(s.copyWith(dateFormat: f));
+                        save(
+                          s.copyWith(
+                            primaryCurrency: CurrencyRegistry.byCode(code),
+                          ),
+                        );
                       },
                     ),
                   ),
@@ -366,55 +329,6 @@ class SettingsScreen extends ConsumerWidget {
                         save(s.copyWith(periodStartDay: day));
                       },
                     ),
-                  ),
-                  ListTile(
-                    leading: const _RowIcon(Icons.date_range_outlined),
-                    title: const Text('Hafta boshlanish kuni'),
-                    trailing: _DropdownField<int>(
-                      value: s.weekStartIso,
-                      items: [
-                        for (var i = 0; i < _weekdayNames.length; i++)
-                          _dropdownItem(i + 1, _weekdayNames[i]),
-                      ],
-                      onChanged: (iso) {
-                        if (iso == null) return;
-                        save(s.copyWith(weekStartIso: iso));
-                      },
-                    ),
-                  ),
-                  ListTile(
-                    leading: const _RowIcon(Icons.tune_outlined),
-                    title: const Text('Kunlik limit usuli'),
-                    trailing: _DropdownField<DailyLimitMethod>(
-                      value: s.dailyLimitMethod,
-                      items: [
-                        for (final m in DailyLimitMethod.values)
-                          _dropdownItem(m, _dailyLimitLabel(m)),
-                      ],
-                      onChanged: (m) {
-                        if (m == null) return;
-                        save(s.copyWith(dailyLimitMethod: m));
-                      },
-                    ),
-                  ),
-                  ListTile(
-                    leading: const _RowIcon(Icons.savings_outlined),
-                    title: const Text('Minimal zaxira'),
-                    subtitle: Text(s.minReserve.format()),
-                    trailing:
-                        const Icon(Icons.edit, color: VeloraColors.muted),
-                    onTap: () => _editReserve(context, s, save),
-                  ),
-                ],
-              ),
-              const _SectionHeader('Bildirishnomalar'),
-              const _SettingsGroup(
-                children: [
-                  ListTile(
-                    enabled: false,
-                    leading: _RowIcon(Icons.notifications_outlined),
-                    title: Text('Bildirishnoma turlari'),
-                    subtitle: Text('(keyingi bosqichda)'),
                   ),
                 ],
               ),
@@ -455,10 +369,12 @@ class SettingsScreen extends ConsumerWidget {
                         final confirmed = await _confirmDisableLock(context);
                         if (confirmed) {
                           await lock.clearPin();
-                          save(s.copyWith(
-                            appLockEnabled: false,
-                            biometricEnabled: false,
-                          ));
+                          save(
+                            s.copyWith(
+                              appLockEnabled: false,
+                              biometricEnabled: false,
+                            ),
+                          );
                         }
                       }
                     },
@@ -485,6 +401,15 @@ class SettingsScreen extends ConsumerWidget {
                     leading: const _RowIcon(Icons.restore_outlined),
                     title: const Text('Zaxiradan tiklash'),
                     onTap: () => _restoreBackup(context, ref),
+                  ),
+                  ListTile(
+                    key: const Key('settings-factory-reset'),
+                    leading: const _RowIcon(Icons.delete_forever_outlined),
+                    title: const Text(
+                      "Ilovani boshlang'ich holatga qaytarish",
+                      style: TextStyle(color: VeloraColors.critical),
+                    ),
+                    onTap: () => _factoryReset(context, ref),
                   ),
                 ],
               ),
@@ -524,53 +449,60 @@ class SettingsScreen extends ConsumerWidget {
     }
   }
 
-  Future<void> _editReserve(
-    BuildContext context,
-    AppSettings s,
-    void Function(AppSettings) save,
-  ) async {
-    // Symbol-less numeric form so an unchanged field re-parses to the same
-    // reserve; format() would embed the currency symbol, which tryParse
-    // rejects → "Saqlash" unedited would silently drop the edit, leaving
-    // minReserve unchanged with no error shown (it feeds allocation's
-    // minimum-reserve bucket; the model-A daily limit no longer reads it).
-    final controller =
-        TextEditingController(text: s.minReserve.formatNumber());
-    final result = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Minimal zaxira'),
-        content: TextField(
-          controller: controller,
-          keyboardType: TextInputType.number,
-          autofocus: true,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Bekor qilish'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, controller.text),
-            child: const Text('Saqlash'),
-          ),
-        ],
-      ),
-    );
-    if (result == null) return;
-    final parsed = Money.tryParse(result, s.primaryCurrency);
-    if (parsed != null) {
-      save(s.copyWith(minReserve: parsed));
-    }
-  }
-
   Future<void> _exportBackup(BuildContext context, WidgetRef ref) async {
     final r = await ref.read(backupControllerProvider).exportAndShare();
     if (!context.mounted) return;
     r.when(
       ok: (_) {},
-      err: (f) => ScaffoldMessenger.of(context)
-          .showAutoDismissSnackBar(SnackBar(content: Text(userMessageFor(f)))),
+      err: (f) => ScaffoldMessenger.of(
+        context,
+      ).showAutoDismissSnackBar(SnackBar(content: Text(userMessageFor(f)))),
+    );
+  }
+
+  Future<void> _factoryReset(BuildContext context, WidgetRef ref) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text("Boshlang'ich holatga qaytarilsinmi?"),
+        content: const Text(
+          "Barcha hisoblar, tranzaksiyalar va sozlamalar butunlay o'chiriladi. "
+          'Bu amalni ortga qaytarib bo\'lmaydi.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Bekor qilish'),
+          ),
+          TextButton(
+            style: TextButton.styleFrom(foregroundColor: VeloraColors.critical),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text("O'chirish"),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+
+    // Wipe secure-storage secrets (PIN/backoff) — they live outside SQLite, so
+    // deleting the DB file alone would leave them behind.
+    await ref.read(appLockControllerProvider).clearPin();
+    final r = await ref.read(backupServiceProvider).factoryReset();
+    if (!context.mounted) return;
+    r.when(
+      ok: (_) => Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(
+          builder: (_) => const RestoreCompleteScreen(
+            title: "Ilova tozalandi",
+            message:
+                "Barcha ma'lumotlar o'chirildi. Ilovani qayta oching — u boshidan sozlanadi.",
+          ),
+        ),
+        (route) => false,
+      ),
+      err: (f) => ScaffoldMessenger.of(
+        context,
+      ).showAutoDismissSnackBar(SnackBar(content: Text(userMessageFor(f)))),
     );
   }
 
@@ -579,7 +511,8 @@ class SettingsScreen extends ConsumerWidget {
     if (!context.mounted) return;
     if (picked is Err<BackupPreview?>) {
       ScaffoldMessenger.of(context).showAutoDismissSnackBar(
-          SnackBar(content: Text(userMessageFor(picked.failure))));
+        SnackBar(content: Text(userMessageFor(picked.failure))),
+      );
       return;
     }
     final preview = picked.valueOrNull;
@@ -593,8 +526,9 @@ class SettingsScreen extends ConsumerWidget {
         MaterialPageRoute(builder: (_) => const RestoreCompleteScreen()),
         (route) => false,
       ),
-      err: (f) => ScaffoldMessenger.of(context)
-          .showAutoDismissSnackBar(SnackBar(content: Text(userMessageFor(f)))),
+      err: (f) => ScaffoldMessenger.of(
+        context,
+      ).showAutoDismissSnackBar(SnackBar(content: Text(userMessageFor(f)))),
     );
   }
 }

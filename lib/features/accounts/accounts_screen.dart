@@ -73,14 +73,40 @@ class AccountsScreen extends ConsumerWidget {
                     const SizedBox(height: VeloraSpacing.md),
                 itemBuilder: (context, index) {
                   final it = items[index];
-                  return _AccountCard(
+                  return Dismissible(
                     key: Key('account_${it.account.id}'),
-                    item: it,
-                    onTap: () => showAccountEditSheet(context, ref,
-                        accountId: it.account.id),
-                    onArchive: () => ref
-                        .read(accountsControllerProvider.notifier)
-                        .archive(it.account.id),
+                    direction: DismissDirection.endToStart,
+                    background: Container(
+                      alignment: Alignment.centerRight,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: VeloraSpacing.lg,
+                      ),
+                      decoration: BoxDecoration(
+                        color: VeloraColors.critical,
+                        borderRadius: BorderRadius.circular(VeloraRadii.card),
+                      ),
+                      child: const Icon(
+                        Icons.archive_outlined,
+                        color: Colors.white,
+                      ),
+                    ),
+                    // Archive is async and the provider rebuild drops the row;
+                    // return false so Dismissible never enters the "removed but
+                    // still in tree" state.
+                    confirmDismiss: (_) async {
+                      await ref
+                          .read(accountsControllerProvider.notifier)
+                          .archive(it.account.id);
+                      return false;
+                    },
+                    child: _AccountCard(
+                      item: it,
+                      onTap: () => showAccountEditSheet(
+                        context,
+                        ref,
+                        accountId: it.account.id,
+                      ),
+                    ),
                   );
                 },
               ),
@@ -90,19 +116,14 @@ class AccountsScreen extends ConsumerWidget {
 }
 
 /// A single account tile in the Velora Human style: a soft plum-tinted icon
-/// tile, the account name with its type + currency beneath, the derived
-/// available balance as the scannable figure, and an archive affordance.
+/// tile, the account name with its type + currency beneath, and the derived
+/// available balance as the scannable figure. Archiving is a left-swipe on the
+/// row (handled by the enclosing Dismissible), not an in-row button.
 class _AccountCard extends StatelessWidget {
-  const _AccountCard({
-    super.key,
-    required this.item,
-    required this.onTap,
-    required this.onArchive,
-  });
+  const _AccountCard({required this.item, required this.onTap});
 
   final AccountWithBalance item;
   final VoidCallback onTap;
-  final VoidCallback onArchive;
 
   @override
   Widget build(BuildContext context) {
@@ -148,16 +169,18 @@ class _AccountCard extends StatelessWidget {
                   children: [
                     Text(
                       account.name,
-                      style: theme.textTheme.titleMedium
-                          ?.copyWith(fontWeight: FontWeight.w700),
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 2),
                     Text(
                       '${accountTypeLabel(account.type)} · ${account.currency.code}',
-                      style: theme.textTheme.bodySmall
-                          ?.copyWith(color: VeloraColors.muted),
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: VeloraColors.muted,
+                      ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -168,28 +191,21 @@ class _AccountCard extends StatelessWidget {
               // `Expanded`, not `Flexible`: both share the row's free space
               // 50/50 with the name column, but a loose `Flexible` only
               // consumes its content width — leaving the unused half as a
-              // trailing gap that floats the balance and archive button to a
-              // different x on every row (balances of different widths never
-              // line up). `Expanded` fills the half, so `textAlign.end`
-              // right-aligns every balance to the same column and pins the
-              // archive button to the edge, while `ellipsis` still guards
-              // overflow at 320px/200% text scale.
+              // trailing gap that floats the balance to a different x on every
+              // row (balances of different widths never line up). `Expanded`
+              // fills the half, so `textAlign.end` right-aligns every balance
+              // to the same column, while `ellipsis` still guards overflow at
+              // 320px/200% text scale.
               Expanded(
                 child: Text(
                   item.balance.format(),
-                  style: theme.textTheme.titleMedium
-                      ?.copyWith(fontWeight: FontWeight.w700),
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
                   textAlign: TextAlign.end,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
-              ),
-              IconButton(
-                key: Key('account-archive-${account.id}'),
-                tooltip: 'Arxivlash',
-                icon: const Icon(Icons.archive_outlined,
-                    color: VeloraColors.muted),
-                onPressed: onArchive,
               ),
             ],
           ),

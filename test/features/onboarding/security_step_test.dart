@@ -20,15 +20,14 @@ class _FakeSecretStore implements SecretStore {
 }
 
 void main() {
-  test('onboarding steps include the security step before the theme step', () {
+  test('the trimmed onboarding is exactly welcome then the security step', () {
     final container = ProviderContainer();
     addTearDown(container.dispose);
     final ids = container
         .read(onboardingStepsProvider)
         .map((s) => s.id)
         .toList();
-    expect(ids.contains('security'), isTrue);
-    expect(ids.indexOf('security'), lessThan(ids.indexOf('theme')));
+    expect(ids, ['welcome', 'security']);
   });
 
   testWidgets(

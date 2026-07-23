@@ -220,40 +220,18 @@ class _LockScreenState extends State<_LockScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // The Velora brand mark: a plum tile + wordmark, so the lock
-                // screen reads as "Velora, locked" rather than a bare OS
+                // The `velora.` wordmark, matching the Home header logo, so the
+                // lock screen reads as "Velora, locked" rather than a bare OS
                 // prompt (design spec sec. 6.13).
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 34,
-                      height: 34,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: VeloraColors.plum,
-                        borderRadius:
-                            BorderRadius.circular(VeloraRadii.control),
-                      ),
-                      child: const Text(
-                        'V',
-                        textScaler: TextScaler.noScaling,
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w800,
-                          fontSize: 16,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: VeloraSpacing.sm),
-                    Text(
-                      'Velora',
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        color: colorScheme.primary,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ],
+                Text(
+                  'velora.',
+                  textScaler: TextScaler.noScaling,
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    color: VeloraColors.plum,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 28,
+                    letterSpacing: -0.5,
+                  ),
                 ),
                 const SizedBox(height: VeloraSpacing.xl),
                 Text(
@@ -299,8 +277,9 @@ class _LockScreenState extends State<_LockScreen> {
                     '${_formatLockout(_lockout)}',
                     key: const Key('app_lock_lockout'),
                     textAlign: TextAlign.center,
-                    style: theme.textTheme.bodyMedium
-                        ?.copyWith(color: colorScheme.error),
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: colorScheme.error,
+                    ),
                   ),
                 ],
                 if (widget.biometricEnabled) ...[
@@ -321,4 +300,3 @@ class _LockScreenState extends State<_LockScreen> {
     );
   }
 }
-

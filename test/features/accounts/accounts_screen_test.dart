@@ -33,8 +33,8 @@ void main() {
   });
 
   testWidgets(
-      'archive buttons and balances right-align across rows with unequal '
-      'balance widths', (tester) async {
+      'balances right-align across rows with unequal balance widths',
+      (tester) async {
     final db = AppDatabase(NativeDatabase.memory());
     addTearDown(db.close);
     final container = ProviderContainer(
@@ -56,21 +56,36 @@ void main() {
     ));
     await tester.pumpAndSettle();
 
-    // Both archive affordances must sit at the same x — pinned to the right
-    // edge, not floating with the balance's content width.
-    final archives = find.byIcon(Icons.archive_outlined);
-    expect(archives, findsNWidgets(2));
-    expect(
-      tester.getCenter(archives.at(0)).dx,
-      moreOrLessEquals(tester.getCenter(archives.at(1)).dx, epsilon: 0.5),
-    );
-
-    // And the balance figures must right-align to the same column.
+    // The balance figures must right-align to the same column.
     final big = tester.getTopRight(
         find.text(const Money(50000000, CurrencyRegistry.uzs).format()));
     final small = tester.getTopRight(
         find.text(const Money(1000, CurrencyRegistry.uzs).format()));
     expect(big.dx, moreOrLessEquals(small.dx, epsilon: 0.5));
+  });
+
+  testWidgets('swiping an account row archives it', (tester) async {
+    final db = AppDatabase(NativeDatabase.memory());
+    addTearDown(db.close);
+    final container = ProviderContainer(
+        overrides: [databaseProvider.overrideWithValue(db)]);
+    addTearDown(container.dispose);
+    await container.read(accountsControllerProvider.notifier).createAccount(
+        name: 'Naqd', type: AccountType.cash,
+        openingBalance: const Money(500000, CurrencyRegistry.uzs),
+        icon: 'wallet');
+
+    await tester.pumpWidget(UncontrolledProviderScope(
+      container: container,
+      child: const MaterialApp(home: AccountsScreen()),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Naqd'), findsOneWidget);
+    // Swipe the row left (endToStart) to archive it; the list drops the row.
+    await tester.drag(find.text('Naqd'), const Offset(-500, 0));
+    await tester.pumpAndSettle();
+    expect(find.text('Naqd'), findsNothing);
   });
 
   testWidgets('selecting an account type does not change the chip width',

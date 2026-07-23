@@ -22,7 +22,8 @@ class BackupService {
     try {
       await DriftMetaRepository(db).touchBackup(DateTime.now());
       final dest = File(destPath);
-      if (await dest.exists()) await dest.delete(); // VACUUM INTO fails if it exists
+      if (await dest.exists())
+        await dest.delete(); // VACUUM INTO fails if it exists
       // ponytail: escape single quotes; temp paths have none, but be safe.
       final escaped = destPath.replaceAll("'", "''");
       await db.customStatement("VACUUM INTO '$escaped'");
@@ -36,7 +37,10 @@ class BackupService {
   /// newer than this app (PRD §20.4), migrates the copy to the current schema,
   /// and returns its counts + backup date (PRD §19.2). The original DB is never
   /// touched. The returned [BackupPreview.validatedTempPath] is the migrated copy.
-  Future<Result<BackupPreview>> validate(String pickedPath, String workDir) async {
+  Future<Result<BackupPreview>> validate(
+    String pickedPath,
+    String workDir,
+  ) async {
     final copyPath = p.join(workDir, 'validate.db');
     try {
       await Directory(workDir).create(recursive: true);
@@ -59,8 +63,11 @@ class BackupService {
       return Err(StorageFailure(e.toString())); // not a readable sqlite db
     }
     if (backupVersion < 1 || backupVersion > db.schemaVersion) {
-      return Err(BackupIncompatibleFailure(
-          'backup schema $backupVersion vs app ${db.schemaVersion}'));
+      return Err(
+        BackupIncompatibleFailure(
+          'backup schema $backupVersion vs app ${db.schemaVersion}',
+        ),
+      );
     }
 
     // Open + migrate the copy (upgrades older backups; rollback-on-failure).
@@ -70,12 +77,14 @@ class BackupService {
     try {
       final meta = await DriftMetaRepository(copyDb).read();
       final counts = await _counts(copyDb);
-      return Ok(BackupPreview(
-        schemaVersion: backupVersion,
-        backupDate: meta.lastBackupAt ?? meta.installedAt,
-        counts: counts,
-        validatedTempPath: copyPath,
-      ));
+      return Ok(
+        BackupPreview(
+          schemaVersion: backupVersion,
+          backupDate: meta.lastBackupAt ?? meta.installedAt,
+          counts: counts,
+          validatedTempPath: copyPath,
+        ),
+      );
     } catch (e) {
       return Err(StorageFailure(e.toString()));
     } finally {
@@ -96,7 +105,9 @@ class BackupService {
       // Drift opens the underlying file lazily; a never-queried live db (e.g. a
       // fresh install) may not have a file yet, so there's nothing to snapshot.
       if (await live.exists()) {
-        await live.copy(snapshot); // snapshot original (now closed = consistent)
+        await live.copy(
+          snapshot,
+        ); // snapshot original (now closed = consistent)
       }
     } catch (e) {
       return Err(StorageFailure(e.toString()));
@@ -105,7 +116,9 @@ class BackupService {
       // Guards against a mid-write swap failure (disk full, permission glitch);
       // File.copy fails atomically on source errors, so a partial dbPath here
       // means the copy never started writing the destination.
-      await File(preview.validatedTempPath).copy(dbPath); // swap in migrated backup
+      await File(
+        preview.validatedTempPath,
+      ).copy(dbPath); // swap in migrated backup
     } catch (e) {
       try {
         if (await File(snapshot).exists()) {
@@ -124,6 +137,25 @@ class BackupService {
       // a reason to report failure or roll back a successful restore.
     }
     return const Ok(null);
+  }
+
+  /// Returns the app to a fresh-install state: closes the live DB and deletes
+  /// its file plus the WAL/SHM sidecars, so the next `openAppDatabase` runs
+  /// `onCreate` again — empty tables and `onboardingComplete = false`, which
+  /// sends the app back to onboarding. The caller must not use [db] afterward
+  /// and should route to a "reopen the app" screen. Secure-storage secrets
+  /// (the PIN) are the caller's to clear; this service is storage-plugin-free.
+  Future<Result<void>> factoryReset() async {
+    try {
+      await db.close();
+      for (final suffix in ['', '-wal', '-shm']) {
+        final f = File('$dbPath$suffix');
+        if (await f.exists()) await f.delete();
+      }
+      return const Ok(null);
+    } catch (e) {
+      return Err(StorageFailure(e.toString()));
+    }
   }
 
   Future<Map<String, int>> _counts(AppDatabase d) async {

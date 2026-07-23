@@ -7,39 +7,27 @@ import '../../providers/app_providers.dart';
 import '../shell/routes.dart';
 import 'onboarding_controller.dart';
 import 'onboarding_step.dart';
-import 'steps/account_step.dart';
-import 'steps/currency_step.dart';
-import 'steps/financial_baseline_step.dart';
-import 'steps/period_step.dart';
 import 'steps/security_step.dart';
-import 'steps/theme_step.dart';
 import 'steps/welcome_step.dart';
 
-/// Foundation's ordered onboarding steps, progressive and skippable
-/// (design spec sec. 6.1): welcome+name, currency, financial-period start,
-/// first account + opening balance, financial baseline (variable budget +
-/// minimal reserve), and appearance. Later sub-projects can override this
-/// provider to insert/append their own steps without touching Foundation
-/// code.
-final onboardingStepsProvider = Provider<List<OnboardingStep>>((ref) => [
-      WelcomeStep(),
-      CurrencyStep(),
-      PeriodStep(),
-      AccountStep(),
-      FinancialBaselineStep(),
-      SecurityStep(),
-      ThemeStep(),
-    ]);
+/// A deliberately minimal onboarding: just the welcome + name, then the App
+/// Lock (PIN/biometric) configuration. Everything else (currency, period,
+/// first account, baseline, theme) keeps its sensible default and is
+/// adjustable later from Settings, so setup reads as an invitation, not a
+/// form. Later sub-projects can override this provider to append steps.
+final onboardingStepsProvider = Provider<List<OnboardingStep>>(
+  (ref) => [WelcomeStep(), SecurityStep()],
+);
 
 final onboardingControllerProvider =
     StateNotifierProvider<OnboardingController, OnboardingDraft>((ref) {
-  final stepCount = ref.watch(onboardingStepsProvider).length;
-  return OnboardingController(
-    settingsRepo: ref.watch(settingsRepositoryProvider),
-    metaRepo: ref.watch(metaRepositoryProvider),
-    stepCount: stepCount,
-  );
-});
+      final stepCount = ref.watch(onboardingStepsProvider).length;
+      return OnboardingController(
+        settingsRepo: ref.watch(settingsRepositoryProvider),
+        metaRepo: ref.watch(metaRepositoryProvider),
+        stepCount: stepCount,
+      );
+    });
 
 class OnboardingScreen extends ConsumerWidget {
   const OnboardingScreen({super.key});
@@ -157,8 +145,9 @@ class OnboardingScreen extends ConsumerWidget {
                         backgroundColor: VeloraColors.coral,
                         foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(
-                          borderRadius:
-                              BorderRadius.circular(VeloraRadii.control),
+                          borderRadius: BorderRadius.circular(
+                            VeloraRadii.control,
+                          ),
                         ),
                       ),
                       onPressed: finishOrAdvance,

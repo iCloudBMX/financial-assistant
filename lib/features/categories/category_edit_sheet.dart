@@ -10,20 +10,26 @@ import '../../ui/components/velora_sheet.dart';
 import 'categories_controller.dart';
 
 /// Opens the searchable category editor (§6.7). Pass [categoryId] to jump
-/// straight to that category's edit form (the fast path from a list row);
-/// omit it to open the searchable list first, with a "Yangi kategoriya" entry.
-Future<void> showCategoryEditSheet(BuildContext context, {int? categoryId}) {
+/// straight to that category's edit form (the fast path from a list row), or
+/// [createNew] to open the create form directly; omit both to open the
+/// searchable list first, with a "Yangi kategoriya" entry.
+Future<void> showCategoryEditSheet(BuildContext context,
+    {int? categoryId, bool createNew = false}) {
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
-    builder: (_) => _CategoryEditSheet(initialCategoryId: categoryId),
+    builder: (_) => _CategoryEditSheet(
+      initialCategoryId: categoryId,
+      createNew: createNew,
+    ),
   );
 }
 
 class _CategoryEditSheet extends ConsumerStatefulWidget {
-  const _CategoryEditSheet({this.initialCategoryId});
+  const _CategoryEditSheet({this.initialCategoryId, this.createNew = false});
   final int? initialCategoryId;
+  final bool createNew;
 
   @override
   ConsumerState<_CategoryEditSheet> createState() => _CategoryEditSheetState();
@@ -31,7 +37,7 @@ class _CategoryEditSheet extends ConsumerStatefulWidget {
 
 class _CategoryEditSheetState extends ConsumerState<_CategoryEditSheet> {
   late int? _editingId = widget.initialCategoryId;
-  bool _creatingNew = false;
+  late bool _creatingNew = widget.createNew;
   final _searchCtrl = TextEditingController();
   String _query = '';
 
@@ -41,7 +47,9 @@ class _CategoryEditSheetState extends ConsumerState<_CategoryEditSheet> {
     super.dispose();
   }
 
-  bool get _directEdit => widget.initialCategoryId != null;
+  // Entered straight into a form (no searchable list behind it), so the form's
+  // "Orqaga" affordance is pointless.
+  bool get _directEdit => widget.initialCategoryId != null || widget.createNew;
 
   @override
   Widget build(BuildContext context) {

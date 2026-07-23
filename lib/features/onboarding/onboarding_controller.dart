@@ -14,43 +14,25 @@ class OnboardingDraft {
   final AppSettings settings;
   final int index;
 
-  /// The id of the account created during the Account step this onboarding
-  /// session, or null if none has been created yet. Lifted out of the step
-  /// widget's local state because `OnboardingScreen` keys each step by
-  /// `step.id`, so backing off the Account step and returning remounts a
-  /// fresh widget — local `_created` state would be lost and re-tapping
-  /// "Hisob qo'shish" would silently create a DUPLICATE account. Tracking it
-  /// on the (session-scoped) draft makes "already created" survive
-  /// back/forward navigation.
-  final int? createdAccountId;
+  const OnboardingDraft(this.settings, this.index);
 
-  const OnboardingDraft(this.settings, this.index, {this.createdAccountId});
-
-  OnboardingDraft copyWith({
-    AppSettings? settings,
-    int? index,
-    int? createdAccountId,
-  }) =>
-      OnboardingDraft(
-        settings ?? this.settings,
-        index ?? this.index,
-        createdAccountId: createdAccountId ?? this.createdAccountId,
-      );
+  OnboardingDraft copyWith({AppSettings? settings, int? index}) =>
+      OnboardingDraft(settings ?? this.settings, index ?? this.index);
 }
 
 AppSettings defaultSettings() => AppSettings(
-      name: '',
-      primaryCurrency: CurrencyRegistry.uzs,
-      dateFormat: 'dd.MM.yyyy',
-      periodStartDay: 1,
-      weekStartIso: 1,
-      dailyLimitMethod: DailyLimitMethod.evenSplit,
-      minReserve: Money.zero(CurrencyRegistry.uzs),
-      themeMode: ThemeModeSetting.system,
-      appLockEnabled: false,
-      biometricEnabled: false,
-      savingsRolloverMode: SavingsRolloverMode.askEachTime,
-    );
+  name: '',
+  primaryCurrency: CurrencyRegistry.uzs,
+  dateFormat: 'dd.MM.yyyy',
+  periodStartDay: 1,
+  weekStartIso: 1,
+  dailyLimitMethod: DailyLimitMethod.evenSplit,
+  minReserve: Money.zero(CurrencyRegistry.uzs),
+  themeMode: ThemeModeSetting.system,
+  appLockEnabled: false,
+  biometricEnabled: false,
+  savingsRolloverMode: SavingsRolloverMode.askEachTime,
+);
 
 class OnboardingController extends StateNotifier<OnboardingDraft> {
   final SettingsRepository settingsRepo;
@@ -84,12 +66,6 @@ class OnboardingController extends StateNotifier<OnboardingDraft> {
 
   void update(AppSettings Function(AppSettings) f) =>
       state = state.copyWith(settings: f(state.settings));
-
-  /// Records the account created during the Account step so re-entering the
-  /// step (after back/forward navigation) knows one already exists and does
-  /// not create a duplicate.
-  void markAccountCreated(int accountId) =>
-      state = state.copyWith(createdAccountId: accountId);
 
   bool get isLast => state.index == stepCount - 1;
 
