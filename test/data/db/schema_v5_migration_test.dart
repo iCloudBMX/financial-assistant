@@ -32,7 +32,7 @@ class _V4AppDatabase extends AppDatabase {
 void main() {
   test('schemaVersion is 7', () {
     final db = AppDatabase(NativeDatabase.memory());
-    expect(db.schemaVersion, 7);
+    expect(db.schemaVersion, 8);
     db.close();
   });
 

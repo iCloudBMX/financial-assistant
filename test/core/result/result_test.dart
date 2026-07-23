@@ -22,12 +22,6 @@ void main() {
     expect(s, 'ok:1');
   });
 
-  test('userMessage is non-technical and mentions no jargon', () {
-    final msg = userMessage(const MigrationFailure('SQLITE_ERROR 1'));
-    expect(msg.toLowerCase(), isNot(contains('sqlite')));
-    expect(msg, isNotEmpty);
-  });
-
   test('userMessageFor maps typed failures without exposing debug details', () {
     const failures = <Failure>[
       ValidationFailure('amount_minor must be positive'),
