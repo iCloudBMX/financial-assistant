@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/money/money.dart';
 import '../../core/theme/velora_tokens.dart';
+import '../../providers/month_close_providers.dart';
 import '../../providers/reports_providers.dart';
 import '../../ui/components/velora_async_state.dart';
 import '../../ui/components/velora_card.dart';
+import '../month_close/month_close_data.dart';
+import '../month_close/month_close_screen.dart';
 import 'category_report_view.dart';
 import 'goal_report_view.dart';
 import 'mortgage_report_view.dart';
@@ -39,21 +42,63 @@ class ReportsScreen extends ConsumerWidget {
             ],
           ),
         ),
-        body: TabBarView(
+        body: Column(
           children: [
-            const _MonthlyTab(),
-            ListView(
-              padding: const EdgeInsets.all(VeloraSpacing.lg),
-              children: const [CategoryReportView()],
+            const _MonthCloseBanner(),
+            Expanded(
+              child: TabBarView(
+                children: [
+                  const _MonthlyTab(),
+                  ListView(
+                    padding: const EdgeInsets.all(VeloraSpacing.lg),
+                    children: const [CategoryReportView()],
+                  ),
+                  ListView(
+                    padding: const EdgeInsets.all(VeloraSpacing.lg),
+                    children: const [GoalReportView()],
+                  ),
+                  ListView(
+                    padding: const EdgeInsets.all(VeloraSpacing.lg),
+                    children: const [MortgageReportView()],
+                  ),
+                ],
+              ),
             ),
-            ListView(
-              padding: const EdgeInsets.all(VeloraSpacing.lg),
-              children: const [GoalReportView()],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Shows only once there is an elapsed, unclosed period (Task 6, §16.1
+/// soft-ceremony close). Tapping it pushes [MonthCloseScreen]; nothing is
+/// forced — silence (loading/error/null) just renders nothing.
+class _MonthCloseBanner extends ConsumerWidget {
+  const _MonthCloseBanner();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final monthClose = ref.watch(monthCloseProvider).asData?.value;
+    if (monthClose == null) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+          VeloraSpacing.lg, VeloraSpacing.lg, VeloraSpacing.lg, 0),
+      child: VeloraCard(
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const MonthCloseScreen()),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.event_available, color: VeloraColors.plum),
+            const SizedBox(width: VeloraSpacing.sm),
+            Expanded(
+              child: Text(
+                '${periodLabel(monthClose.period)} oyini yopish vaqti keldi',
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
             ),
-            ListView(
-              padding: const EdgeInsets.all(VeloraSpacing.lg),
-              children: const [MortgageReportView()],
-            ),
+            const Icon(Icons.chevron_right),
           ],
         ),
       ),

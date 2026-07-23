@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/ledger/summary_engine.dart';
+import '../core/money/currency.dart';
 import '../core/money/money.dart';
 import '../core/reports/period_summary.dart';
 import '../core/time/financial_period.dart';
@@ -8,27 +9,14 @@ import '../features/reports/category_report_view.dart';
 import '../features/reports/report_data.dart';
 import 'app_providers.dart';
 
-final monthlyReportProvider = FutureProvider<MonthlyReport>((ref) async {
-  ref.watch(ledgerRevisionProvider);
-  final settings = await ref.watch(settingsProvider.future);
-  final accounts =
-      await ref.watch(accountRepositoryProvider).list(includeArchived: false);
-  final entries = await ref.watch(ledgerRepositoryProvider).allEntries();
-  final categories = await ref.watch(categoriesProvider.future);
+/// Goal allocated in [period]: Σ positive goal contributions across all
+/// goals, in-period, in [currency]. Shared by `monthlyReportProvider` and
+/// `monthCloseProvider` so the fold isn't duplicated.
+/// ponytail: N+1 over goals (one contributions() call each) — fine at MVP
+/// scale; add a repo allContributions() if goal counts ever get large.
+Future<Money> goalAllocatedInPeriod(
+    Ref ref, FinancialPeriod period, Currency currency) async {
   final goals = await ref.watch(goalsProvider.future);
-
-  final now = DateTime.now();
-  final period = FinancialPeriod.containing(now, settings.periodStartDay);
-  final prev = period.previous();
-  final currency = settings.primaryCurrency;
-  final mandatoryIds = {
-    for (final c in categories)
-      if (c.kind == CategoryKind.mandatory) c.id
-  };
-
-  // goal allocated this period: Σ positive contributions in-period across goals.
-  // ponytail: N+1 over goals (one contributions() call each) — fine at MVP
-  // scale; add a repo allContributions() if goal counts ever get large.
   final goalRepo = ref.watch(goalRepositoryProvider);
   var allocated = 0;
   for (final gwp in goals) {
@@ -41,6 +29,27 @@ final monthlyReportProvider = FutureProvider<MonthlyReport>((ref) async {
       }
     }
   }
+  return Money(allocated, currency);
+}
+
+final monthlyReportProvider = FutureProvider<MonthlyReport>((ref) async {
+  ref.watch(ledgerRevisionProvider);
+  final settings = await ref.watch(settingsProvider.future);
+  final accounts =
+      await ref.watch(accountRepositoryProvider).list(includeArchived: false);
+  final entries = await ref.watch(ledgerRepositoryProvider).allEntries();
+  final categories = await ref.watch(categoriesProvider.future);
+
+  final now = DateTime.now();
+  final period = FinancialPeriod.containing(now, settings.periodStartDay);
+  final prev = period.previous();
+  final currency = settings.primaryCurrency;
+  final mandatoryIds = {
+    for (final c in categories)
+      if (c.kind == CategoryKind.mandatory) c.id
+  };
+
+  final goalAllocated = await goalAllocatedInPeriod(ref, period, currency);
 
   return MonthlyReport(
     current: buildMonthlySummary(
@@ -55,7 +64,7 @@ final monthlyReportProvider = FutureProvider<MonthlyReport>((ref) async {
         mandatoryCategoryIds: mandatoryIds,
         period: prev,
         currency: currency),
-    goalAllocated: Money(allocated, currency),
+    goalAllocated: goalAllocated,
     period: period,
     currency: currency,
   );
