@@ -13,6 +13,7 @@ import '../data/accounts/account_repository.dart';
 import '../data/allocation/allocation_plan_repository.dart';
 import '../data/categories/category_model.dart';
 import '../data/categories/category_repository.dart';
+import '../data/backup/backup_service.dart';
 import '../data/db/app_database.dart';
 import '../data/goals/goal_model.dart';
 import '../data/goals/goal_repository.dart';
@@ -24,12 +25,26 @@ import '../data/mortgage/mortgage_repository.dart';
 import '../data/recurring/recurring_repository.dart';
 import '../data/settings/settings_model.dart';
 import '../data/settings/settings_repository.dart';
+import '../features/backup/backup_controller.dart';
 import '../features/home/dashboard_data.dart';
 import '../features/security/app_lock_controller.dart';
 
 /// Overridden in the composition root with the opened database.
 final databaseProvider = Provider<AppDatabase>(
   (ref) => throw UnimplementedError('databaseProvider must be overridden'),
+);
+
+/// Absolute path to the live DB file. Overridden in the composition root.
+final dbPathProvider = Provider<String>(
+  (ref) => throw UnimplementedError('dbPathProvider must be overridden'),
+);
+
+final backupServiceProvider = Provider<BackupService>(
+  (ref) => BackupService(ref.watch(databaseProvider), ref.watch(dbPathProvider)),
+);
+
+final backupControllerProvider = Provider<BackupController>(
+  (ref) => BackupController(ref.watch(backupServiceProvider)),
 );
 
 final settingsRepositoryProvider = Provider<SettingsRepository>(

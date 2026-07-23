@@ -16,7 +16,10 @@ Future<void> main() async {
   result.when(
     ok: (db) => runApp(
       ProviderScope(
-        overrides: [databaseProvider.overrideWithValue(db)],
+        overrides: [
+          databaseProvider.overrideWithValue(db),
+          dbPathProvider.overrideWithValue(dbPath),
+        ],
         child: const App(),
       ),
     ),
