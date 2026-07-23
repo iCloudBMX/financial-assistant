@@ -5,38 +5,67 @@ import '../../core/theme/velora_tokens.dart';
 import '../../providers/reports_providers.dart';
 import '../../ui/components/velora_async_state.dart';
 import '../../ui/components/velora_card.dart';
+import 'category_report_view.dart';
 import 'report_data.dart';
 
-/// The Tahlil (Reports) tab. Task 3 ships the Oylik (monthly) section only;
-/// Category/Goal/Mortgage sections slot in as later tabs.
+/// The Tahlil (Reports) tab: Oylik (monthly) + Kategoriya sections.
+/// Goal/Mortgage sections slot in as later tabs.
 class ReportsScreen extends ConsumerWidget {
   const ReportsScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final report = ref.watch(monthlyReportProvider);
-    return Scaffold(
-      backgroundColor: VeloraColors.blush,
-      appBar: AppBar(
-        title: const Text('Hisobotlar'),
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
         backgroundColor: VeloraColors.blush,
-        surfaceTintColor: Colors.transparent,
-        elevation: 0,
-        foregroundColor: VeloraColors.inkberry,
-      ),
-      body: report.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => VeloraErrorState(
-          message: 'Xatolik yuz berdi',
-          onRetry: () => ref.invalidate(monthlyReportProvider),
+        appBar: AppBar(
+          title: const Text('Hisobotlar'),
+          backgroundColor: VeloraColors.blush,
+          surfaceTintColor: Colors.transparent,
+          elevation: 0,
+          foregroundColor: VeloraColors.inkberry,
+          bottom: const TabBar(
+            labelColor: VeloraColors.plum,
+            unselectedLabelColor: VeloraColors.muted,
+            indicatorColor: VeloraColors.plum,
+            tabs: [
+              Tab(text: 'Oylik'),
+              Tab(text: 'Kategoriya'),
+            ],
+          ),
         ),
-        data: (data) => ListView(
-          padding: const EdgeInsets.all(VeloraSpacing.lg),
+        body: TabBarView(
           children: [
-            _MonthlySection(report: data),
-            // TODO(SP5 Task 4/5): Category / Goal / Mortgage tabs.
+            const _MonthlyTab(),
+            ListView(
+              padding: const EdgeInsets.all(VeloraSpacing.lg),
+              children: const [CategoryReportView()],
+            ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _MonthlyTab extends ConsumerWidget {
+  const _MonthlyTab();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final report = ref.watch(monthlyReportProvider);
+    return report.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, _) => VeloraErrorState(
+        message: 'Xatolik yuz berdi',
+        onRetry: () => ref.invalidate(monthlyReportProvider),
+      ),
+      data: (data) => ListView(
+        padding: const EdgeInsets.all(VeloraSpacing.lg),
+        children: [
+          _MonthlySection(report: data),
+        ],
       ),
     );
   }

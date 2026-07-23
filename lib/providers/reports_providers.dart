@@ -1,8 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../core/ledger/summary_engine.dart';
 import '../core/money/money.dart';
 import '../core/reports/period_summary.dart';
 import '../core/time/financial_period.dart';
 import '../data/categories/category_model.dart';
+import '../features/reports/category_report_view.dart';
 import '../features/reports/report_data.dart';
 import 'app_providers.dart';
 
@@ -57,4 +59,39 @@ final monthlyReportProvider = FutureProvider<MonthlyReport>((ref) async {
     period: period,
     currency: currency,
   );
+});
+
+/// Reports ▸ Kategoriya: actual spend per category this period, share of
+/// total expense, and spend in the previous period (for the trend chip).
+/// No planned-budget/remaining/deviation — category budgets were removed.
+final categoryReportProvider =
+    FutureProvider<List<CategoryReportRow>>((ref) async {
+  ref.watch(ledgerRevisionProvider);
+  final settings = await ref.watch(settingsProvider.future);
+  final entries = await ref.watch(ledgerRepositoryProvider).allEntries();
+  final categories = await ref.watch(categoriesProvider.future);
+
+  final now = DateTime.now();
+  final period = FinancialPeriod.containing(now, settings.periodStartDay);
+  final prev = period.previous();
+  final currency = settings.primaryCurrency;
+
+  final spent = categorySpent(entries, period, currency);
+  final prevSpentByCategory = categorySpent(entries, prev, currency);
+  final total = periodExpense(entries, period, currency);
+
+  final rows = <CategoryReportRow>[
+    for (final c in categories)
+      if ((spent[c.id]?.minorUnits ?? 0) > 0)
+        CategoryReportRow(
+          categoryId: c.id,
+          name: c.name,
+          icon: c.icon,
+          spent: spent[c.id]!,
+          shareBp: shareBp(spent[c.id]!, total),
+          prevSpent: prevSpentByCategory[c.id] ?? Money.zero(currency),
+        ),
+  ];
+  rows.sort((a, b) => b.spent.compareTo(a.spent));
+  return rows;
 });
