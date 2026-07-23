@@ -46,8 +46,9 @@ void main() {
     ));
     await tester.pumpAndSettle();
 
-    // Skip: welcome -> currency -> period -> account -> financial-baseline.
-    for (var i = 0; i < 5; i++) {
+    // Skip: welcome -> currency -> period -> account -> financial-baseline
+    // -> security.
+    for (var i = 0; i < 6; i++) {
       expect(find.byKey(const Key('onboarding_skip_button')), findsOneWidget);
       await tester.tap(find.byKey(const Key('onboarding_skip_button')));
       await tester.pumpAndSettle();
@@ -211,6 +212,9 @@ void main() {
     );
     await tester.pump();
 
+    await tester.tap(find.byKey(const Key('onboarding_next_button')));
+    await tester.pumpAndSettle();
+    // Past the (skippable) security step.
     await tester.tap(find.byKey(const Key('onboarding_next_button')));
     await tester.pumpAndSettle();
     // Finish onboarding from the last (appearance) step.

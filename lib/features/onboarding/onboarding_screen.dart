@@ -11,6 +11,7 @@ import 'steps/account_step.dart';
 import 'steps/currency_step.dart';
 import 'steps/financial_baseline_step.dart';
 import 'steps/period_step.dart';
+import 'steps/security_step.dart';
 import 'steps/theme_step.dart';
 import 'steps/welcome_step.dart';
 
@@ -26,6 +27,7 @@ final onboardingStepsProvider = Provider<List<OnboardingStep>>((ref) => [
       PeriodStep(),
       AccountStep(),
       FinancialBaselineStep(),
+      SecurityStep(),
       ThemeStep(),
     ]);
 
