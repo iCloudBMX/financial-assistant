@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/theme/velora_tokens.dart';
 import 'app_lock_controller.dart';
+import 'pin_keypad.dart';
 
 /// Blocks [child] behind a PIN/biometric prompt until the user unlocks the
 /// app. Requires unlock on cold start (when [enabled] is true) and again
@@ -238,7 +239,7 @@ class _LockScreenState extends State<_LockScreen> {
                   ),
                 ),
                 const SizedBox(height: VeloraSpacing.xl),
-                _PinDots(filled: _digits.length, error: _error != null),
+                PinDots(filled: _digits.length, error: _error != null),
                 const SizedBox(height: VeloraSpacing.md),
                 SizedBox(
                   height: 20,
@@ -250,7 +251,7 @@ class _LockScreenState extends State<_LockScreen> {
                         ),
                 ),
                 const SizedBox(height: VeloraSpacing.xl),
-                _Keypad(
+                PinKeypad(
                   enabled: !_checking,
                   onDigit: _onDigit,
                   onBackspace: _onBackspace,
@@ -276,157 +277,3 @@ class _LockScreenState extends State<_LockScreen> {
   }
 }
 
-class _PinDots extends StatelessWidget {
-  const _PinDots({required this.filled, required this.error});
-
-  final int filled;
-  final bool error;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final color = error ? colorScheme.error : colorScheme.primary;
-    return Semantics(
-      label: '$filled / 4 raqam kiritildi',
-      child: ExcludeSemantics(
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            for (var i = 0; i < 4; i++)
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: VeloraSpacing.sm,
-                ),
-                child: Container(
-                  width: 14,
-                  height: 14,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: i < filled ? color : Colors.transparent,
-                    border: Border.all(color: color, width: 1.5),
-                  ),
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _Keypad extends StatelessWidget {
-  const _Keypad({
-    required this.enabled,
-    required this.onDigit,
-    required this.onBackspace,
-    required this.showBiometric,
-    required this.onBiometricRetry,
-  });
-
-  final bool enabled;
-  final ValueChanged<int> onDigit;
-  final VoidCallback onBackspace;
-  final bool showBiometric;
-  final VoidCallback onBiometricRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    Widget digitButton(int d) => _KeypadButton(
-          key: Key('app_lock_key_$d'),
-          onPressed: enabled ? () => onDigit(d) : null,
-          semanticLabel: '$d raqami',
-          child: Text('$d'),
-        );
-
-    Widget row(List<Widget> children) => Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: children,
-        );
-
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        row([digitButton(1), digitButton(2), digitButton(3)]),
-        const SizedBox(height: VeloraSpacing.md),
-        row([digitButton(4), digitButton(5), digitButton(6)]),
-        const SizedBox(height: VeloraSpacing.md),
-        row([digitButton(7), digitButton(8), digitButton(9)]),
-        const SizedBox(height: VeloraSpacing.md),
-        row([
-          if (showBiometric)
-            _KeypadButton(
-              key: const Key('app_lock_biometric_retry'),
-              onPressed: enabled ? onBiometricRetry : null,
-              semanticLabel: "Biometrik orqali qayta urinish",
-              child: const Icon(Icons.fingerprint, color: VeloraColors.plum),
-            )
-          else
-            const SizedBox(width: 56, height: 56),
-          digitButton(0),
-          _KeypadButton(
-            key: const Key('app_lock_key_backspace'),
-            onPressed: enabled ? onBackspace : null,
-            semanticLabel: "Bitta raqamni o'chirish",
-            child:
-                const Icon(Icons.backspace_outlined, color: VeloraColors.plum),
-          ),
-        ]),
-      ],
-    );
-  }
-}
-
-/// A single keypad key. Digit glyphs opt out of system text scaling so the
-/// 56x56 touch target (>= the 48x48 minimum) never overflows at 200% text
-/// scale -- the key stays a fixed, thumb-reachable size regardless.
-class _KeypadButton extends StatelessWidget {
-  const _KeypadButton({
-    super.key,
-    required this.onPressed,
-    required this.child,
-    required this.semanticLabel,
-  });
-
-  final VoidCallback? onPressed;
-  final Widget child;
-  final String semanticLabel;
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      button: true,
-      label: semanticLabel,
-      enabled: onPressed != null,
-      child: SizedBox(
-        width: 56,
-        height: 56,
-        child: Material(
-          color: Theme.of(context).colorScheme.surfaceContainerHighest,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(VeloraRadii.control),
-          ),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(VeloraRadii.control),
-            onTap: onPressed,
-            child: ExcludeSemantics(
-              child: Center(
-                child: MediaQuery(
-                  data: MediaQuery.of(
-                    context,
-                  ).copyWith(textScaler: TextScaler.noScaling),
-                  child: DefaultTextStyle.merge(
-                    style: Theme.of(context).textTheme.headlineSmall,
-                    child: IconTheme.merge(
-                      data: const IconThemeData(size: 24),
-                      child: child,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
