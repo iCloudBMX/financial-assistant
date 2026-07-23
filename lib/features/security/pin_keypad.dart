@@ -62,6 +62,7 @@ class PinKeypad extends StatelessWidget {
     this.showBiometric = false,
     this.onBiometricRetry,
     this.keyPrefix = 'app_lock_key',
+    this.biometricEnabled,
   });
 
   final bool enabled;
@@ -70,6 +71,12 @@ class PinKeypad extends StatelessWidget {
   final bool showBiometric;
   final VoidCallback? onBiometricRetry;
   final String keyPrefix;
+  /// Enabled state for the biometric-retry key only; defaults to [enabled]
+  /// when null. Lets callers keep biometric retry usable while the digit
+  /// keys are disabled (e.g. during a PIN lockout -- biometrics are already
+  /// rate-limited by the OS/hardware, so PIN brute-force backoff need not
+  /// apply to them).
+  final bool? biometricEnabled;
 
   @override
   Widget build(BuildContext context) {
@@ -98,7 +105,7 @@ class PinKeypad extends StatelessWidget {
           if (showBiometric)
             PinKeypadButton(
               key: const Key('app_lock_biometric_retry'),
-              onPressed: enabled ? onBiometricRetry : null,
+              onPressed: (biometricEnabled ?? enabled) ? onBiometricRetry : null,
               semanticLabel: 'Biometrik orqali qayta urinish',
               child: const Icon(Icons.fingerprint, color: VeloraColors.plum),
             )

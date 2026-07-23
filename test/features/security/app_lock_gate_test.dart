@@ -198,6 +198,33 @@ void main() {
   });
 
   testWidgets(
+      'biometric retry stays usable during a PIN lockout -- only the digit '
+      'keypad is disabled', (tester) async {
+    controller.lockout = const Duration(seconds: 45);
+    // False for the auto-on-entry call, so THIS test is about the manual
+    // retry button unlocking, not the automatic entry attempt.
+    controller.biometricResult = false;
+    await pumpGate(tester, biometricEnabled: true);
+    await tester.pumpAndSettle();
+    expect(controller.biometricCalls, 1);
+    expect(find.text('Unlocked home'), findsNothing);
+
+    // Digits are still disabled during the lockout.
+    await _tapDigits(tester, '1234');
+    await tester.pumpAndSettle();
+    expect(find.text('Unlocked home'), findsNothing);
+
+    // The retry button, however, is exempt from the lockout: tapping it
+    // invokes the platform biometric check and, on success, unlocks.
+    controller.biometricResult = true;
+    await tester.tap(find.byKey(const Key('app_lock_biometric_retry')));
+    await tester.pumpAndSettle();
+
+    expect(controller.biometricCalls, 2);
+    expect(find.text('Unlocked home'), findsOneWidget);
+  });
+
+  testWidgets(
       'the background privacy shield hides content while the app is '
       'inactive/paused and un-hides it on resume', (tester) async {
     await tester.pumpWidget(MaterialApp(

@@ -289,8 +289,8 @@ class _LockScreenState extends State<_LockScreen> {
                   onDigit: _onDigit,
                   onBackspace: _onBackspace,
                   showBiometric: widget.biometricEnabled,
-                  onBiometricRetry:
-                      _lockout == Duration.zero ? _tryBiometric : () {},
+                  biometricEnabled: !_checking,
+                  onBiometricRetry: _tryBiometric,
                 ),
                 if (_lockout > Duration.zero) ...[
                   const SizedBox(height: VeloraSpacing.lg),
