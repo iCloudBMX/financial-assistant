@@ -17,6 +17,7 @@ jobs:
           channel: stable
           cache: true
       - run: flutter pub get
+      - run: dart run build_runner build --delete-conflicting-outputs
       - run: flutter build ios --release --no-codesign --config-only
       - name: Build unsigned app
         run: |
