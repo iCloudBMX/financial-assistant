@@ -1,5 +1,4 @@
 import 'package:drift/native.dart';
-import 'package:financial_assistant/core/money/currency.dart';
 import 'package:financial_assistant/data/db/app_database.dart';
 import 'package:financial_assistant/data/settings/settings_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
