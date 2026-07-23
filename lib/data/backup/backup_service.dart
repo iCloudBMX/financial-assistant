@@ -83,6 +83,40 @@ class BackupService {
     }
   }
 
+  /// Replaces the live DB file with the validated backup (PRD §19.3). Closes the
+  /// live handle, snapshots the current DB, swaps in the migrated copy, and on
+  /// any file failure restores the snapshot so existing data is untouched
+  /// (PRD §19.4). The caller must not use [db] after this and should route the
+  /// user to a "reopen the app" screen.
+  Future<Result<void>> commit(BackupPreview preview) async {
+    final snapshot = '$dbPath.importbak';
+    final live = File(dbPath);
+    try {
+      await db.close();
+      // Drift opens the underlying file lazily; a never-queried live db (e.g. a
+      // fresh install) may not have a file yet, so there's nothing to snapshot.
+      if (await live.exists()) {
+        await live.copy(snapshot); // snapshot original (now closed = consistent)
+      }
+    } catch (e) {
+      return Err(StorageFailure(e.toString()));
+    }
+    try {
+      await File(preview.validatedTempPath).copy(dbPath); // swap in migrated backup
+      if (await File(snapshot).exists()) await File(snapshot).delete();
+      return const Ok(null);
+    } catch (e) {
+      try {
+        if (await File(snapshot).exists()) {
+          await File(snapshot).copy(dbPath); // rollback: restore original
+        }
+      } catch (_) {
+        // best-effort; original snapshot remains on disk for manual recovery
+      }
+      return Err(StorageFailure(e.toString()));
+    }
+  }
+
   Future<Map<String, int>> _counts(AppDatabase d) async {
     Future<int> c(String table) async =>
         (await d.customSelect('SELECT count(*) AS n FROM $table').getSingle())
