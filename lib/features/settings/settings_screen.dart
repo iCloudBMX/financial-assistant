@@ -2,9 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/money/currency.dart';
 import '../../core/money/money.dart';
+import '../../core/result/failure_messages.dart';
+import '../../core/result/result.dart';
 import '../../core/theme/velora_tokens.dart';
+import '../../data/backup/backup_preview.dart';
 import '../../data/settings/settings_model.dart';
 import '../../providers/app_providers.dart';
+import '../../ui/components/app_snackbar.dart';
+import '../backup/restore_complete_screen.dart';
+import '../backup/restore_confirm_sheet.dart';
 import '../categories/category_management_screen.dart';
 import '../security/pin_setup_sheet.dart';
 import 'settings_controller.dart';
@@ -468,13 +474,17 @@ class SettingsScreen extends ConsumerWidget {
                 ],
               ),
               const _SectionHeader("Ma'lumotlar"),
-              const _SettingsGroup(
+              _SettingsGroup(
                 children: [
                   ListTile(
-                    enabled: false,
-                    leading: _RowIcon(Icons.download_outlined),
-                    title: Text("Ma'lumotlarni eksport qilish"),
-                    subtitle: Text('(keyingi bosqichda)'),
+                    leading: const _RowIcon(Icons.download_outlined),
+                    title: const Text('Zaxira nusxa yaratish'),
+                    onTap: () => _exportBackup(context, ref),
+                  ),
+                  ListTile(
+                    leading: const _RowIcon(Icons.restore_outlined),
+                    title: const Text('Zaxiradan tiklash'),
+                    onTap: () => _restoreBackup(context, ref),
                   ),
                 ],
               ),
@@ -552,5 +562,39 @@ class SettingsScreen extends ConsumerWidget {
     if (parsed != null) {
       save(s.copyWith(minReserve: parsed));
     }
+  }
+
+  Future<void> _exportBackup(BuildContext context, WidgetRef ref) async {
+    final r = await ref.read(backupControllerProvider).exportAndShare();
+    if (!context.mounted) return;
+    r.when(
+      ok: (_) {},
+      err: (f) => ScaffoldMessenger.of(context)
+          .showAutoDismissSnackBar(SnackBar(content: Text(userMessageFor(f)))),
+    );
+  }
+
+  Future<void> _restoreBackup(BuildContext context, WidgetRef ref) async {
+    final picked = await ref.read(backupControllerProvider).pickAndValidate();
+    if (!context.mounted) return;
+    if (picked is Err<BackupPreview?>) {
+      ScaffoldMessenger.of(context).showAutoDismissSnackBar(
+          SnackBar(content: Text(userMessageFor(picked.failure))));
+      return;
+    }
+    final preview = picked.valueOrNull;
+    if (preview == null) return; // cancelled
+    final confirmed = await showRestoreConfirmSheet(context, preview);
+    if (!confirmed || !context.mounted) return;
+    final done = await ref.read(backupControllerProvider).confirm(preview);
+    if (!context.mounted) return;
+    done.when(
+      ok: (_) => Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const RestoreCompleteScreen()),
+        (route) => false,
+      ),
+      err: (f) => ScaffoldMessenger.of(context)
+          .showAutoDismissSnackBar(SnackBar(content: Text(userMessageFor(f)))),
+    );
   }
 }

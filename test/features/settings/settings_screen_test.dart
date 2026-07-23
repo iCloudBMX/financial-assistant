@@ -205,6 +205,38 @@ void main() {
     expect(await lock.verifyPin('1234'), isFalse);
   });
 
+  testWidgets(
+      "Ma'lumotlar section shows enabled export/restore tiles (no placeholder)",
+      (tester) async {
+    tester.view.physicalSize = const Size(400, 1800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final db = AppDatabase(NativeDatabase.memory());
+    addTearDown(db.close);
+    final container = ProviderContainer(
+        overrides: [databaseProvider.overrideWithValue(db)]);
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(UncontrolledProviderScope(
+      container: container,
+      child: const MaterialApp(home: SettingsScreen()),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.text('Zaxira nusxa yaratish'));
+    expect(find.text('Zaxira nusxa yaratish'), findsOneWidget);
+    expect(find.text('Zaxiradan tiklash'), findsOneWidget);
+    expect(find.text("Ma'lumotlarni eksport qilish"), findsNothing);
+
+    final exportTile = tester.widget<ListTile>(find.ancestor(
+      of: find.text('Zaxira nusxa yaratish'),
+      matching: find.byType(ListTile),
+    ));
+    expect(exportTile.enabled, isTrue);
+  });
+
   testWidgets('Biometric switch is disabled while App Lock is off',
       (tester) async {
     tester.view.physicalSize = const Size(400, 1800);
