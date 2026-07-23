@@ -6,17 +6,18 @@ import '../../providers/reports_providers.dart';
 import '../../ui/components/velora_async_state.dart';
 import '../../ui/components/velora_card.dart';
 import 'category_report_view.dart';
+import 'goal_report_view.dart';
+import 'mortgage_report_view.dart';
 import 'report_data.dart';
 
-/// The Tahlil (Reports) tab: Oylik (monthly) + Kategoriya sections.
-/// Goal/Mortgage sections slot in as later tabs.
+/// The Tahlil (Reports) tab: Oylik, Kategoriya, Maqsad, Ipoteka sections.
 class ReportsScreen extends ConsumerWidget {
   const ReportsScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return DefaultTabController(
-      length: 2,
+      length: 4,
       child: Scaffold(
         backgroundColor: VeloraColors.blush,
         appBar: AppBar(
@@ -26,12 +27,15 @@ class ReportsScreen extends ConsumerWidget {
           elevation: 0,
           foregroundColor: VeloraColors.inkberry,
           bottom: const TabBar(
+            isScrollable: true,
             labelColor: VeloraColors.plum,
             unselectedLabelColor: VeloraColors.muted,
             indicatorColor: VeloraColors.plum,
             tabs: [
               Tab(text: 'Oylik'),
               Tab(text: 'Kategoriya'),
+              Tab(text: 'Maqsad'),
+              Tab(text: 'Ipoteka'),
             ],
           ),
         ),
@@ -41,6 +45,14 @@ class ReportsScreen extends ConsumerWidget {
             ListView(
               padding: const EdgeInsets.all(VeloraSpacing.lg),
               children: const [CategoryReportView()],
+            ),
+            ListView(
+              padding: const EdgeInsets.all(VeloraSpacing.lg),
+              children: const [GoalReportView()],
+            ),
+            ListView(
+              padding: const EdgeInsets.all(VeloraSpacing.lg),
+              children: const [MortgageReportView()],
             ),
           ],
         ),
