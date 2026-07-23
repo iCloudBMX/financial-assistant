@@ -12,18 +12,21 @@ import 'goal_controller.dart';
 import 'goal_visuals.dart';
 
 Future<void> showGoalContributeSheet(BuildContext context, WidgetRef ref,
-    {required int goalId, bool withdraw = false}) {
+    {required int goalId, bool withdraw = false, Money? initialAmount}) {
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
-    builder: (_) => _ContributeSheet(goalId: goalId, withdraw: withdraw),
+    builder: (_) => _ContributeSheet(
+        goalId: goalId, withdraw: withdraw, initialAmount: initialAmount),
   );
 }
 
 class _ContributeSheet extends ConsumerStatefulWidget {
   final int goalId;
   final bool withdraw;
-  const _ContributeSheet({required this.goalId, required this.withdraw});
+  final Money? initialAmount;
+  const _ContributeSheet(
+      {required this.goalId, required this.withdraw, this.initialAmount});
   @override
   ConsumerState<_ContributeSheet> createState() => _ContributeSheetState();
 }
@@ -32,6 +35,14 @@ class _ContributeSheetState extends ConsumerState<_ContributeSheet> {
   final _amount = TextEditingController();
   final _note = TextEditingController();
   String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.initialAmount != null) {
+      _amount.text = widget.initialAmount!.formatNumber();
+    }
+  }
 
   @override
   void dispose() {

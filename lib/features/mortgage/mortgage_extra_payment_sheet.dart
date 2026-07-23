@@ -12,17 +12,20 @@ import '../../ui/components/velora_sheet.dart';
 import 'mortgage_controller.dart';
 
 Future<void> showMortgageExtraPaymentSheet(
-    BuildContext context, WidgetRef ref, int mortgageId) {
+    BuildContext context, WidgetRef ref, int mortgageId,
+    {Money? initialAmount}) {
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
-    builder: (_) => _ExtraSheet(mortgageId: mortgageId),
+    builder: (_) => _ExtraSheet(
+        mortgageId: mortgageId, initialAmount: initialAmount),
   );
 }
 
 class _ExtraSheet extends ConsumerStatefulWidget {
   final int mortgageId;
-  const _ExtraSheet({required this.mortgageId});
+  final Money? initialAmount;
+  const _ExtraSheet({required this.mortgageId, this.initialAmount});
   @override
   ConsumerState<_ExtraSheet> createState() => _ExtraSheetState();
 }
@@ -35,6 +38,9 @@ class _ExtraSheetState extends ConsumerState<_ExtraSheet> {
   @override
   void initState() {
     super.initState();
+    if (widget.initialAmount != null) {
+      _amount.text = widget.initialAmount!.formatNumber();
+    }
     _amount.addListener(() => setState(() {}));
   }
 
