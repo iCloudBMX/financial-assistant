@@ -4,7 +4,9 @@ import '../../core/money/currency.dart';
 import '../../core/money/money.dart';
 import '../../core/theme/velora_tokens.dart';
 import '../../data/settings/settings_model.dart';
+import '../../providers/app_providers.dart';
 import '../categories/category_management_screen.dart';
+import '../security/pin_setup_sheet.dart';
 import 'settings_controller.dart';
 
 /// A group header for the grouped Settings layout (design spec sec. 6.12):
@@ -200,6 +202,28 @@ DropdownMenuItem<T> _dropdownItem<T>(T value, String label) =>
       value: value,
       child: Text(label, overflow: TextOverflow.ellipsis),
     );
+
+Future<bool> _confirmDisableLock(BuildContext context) async {
+  final result = await showDialog<bool>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: const Text('Ilova qulfini o\'chirasizmi?'),
+      content: const Text(
+          'PIN kod o\'chiriladi va ilova qulfsiz ochiladi.'),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(ctx).pop(false),
+          child: const Text('Bekor qilish'),
+        ),
+        TextButton(
+          onPressed: () => Navigator.of(ctx).pop(true),
+          child: const Text('O\'chirish'),
+        ),
+      ],
+    ),
+  );
+  return result ?? false;
+}
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -409,28 +433,37 @@ class SettingsScreen extends ConsumerWidget {
                 ],
               ),
               const _SectionHeader('Maxfiylik va xavfsizlik'),
-              // Deferred like the export/notification tiles below: there is
-              // no PIN-setup flow yet (AppLockController.setPin is never
-              // called anywhere in the app), so a live switch here could set
-              // appLockEnabled=true with no PIN ever stored. On the next cold
-              // start AppLockGate would show a PIN pad that can never be
-              // satisfied — verifyPin always returns false with no stored
-              // PIN — permanently locking the user out of their data with
-              // biometrics off. Keep these disabled until a real PIN-setup
-              // flow lands (see settings_screen_test.dart).
-              const _SettingsGroup(
+              _SettingsGroup(
                 children: [
-                  ListTile(
-                    enabled: false,
-                    leading: _RowIcon(Icons.lock_outline),
-                    title: Text('Ilova qulfi'),
-                    subtitle: Text('(keyingi bosqichda)'),
+                  SwitchListTile(
+                    secondary: const _RowIcon(Icons.lock_outline),
+                    title: const Text('Ilova qulfi'),
+                    subtitle: const Text('PIN kod bilan ilovani himoyalash'),
+                    value: s.appLockEnabled,
+                    onChanged: (want) async {
+                      final lock = ref.read(appLockControllerProvider);
+                      if (want) {
+                        final ok = await showPinSetup(context, lock);
+                        if (ok) save(s.copyWith(appLockEnabled: true));
+                      } else {
+                        final confirmed = await _confirmDisableLock(context);
+                        if (confirmed) {
+                          await lock.clearPin();
+                          save(s.copyWith(
+                            appLockEnabled: false,
+                            biometricEnabled: false,
+                          ));
+                        }
+                      }
+                    },
                   ),
-                  ListTile(
-                    enabled: false,
-                    leading: _RowIcon(Icons.fingerprint),
-                    title: Text('Biometrik autentifikatsiya'),
-                    subtitle: Text('(keyingi bosqichda)'),
+                  SwitchListTile(
+                    secondary: const _RowIcon(Icons.fingerprint),
+                    title: const Text('Biometrik autentifikatsiya'),
+                    value: s.biometricEnabled,
+                    onChanged: s.appLockEnabled
+                        ? (want) => save(s.copyWith(biometricEnabled: want))
+                        : null,
                   ),
                 ],
               ),
