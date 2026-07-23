@@ -12,6 +12,9 @@ build/
 *.g.dart
 *.drift.dart
 
+# Flutter golden-test failure artifacts (regenerated on each failing run)
+test/**/failures/
+
 # IDE
 .idea/
 .vscode/
@@ -21,6 +24,7 @@ build/
 
 # Android
 android/.gradle/
+android/.kotlin/
 android/app/debug/
 android/app/profile/
 android/app/release/

@@ -1,0 +1,1176 @@
+Shaxsiy moliyaviy assistent -- Product
+Requirements Document
+
+Mahsulot turi: Mobile ilova
+Platforma: iOS va Android
+Texnologik cheklov: Flutter
+Ma'lumotlarni saqlash: Lokal SQLite baza
+Backend: MVP bosqichida mavjud emas
+Asosiy valyuta: O`zbekiston so`mi -- UZS
+Asosiy foydalanuvchi: Ilova egasi
+Mahsulot holati: MVP
+
+1. Mahsulot tavsifi
+
+Shaxsiy moliyaviy assistent foydalanuvchining kirimlarini to`g`ri taqsimlash, chiqimlarini nazorat qilish,
+kunlik xavfsiz xarajat limitini hisoblash, moliyaviy maqsadlar uchun jamg`arish va ipoteka qarzini tezroq
+yopishga yordam beradigan mobile ilovadir.
+
+Mahsulot oddiy kirim-chiqim hisoboti bilan cheklanmaydi. Ilova quyidagi savollarga doimiy javob berishi
+kerak:
+
+      1. Pul qayerga sarflanmoqda?
+      2. Bugun qancha xavfsiz sarflash mumkin?
+      3. Kirim qanday yo`nalishlarga taqsimlanishi kerak?
+      4. Maqsadlarga qancha mablag` ajratildi?
+      5. Ipoteka hozirgi to`lov sur'atida qachon yopiladi?
+      6. Qo`shimcha to`lov ipoteka muddatini va foiz xarajatini qanchaga kamaytiradi?
+
+2. Mahsulot maqsadlari
+
+Mahsulotning asosiy maqsadlari:
+
+        · barcha kirim va chiqimlarni bitta joyda yuritish;
+        · har bir kirimni oldindan belgilangan moliyaviy yo`nalishlarga taqsimlash;
+        · kundalik, haftalik va oylik xavfsiz xarajat limitlarini ko`rsatish;
+        · xarajatlarning rejalashtirilgan budjetga nisbatan holatini kuzatish;
+        · ipoteka qarzining joriy holatini ko`rsatish;
+        · ipotekani muddatidan oldin yopish bo`yicha ssenariylarni hisoblash;
+        · foydalanuvchiga bir nechta dinamik moliyaviy maqsad yaratish imkonini berish;
+        · maqsadlar uchun jamg`arilgan mablag`ni nazorat qilish;
+        · barcha ma'lumotlarni faqat mobile qurilmada saqlash;
+        · ilova yangilanganda mavjud ma'lumotlar bilan ishlashni davom ettirish;
+        · barcha ma'lumotlarni boshqa qurilmaga ko`chirish uchun eksport va import qilish.
+
+                                                                         1
+3. Mahsulotning asosiy tamoyillari
+
+3.1. Tezkorlik
+
+Eng ko`p ishlatiladigan amal -- chiqim kiritish -- 3­5 soniya ichida bajarilishi kerak.
+
+3.2. Soddalik
+
+Foydalanuvchi moliyaviy yoki buxgalteriya terminlarini bilmasdan ilovadan foydalanishi kerak.
+
+3.3. Qaror qabul qilishga yordam berish
+
+Ilova faqat tarixiy ma'lumotlarni ko`rsatmasligi, balki foydalanuvchiga keyingi moliyaviy qarorini
+tushunishga yordam berishi kerak.
+
+3.4. Maqsadga yo`naltirilganlik
+
+Xarajatdan tejab qolingan yoki taqsimlanmagan mablag` maqsadlarga yo`naltirilishi kerak.
+
+3.5. Lokal va mustaqil ishlash
+
+Internet mavjud bo`lmagan holatda ham barcha asosiy funksiyalar ishlashi kerak.
+
+3.6. Ma'lumotlar davomiyligi
+
+Ilova versiyasi yangilanganda yoki boshqa qurilmaga ko`chirilganda moliyaviy tarix yo`qolmasligi kerak.
+
+4. MVP tarkibi
+
+MVP quyidagi modullardan iborat bo`ladi:
+
+      1. Onboarding va asosiy sozlamalar.
+      2. Hisoblar va balans.
+      3. Kirimlarni boshqarish.
+      4. Kirimlarni taqsimlash.
+      5. Chiqimlarni tezkor kiritish.
+      6. Kategoriya va budjetlar.
+      7. Kunlik xavfsiz limit.
+      8. Moliyaviy maqsadlar.
+      9. Ipoteka boshqaruvi.
+     10. Hisobotlar.
+     11. Oylik davrni yopish.
+     12. Ma'lumotlarni eksport va import qilish.
+     13. Ilova yangilanishida ma'lumotlarni saqlab qolish.
+
+                                                                         2
+5. Onboarding va dastlabki sozlash
+
+5.1. Birinchi ishga tushirish
+
+Ilova birinchi ishga tushirilganda foydalanuvchidan quyidagi ma'lumotlarni so`rashi kerak:
+
+        · asosiy valyuta;
+        · oylik moliyaviy davr boshlanadigan kun;
+        · o`rtacha oylik daromad;
+        · boshlang`ich balans;
+        · asosiy hisob yoki karta;
+        · oylik majburiy xarajatlar;
+        · oylik o`zgaruvchan xarajat budjeti;
+        · minimal moliyaviy zaxira;
+        · ipoteka mavjud yoki mavjud emasligi.
+Foydalanuvchi ayrim ma'lumotlarni o`tkazib yuborishi va keyinchalik kiritishi mumkin.
+
+5.2. Asosiy sozlamalar
+
+Foydalanuvchi quyidagilarni o`zgartira olishi kerak:
+
+        · ism yoki murojaat nomi;
+        · valyuta;
+        · sana formati;
+        · moliyaviy davr boshlanish kuni;
+        · haftaning boshlanish kuni;
+        · kunlik limit hisoblash usuli;
+        · minimal zaxira miqdori;
+        · bildirishnomalar;
+        · theme;
+        · biometrik himoya;
+        · ma'lumotlarni eksport qilish.
+
+6. Hisoblar va balans
+
+6.1. Hisob yaratish
+
+Foydalanuvchi cheklanmagan miqdorda moliyaviy hisob yaratishi kerak.
+
+MVP hisob turlari:
+
+        · bank kartasi;
+        · naqd pul;
+        · jamg`arma hisobi;
+        · boshqa hisob.
+
+                                                                         3
+Har bir hisob quyidagi ma'lumotlarga ega bo`ladi:
+
+        · nomi;
+        · turi;
+        · joriy balans;
+        · valyuta;
+        · icon;
+        · faol yoki arxivlangan holat.
+
+6.2. Hisoblar orasida o`tkazma
+
+Foydalanuvchi bir hisobdan boshqa hisobga pul o`tkazishi kerak.
+
+O`tkazma:
+
+        · xarajat sifatida hisoblanmasligi;
+        · daromad sifatida hisoblanmasligi;
+        · ikkala hisob balansini yangilashi kerak.
+
+6.3. Balansni tuzatish
+
+Foydalanuvchi real balans va ilovadagi balans farq qilganda balansni tuzatishi kerak.
+
+Balans tuzatish operatsiyasi tarixda alohida qayd sifatida saqlanishi kerak.
+
+7. Kirimlarni boshqarish
+
+7.1. Kirim qo`shish
+
+Kirim qo`shishda quyidagi maydonlar mavjud bo`ladi:
+
+        · summa;
+        · kirim turi;
+        · qabul qiluvchi hisob;
+        · sana va vaqt;
+        · izoh;
+        · takroriy kirim belgisi.
+Kirim turlari:
+
+        · oylik maosh;
+        · bonus;
+        · freelance yoki qo`shimcha daromad;
+        · qaytarilgan pul;
+        · boshqa kirim.
+
+                                                                         4
+7.2. Kirim kiritilgandan keyingi jarayon
+
+Yangi kirim qo`shilgandan keyin ilova foydalanuvchiga quyidagi variantlarni ko`rsatishi kerak:
+        · hozir taqsimlash;
+        · keyinroq taqsimlash;
+        · oldingi taqsimot rejasini qo`llash.
+
+Taqsimlanmagan kirimlar dashboard'da alohida ko`rsatilishi kerak.
+
+7.3. Takroriy kirimlar
+
+Foydalanuvchi maosh kabi takroriy kirim uchun reja yaratishi kerak.
+Takroriy kirim avtomatik tranzaksiya yaratmasligi mumkin, lekin belgilangan sanada foydalanuvchiga
+kirimni tasdiqlashni taklif qilishi kerak.
+
+8. Kirimlarni taqsimlash
+
+8.1. Taqsimlash maqsadi
+
+Har bir kirim quyidagi yo`nalishlarga taqsimlanishi mumkin:
+        · majburiy xarajatlar;
+        · o`zgaruvchan xarajatlar;
+        · minimal zaxira;
+        · ipoteka majburiy to`lovi;
+        · ipoteka asosiy qarziga qo`shimcha to`lov;
+        · boshqa moliyaviy maqsadlar;
+        · taqsimlanmagan mablag`.
+
+8.2. Taqsimlash qoidalari
+
+MVP quyidagi taqsimlash usullarini qo`llab-quvvatlashi kerak:
+
+Belgilangan summa
+
+Misol: har oy ipotekaga 10 500 000 so`m.
+
+Foiz asosida
+
+Misol: har bir kirimning 10 foizi zaxira fondiga.
+
+Maqsad asosida
+
+Ilova maqsad summasi va muddatidan kelib chiqib kerakli oylik ajratmani hisoblaydi.
+
+                                                                         5
+Qolgan summa
+
+Boshqa majburiy taqsimotlardan keyin qolgan mablag` belgilangan maqsadga yo`naltiriladi.
+
+8.3. Taqsimlash tartibi
+
+Standart taqsimlash tartibi:
+
+      1. Majburiy to`lovlar.
+      2. Oylik yashash budjeti.
+      3. Minimal moliyaviy zaxira.
+      4. Yuqori prioritetli maqsadlar.
+      5. Ipoteka asosiy qarziga qo`shimcha to`lov.
+      6. Boshqa maqsadlar.
+Foydalanuvchi ushbu tartibni o`zgartira olishi kerak.
+
+8.4. Taqsimotni tasdiqlash
+
+Ilova taqsimlashdan oldin quyidagilarni ko`rsatishi kerak:
+
+        · jami kirim;
+        · har bir yo`nalishga ajratilgan summa;
+        · taqsimlangan jami summa;
+        · taqsimlanmagan qoldiq;
+        · taqsimotdan keyingi erkin balans.
+Foydalanuvchi taqsimotni tasdiqlashi yoki har bir summani tahrirlashi mumkin.
+
+8.5. Kirim yetarli bo`lmagan holat
+
+Agar kirim barcha rejalashtirilgan yo`nalishlar uchun yetarli bo`lmasa:
+
+        · Critical maqsadlar birinchi moliyalashtirilishi;
+        · past prioritetli maqsadlar kamaytirilishi;
+        · foydalanuvchiga yetishmayotgan summa ko`rsatilishi;
+        · qaysi yo`nalishlar to`liq moliyalashtirilmagani ko`rsatilishi kerak.
+
+9. Chiqimlarni boshqarish
+
+9.1. Tezkor chiqim kiritish
+
+Chiqim kiritish jarayoni 3­5 soniyada tugallanishi kerak.
+
+Standart jarayon:
+
+      1. Summa kiritish.
+      2. Kategoriya tanlash.
+
+                                                                         6
+      3. Saqlash.
+Quyidagi maydonlar standart holatda yashirin yoki ixtiyoriy bo`lishi kerak:
+
+        · hisob;
+        · sana;
+        · vaqt;
+        · izoh;
+        · subkategoriya;
+        · rejalashtirilgan yoki kutilmagan chiqim.
+Ilova oxirgi ishlatilgan hisobni va joriy sana-vaqtni avtomatik tanlashi kerak.
+
+9.2. Tez tanlanadigan kategoriyalar
+
+Chiqim kiritish oynasida quyidagilar birinchi ko`rsatilishi kerak:
+
+        · oxirgi ishlatilgan kategoriyalar;
+        · eng ko`p ishlatiladigan kategoriyalar;
+        · foydalanuvchi biriktirgan sevimli kategoriyalar.
+
+9.3. Chiqimni saqlagandan keyin
+
+Chiqim saqlangandan keyin ilova:
+
+        · hisob balansini yangilashi;
+        · kategoriya budjetini yangilashi;
+        · kunlik xavfsiz limitni qayta hisoblashi;
+        · oylik xarajat hisobotini yangilashi;
+        · goal uchun mavjud erkin mablag`ni qayta hisoblash imkonini berishi kerak.
+
+9.4. Chiqimni bekor qilish
+
+Chiqim saqlangandan keyin qisqa vaqt davomida "Bekor qilish" amali mavjud bo`lishi kerak.
+
+9.5. Chiqimni tahrirlash
+
+Foydalanuvchi quyidagilarni tahrirlashi kerak:
+
+        · summa;
+        · kategoriya;
+        · hisob;
+        · sana;
+        · izoh.
+Har qanday tahrirdan keyin tegishli balans va limitlar qayta hisoblanishi kerak.
+
+                                                                         7
+10. Kategoriyalar va budjetlar
+
+10.1. Standart kategoriyalar
+
+MVP'da quyidagi standart kategoriyalar bo`lishi kerak:
+
+        · oziq-ovqat;
+        · transport;
+        · uy;
+        · kommunal to`lovlar;
+        · sog`liq;
+        · ta'lim;
+        · kiyim;
+        · ko`ngilochar;
+        · restoran va yetkazib berish;
+        · obunalar;
+        · sovg`alar;
+        · sayohat;
+        · boshqa.
+
+10.2. Dinamik kategoriyalar
+
+Foydalanuvchi:
+
+        · yangi kategoriya yaratishi;
+        · kategoriya nomini o`zgartirishi;
+        · icon tanlashi;
+        · subkategoriya qo`shishi;
+        · kategoriyani arxivlashi kerak.
+
+Ishlatilgan kategoriya o`chirilmasligi, faqat arxivlanishi kerak.
+
+10.3. Kategoriya budjeti
+
+Har bir kategoriya uchun:
+
+        · oylik limit;
+        · haftalik limit;
+        · limit mavjud emas holati;
+        · sarflangan summa;
+        · qolgan summa;
+        · limitdan og`ish ko`rsatilishi kerak.
+
+10.4. Limit holatlari
+
+Kategoriya kartasi quyidagi holatlardan birini ko`rsatishi kerak:
+
+        · xavfsiz;
+        · limitga yaqin;
+
+                                                                         8
+        · limitdan oshgan.
+Holat faqat rang bilan emas, matn va icon orqali ham ko`rsatilishi kerak.
+
+11. Kunlik xavfsiz limit
+
+11.1. Asosiy talab
+
+Dashboard foydalanuvchiga bugun qancha mablag`ni xavfsiz sarflashi mumkinligini ko`rsatishi kerak.
+
+11.2. Hisoblash tarkibi
+
+Kunlik xavfsiz limit quyidagilarni hisobga olishi kerak:
+
+        · joriy erkin balans;
+        · oylik o`zgaruvchan xarajat budjeti;
+        · shu oy sarflangan o`zgaruvchan xarajatlar;
+        · oy oxirigacha qolgan kunlar;
+        · hali to`lanmagan majburiy to`lovlar;
+        · goal'lar uchun rezerv qilingan mablag`;
+        · minimal zaxira;
+        · foydalanuvchi qo`lda belgilagan xavfsizlik buferi.
+Asosiy hisoblash mantiqi:
+
+   Kunlik xavfsiz limit =
+   Qolgan erkin o`zgaruvchan budjet
+   ÷
+   Moliyaviy davr oxirigacha qolgan kunlar
+
+11.3. Dinamik qayta hisoblash
+
+Kunlik limit quyidagi holatlarda avtomatik qayta hisoblanishi kerak:
+
+        · yangi chiqim qo`shilganda;
+        · chiqim tahrirlanganda yoki o`chirilganda;
+        · yangi kirim qo`shilganda;
+        · kirim taqsimlanganda;
+        · budjet o`zgartirilganda;
+        · goal uchun mablag` ajratilganda;
+        · majburiy to`lov amalga oshirilganda.
+
+11.4. Limitdan kam sarflash
+
+Agar foydalanuvchi kunlik limitdan kam sarflasa, tejab qolingan summa qolgan kunlar bo`yicha qayta
+taqsimlanishi kerak.
+
+                                                                         9
+Foydalanuvchi sozlamalarda quyidagilardan birini tanlashi mumkin:
+
+        · tejab qolingan pulni keyingi kunlarga qo`shish;
+        · tejab qolingan pulni goal uchun ajratish;
+        · har safar tanlash.
+
+11.5. Limitdan oshish
+
+Agar foydalanuvchi kunlik limitdan oshsa:
+
+        · oshgan summa ko`rsatilishi;
+        · yangi kunlik limit hisoblanishi;
+        · qaysi kategoriya limitdan chiqishga sabab bo`lgani ko`rsatilishi kerak.
+
+11.6. Haftalik xavfsiz limit
+
+Ilova quyidagilarni ham ko`rsatishi kerak:
+
+        · shu haftadagi xavfsiz xarajat limiti;
+        · sarflangan summa;
+        · qolgan summa;
+        · haftalik og`ish.
+
+12. Moliyaviy maqsadlar
+
+12.1. Dinamik goal yaratish
+
+Foydalanuvchi cheklanmagan miqdorda moliyaviy maqsad yaratishi kerak.
+
+Goal misollari:
+
+        · sayohat;
+        · yangi kompyuter;
+        · avtomobil;
+        · ta'mirlash;
+        · favqulodda zaxira;
+        · ta'lim;
+        · katta xarid;
+        · boshqa.
+
+12.2. Goal ma'lumotlari
+
+Har bir goal quyidagi ma'lumotlarga ega bo`lishi kerak:
+
+        · nom;
+        · goal turi;
+        · target summa;
+        · joriy jamg`arilgan summa;
+
+                                                                        10
+        · target sana;
+        · boshlanish sanasi;
+        · prioritet;
+        · icon yoki rasm;
+        · avtomatik taqsimlash qoidasi;
+        · status;
+        · izoh.
+
+12.3. Goal prioritetlari
+
+Goal quyidagi prioritetlardan biriga ega bo`ladi:
+
+        · Critical;
+        · High;
+        · Medium;
+        · Low.
+Kirimni avtomatik taqsimlashda yuqori prioritetli goal'lar birinchi hisobga olinishi kerak.
+
+12.4. Goal progress
+
+Goal kartasi quyidagilarni ko`rsatishi kerak:
+
+        · jamg`arilgan summa;
+        · target summa;
+        · bajarilish foizi;
+        · qolgan summa;
+        · target sanagacha qolgan vaqt;
+        · joriy sur'atda targetga yetish sanasi;
+        · targetga vaqtida yetish uchun kerakli oylik summa.
+
+12.5. Goal contribution
+
+Foydalanuvchi goal'ga:
+
+        · kirim taqsimoti orqali;
+        · qo`lda;
+        · boshqa hisobdan;
+        · kategoriya budjetidan tejab qolingan pul orqali mablag` qo`sha olishi kerak.
+Har bir contribution tarixda saqlanishi kerak.
+
+12.6. Goal'dan mablag` yechish
+
+Foydalanuvchi goal'dan pul yechishi mumkin.
+
+Ilova:
+
+        · yechilgan summani tarixda ko`rsatishi;
+        · goal progress'ini qayta hisoblashi;
+
+                                                                        11
+        · target sanaga ta'sirini ko`rsatishi kerak.
+
+12.7. Goal yakunlanishi
+
+Goal target summaga yetganda:
+
+        · completed holatiga o`tishi;
+        · foydalanuvchiga ijobiy xabar ko`rsatishi;
+        · keyingi amalni taklif qilishi kerak.
+Keyingi amallar:
+
+        · goal'ni yopish;
+        · yangi target belgilash;
+        · ortiqcha mablag`ni boshqa goal'ga o`tkazish.
+
+13. Ipoteka boshqaruvi
+
+13.1. Ipotekani yaratish
+
+Foydalanuvchi ipoteka bo`yicha quyidagi joriy ma'lumotlarni kiritishi kerak:
+
+        · ipoteka nomi;
+        · bank nomi;
+        · boshlang`ich kredit summasi;
+        · joriy asosiy qarz qoldig`i;
+        · yillik foiz stavkasi;
+        · kredit boshlangan sana;
+        · kredit tugash sanasi;
+        · majburiy oylik to`lov;
+        · navbatdagi to`lov sanasi;
+        · to`lov turi;
+        · qo`shimcha to`lov strategiyasi.
+MVP quyidagi to`lov turlarini qo`llab-quvvatlashi kerak:
+
+        · annuitet;
+        · differensial;
+        · foydalanuvchi kiritadigan individual jadval.
+
+13.2. Ipoteka dashboard'i
+
+Ipoteka bo`limida quyidagilar ko`rsatilishi kerak:
+
+        · joriy asosiy qarz qoldig`i;
+        · yillik foiz stavkasi;
+        · navbatdagi majburiy to`lov;
+        · navbatdagi to`lov sanasi;
+
+                                                                        12
+        · jami amalga oshirilgan to`lov;
+        · asosiy qarzga to`langan summa;
+        · foizga to`langan summa;
+        · qo`shimcha asosiy qarz to`lovlari;
+        · kreditning bajarilish foizi;
+        · taxminiy yopilish sanasi.
+
+13.3. Ipoteka to`lovini kiritish
+
+To`lov quyidagi qismlardan iborat bo`lishi mumkin:
+
+        · asosiy qarz;
+        · foiz;
+        · komissiya;
+        · sug`urta;
+        · boshqa to`lov.
+Foydalanuvchi umumiy to`lovni yoki uning qismlarini alohida kiritishi mumkin.
+
+13.4. Qo`shimcha to`lov
+
+Foydalanuvchi ipoteka asosiy qarziga qo`shimcha to`lov kiritishi kerak.
+
+Qo`shimcha to`lov kiritilganda ilova:
+
+        · joriy qarz qoldig`ini kamaytirishi;
+        · taxminiy yopilish sanasini qayta hisoblashi;
+        · kelajakdagi foiz xarajatini qayta hisoblashi;
+        · taxminiy tejalgan foizni ko`rsatishi;
+        · kredit muddati qancha qisqarganini ko`rsatishi kerak.
+
+13.5. Muddatidan oldin yopish strategiyasi
+
+Foydalanuvchi bankdagi qo`shimcha to`lov natijasini tanlashi kerak:
+
+        · kredit muddatini qisqartirish;
+        · oylik to`lov miqdorini kamaytirish;
+        · aniq emas.
+"Aniq emas" tanlanganda ilova natijalarni taxminiy deb belgilashi kerak.
+
+13.6. Ipoteka ssenariylari
+
+Foydalanuvchi quyidagi ssenariylarni ko`rishi kerak:
+
+        · faqat majburiy to`lov bilan davom etish;
+        · har oy belgilangan qo`shimcha summa to`lash;
+        · daromaddan qolgan barcha mablag`ni to`lash;
+        · bir martalik qo`shimcha summa to`lash;
+        · bir nechta variantni taqqoslash.
+
+                                                                        13
+Har bir ssenariy bo`yicha:
+
+        · taxminiy yopilish sanasi;
+        · qolgan oylar soni;
+        · taxminiy jami foiz;
+        · tejaladigan foiz;
+        · qisqaradigan muddat;
+        · oylik talab qilinadigan summa ko`rsatilishi kerak.
+
+13.7. Ipoteka bo`yicha tavsiyalar
+
+Ilova quyidagi turdagi tavsiyalarni ko`rsatishi mumkin:
+
+        · joriy sur'atda ipoteka qachon yopilishi;
+        · oyiga qo`shimcha to`lovni oshirish natijasi;
+        · taqsimlanmagan mablag`ni ipotekaga yo`naltirish taklifi;
+        · kategoriya budjetidan tejab qolingan mablag`ni ipotekaga o`tkazish;
+        · minimal zaxira yetarli bo`lmasa, qo`shimcha to`lovni kamaytirish.
+
+Tavsiyalar axborot xarakterida ekanligi va bankning rasmiy hisob-kitobini almashtirmasligi ko`rsatilishi
+kerak.
+
+13.8. Ipoteka hisoboti
+
+Ipoteka hisoboti quyidagilarni ko`rsatishi kerak:
+
+        · oylar bo`yicha qarz qoldig`i;
+        · asosiy qarzga to`lovlar;
+        · foiz to`lovlari;
+        · qo`shimcha to`lovlar;
+        · amalga oshirilgan va rejalashtirilgan yopilish sanasi;
+        · taxminiy tejalgan foiz;
+        · muddat qisqarishi.
+
+14. Dashboard
+
+14.1. Asosiy ma'lumotlar
+
+Dashboard bir qarashda quyidagilarni ko`rsatishi kerak:
+
+        · jami mavjud balans;
+        · shu oygi jami kirim;
+        · shu oygi jami chiqim;
+        · taqsimlanmagan mablag`;
+        · bugungi xavfsiz limit;
+        · bugun sarflangan summa;
+        · haftalik xavfsiz limit;
+        · oylik erkin budjet qoldig`i;
+
+                                                                        14
+        · asosiy goal progress'i;
+        · ipoteka qoldig`i;
+        · shu oy ipotekaga qo`shimcha to`langan summa.
+
+14.2. Tezkor amallar
+
+Dashboard'da quyidagi tezkor tugmalar bo`lishi kerak:
+
+        · chiqim qo`shish;
+        · kirim qo`shish;
+        · mablag`ni taqsimlash;
+        · goal'ga mablag` qo`shish;
+        · ipoteka to`lovini kiritish.
+
+14.3. Shaxsiylashtirish
+
+Foydalanuvchi dashboard kartalarining:
+
+        · tartibini o`zgartirishi;
+        · ayrim kartalarni yashirishi;
+        · asosiy goal'ni tanlashi kerak.
+
+15. Hisobotlar
+
+15.1. Kunlik hisobot
+
+Kunlik hisobot:
+
+        · jami chiqim;
+        · kunlik limit;
+        · limitdan qolgan yoki oshgan summa;
+        · kategoriyalar bo`yicha chiqim;
+        · eng katta chiqim;
+        · goal'ga ajratilgan summa.
+
+15.2. Haftalik hisobot
+
+Haftalik hisobot:
+
+        · jami kirim;
+        · jami chiqim;
+        · haftalik xavfsiz limit;
+        · budjetdan og`ish;
+        · eng ko`p xarajat qilingan kategoriyalar;
+        · oldingi hafta bilan taqqoslash.
+
+                                                                        15
+15.3. Oylik hisobot
+
+Oylik hisobot:
+
+        · jami kirim;
+        · jami chiqim;
+        · majburiy xarajatlar;
+        · o`zgaruvchan xarajatlar;
+        · goal'larga ajratilgan summa;
+        · ipoteka majburiy to`lovi;
+        · ipoteka qo`shimcha to`lovi;
+        · jamg`arilgan summa;
+        · taqsimlanmagan qoldiq;
+        · oldingi oy bilan taqqoslash.
+
+15.4. Kategoriya hisoboti
+
+Har bir kategoriya uchun:
+
+        · rejalashtirilgan budjet;
+        · amaldagi chiqim;
+        · qolgan summa;
+        · og`ish;
+        · umumiy chiqimdagi ulushi;
+        · oldingi davrlar bilan trend.
+
+15.5. Goal hisoboti
+
+Goal hisoboti:
+
+        · goal progress;
+        · shu oy qo`shilgan mablag`;
+        · jami jamg`arilgan mablag`;
+        · targetga qolgan summa;
+        · targetga yetish prognozi;
+        · contribution tarixi.
+
+15.6. Filtrlash
+
+Hisobotlar quyidagilar bo`yicha filtrlanishi kerak:
+
+        · sana oralig`i;
+        · hisob;
+        · kategoriya;
+        · tranzaksiya turi;
+        · goal;
+        · ipoteka.
+
+                                                                        16
+16. Oylik davrni yopish
+
+16.1. Oylik xulosa
+
+Moliyaviy davr oxirida ilova quyidagilarni ko`rsatishi kerak:
+
+        · jami kirim;
+        · jami chiqim;
+        · budjetdan oshilgan yoki tejab qolingan summa;
+        · goal'larga qo`shilgan mablag`;
+        · ipoteka qoldig`ining o`zgarishi;
+        · taqsimlanmagan mablag`.
+
+16.2. Qolgan mablag`ni taqsimlash
+
+Oy oxirida qolgan mablag` uchun quyidagi variantlar taklif qilinishi kerak:
+
+        · ipoteka asosiy qarziga;
+        · zaxira fondiga;
+        · tanlangan goal'ga;
+        · keyingi oyga o`tkazish;
+        · bir nechta maqsadga bo`lib taqsimlash.
+
+16.3. Keyingi oy rejasi
+
+Oylik davr yopilgandan keyin ilova:
+
+        · keyingi davrni yaratishi;
+        · oldingi oy budjetlarini nusxalash imkonini berishi;
+        · takroriy majburiy to`lovlarni ko`chirishi;
+        · goal'lar progress'ini davom ettirishi kerak.
+
+17. Bildirishnomalar
+
+Ilova lokal bildirishnomalardan foydalanishi kerak.
+
+Bildirishnoma holatlari:
+
+        · rejalashtirilgan ipoteka to`lovi yaqinlashganda;
+        · majburiy to`lov sanasi yaqinlashganda;
+        · kategoriya budjetining 80 foizi sarflanganda;
+        · kategoriya budjeti tugaganda;
+        · kunlik limitdan oshilganda;
+        · taqsimlanmagan kirim mavjud bo`lganda;
+        · goal target sanasi yaqinlashganda;
+        · oylik davrni yopish vaqti kelganda;
+        · ma'lumotlar backup'i uzoq vaqt yaratilmaganda.
+
+                                                                        17
+Foydalanuvchi har bir bildirishnoma turini alohida yoqishi yoki o`chirishi kerak.
+
+18. Ma'lumotlarni eksport qilish
+
+18.1. To`liq backup
+
+Foydalanuvchi ilovadagi barcha ma'lumotlarni bitta backup faylga eksport qilishi kerak.
+
+Backup quyidagilarni o`z ichiga olishi kerak:
+
+        · hisoblar;
+        · kirimlar;
+        · chiqimlar;
+        · kategoriyalar;
+        · budjetlar;
+        · taqsimlash qoidalari;
+        · goal'lar;
+        · goal contribution'lari;
+        · ipoteka ma'lumotlari;
+        · ipoteka to`lovlari;
+        · sozlamalar;
+        · hisobot uchun kerakli tarixiy ma'lumotlar.
+
+18.2. Eksport imkoniyatlari
+
+Foydalanuvchi backup faylni:
+
+        · qurilmaga saqlashi;
+        · Files ilovasiga yuborishi;
+        · boshqa ilova orqali ulashishi;
+        · bulutli diskka qo`lda saqlashi mumkin.
+MVP'da avtomatik cloud synchronization talab qilinmaydi.
+
+18.3. Hisobot eksporti
+
+Foydalanuvchi tranzaksiya va hisobotlarni quyidagi formatlarda eksport qilishi kerak:
+
+        · CSV;
+        · JSON.
+To`liq ko`chirish backup'i alohida formatda saqlanishi mumkin.
+
+18.4. Eksport xavfsizligi
+
+Backup yaratishda foydalanuvchiga quyidagi variant berilishi kerak:
+
+        · oddiy backup;
+
+                                                                        18
+        · parol bilan himoyalangan backup.
+
+19. Ma'lumotlarni import qilish
+
+19.1. To`liq tiklash
+
+Foydalanuvchi oldin eksport qilingan backup fayl orqali barcha ma'lumotlarini tiklay olishi kerak.
+
+19.2. Importdan oldingi tekshiruv
+
+Import boshlanishidan oldin ilova:
+        · fayl formatini tekshirishi;
+        · backup versiyasini tekshirishi;
+        · backup yaratilgan sanani ko`rsatishi;
+        · topilgan ma'lumotlar miqdorini ko`rsatishi;
+        · amaldagi ma'lumotlar almashtirilishi haqida ogohlantirishi kerak.
+
+19.3. Tiklash variantlari
+
+MVP'da kamida quyidagi variant mavjud bo`lishi kerak:
+        · mavjud ma'lumotlarni o`chirib, backup'dan to`liq tiklash.
+
+Keyingi versiyada mavjud ma'lumotlar bilan birlashtirish qo`shilishi mumkin.
+
+19.4. Import xatosi
+
+Import muvaffaqiyatsiz tugasa:
+        · mavjud ma'lumotlar o`zgarmasligi;
+        · foydalanuvchiga xato sababi ko`rsatilishi;
+        · qayta urinish imkoniyati berilishi kerak.
+
+20. Ilova yangilanishi va ma'lumotlar
+davomiyligi
+
+20.1. Yangilanishdan keyingi davomiylik
+
+Ilova yangi versiyaga yangilanganda:
+        · mavjud ma'lumotlar saqlanib qolishi;
+        · foydalanuvchi qayta sozlash qilmasligi;
+        · hisoblar, tranzaksiyalar, goal'lar va ipoteka tarixi bilan ishlashni davom ettirishi kerak.
+
+                                                                        19
+20.2. Ma'lumotlar migratsiyasi
+
+Yangi versiyada ma'lumotlar tuzilmasi o`zgarsa:
+
+        · lokal baza avtomatik yangilanishi;
+        · eski ma'lumotlar yangi formatga ko`chirilishi;
+        · migratsiya foydalanuvchi aralashuvisiz bajarilishi kerak.
+
+20.3. Yangilanishdan oldingi himoya
+
+Muhim baza migratsiyasidan oldin ilova lokal recovery backup yaratishi kerak.
+
+Migratsiya muvaffaqiyatsiz tugasa:
+
+        · oldingi ma'lumotlar tiklanishi;
+        · ilova ma'lumot yo`qotmasdan ochilishi;
+        · foydalanuvchiga muammo haqida tushunarli xabar berilishi kerak.
+
+20.4. Backup versiyalari
+
+Yangi ilova versiyasi oldingi versiyalarda yaratilgan backup fayllarni import qila olishi kerak.
+
+Agar backup juda eski yoki qo`llab-quvvatlanmasa, foydalanuvchiga aniq sabab ko`rsatilishi kerak.
+
+21. UI/UX talablari
+
+21.1. Umumiy uslub
+
+Ilova zamonaviy, samimiy va kayfiyatni ko`taradigan vizual uslubga ega bo`lishi kerak.
+
+Dizayn:
+
+        · ortiqcha elementlardan xoli;
+        · yengil;
+        · ishonchli;
+        · moliyaviy bosim hissini kuchaytirmaydigan;
+        · foydalanuvchini ayblamaydigan bo`lishi kerak.
+
+21.2. Ranglar
+
+Ranglar quyidagi hissiyotlarni berishi kerak:
+
+        · xotirjamlik;
+        · moliyaviy nazorat;
+        · ijobiy progress;
+        · ishonch.
+
+                                                                        20
+Asosiy ranglar iliq yoki yumshoq bo`lishi kerak. Qizil rang faqat xato yoki kritik holatlarda qo`llanilishi
+kerak.
+
+Limitdan oshish kabi holatlar qo`rqituvchi emas, konstruktiv ohangda ko`rsatilishi kerak.
+
+21.3. Shrift
+
+Shrift:
+
+        · mobile ekranda oson o`qilishi;
+        · raqamlarni aniq ko`rsatishi;
+        · kirill va lotin belgilarini to`liq qo`llab-quvvatlashi;
+        · samimiy va zamonaviy ko`rinishi kerak.
+
+21.4. Navigatsiya
+
+Asosiy navigatsiya beshtadan ko`p bo`lmagan bo`limdan iborat bo`lishi kerak:
+
+      1. Bosh sahifa.
+      2. Tranzaksiyalar.
+      3. Taqsimlash.
+      4. Goal'lar.
+      5. Hisobotlar.
+Sozlamalar profil yoki alohida menyu orqali ochilishi mumkin.
+
+21.5. Bir qo`l bilan foydalanish
+
+Eng ko`p ishlatiladigan amallar ekranning pastki qismida va bosh barmoq yetadigan joyda bo`lishi kerak.
+
+21.6. Chiqim kiritish UX'i
+
+Chiqim qo`shish tugmasi barcha asosiy ekranlardan ochilishi kerak.
+
+Chiqim kiritish oynasi:
+
+        · summa maydonini avtomatik aktiv qilishi;
+        · raqamli klaviaturani avtomatik ochishi;
+        · oxirgi hisobni tanlashi;
+        · eng ko`p ishlatiladigan kategoriyalarni ko`rsatishi;
+        · bitta bosish orqali saqlash imkonini berishi kerak.
+
+21.7. Ijobiy feedback
+
+Quyidagi holatlarda ijobiy vizual feedback ko`rsatilishi kerak:
+
+        · goal progress oshganda;
+        · ipoteka uchun qo`shimcha to`lov kiritilganda;
+        · oy budjet doirasida yakunlanganda;
+
+                                                                        21
+        · goal yakunlanganda;
+        · xarajat limitdan past bo`lganda.
+Animatsiyalar qisqa va foydalanuvchini chalg`itmaydigan bo`lishi kerak.
+
+21.8. Accessibility
+
+Ilova:
+        · system font scaling'ni qo`llab-quvvatlashi;
+        · yetarli rang kontrastiga ega bo`lishi;
+        · holatlarni faqat rang bilan ifodalamasligi;
+        · katta touch target'lardan foydalanishi kerak.
+
+22. Maxfiylik va xavfsizlik
+
+22.1. Lokal ma'lumotlar
+
+MVP'da barcha moliyaviy ma'lumotlar foydalanuvchi qurilmasida saqlanishi kerak.
+Ma'lumotlar tashqi serverga yuborilmasligi kerak.
+
+22.2. Ilovani himoyalash
+
+Foydalanuvchi ilovani quyidagilar orqali himoyalashi mumkin:
+        · PIN-kod;
+        · Face ID;
+        · Touch ID yoki Android biometrik himoyasi.
+
+22.3. Maxfiy ma'lumotlarni yashirish
+
+Ilova background holatiga o`tganda app preview'da moliyaviy summalar yashirilishi kerak.
+
+22.4. Ma'lumotlarni o`chirish
+
+Foydalanuvchi:
+        · alohida tranzaksiyani;
+        · alohida goal'ni;
+        · alohida hisobni;
+        · barcha ma'lumotlarni to`liq o`chira olishi kerak.
+
+Barcha ma'lumotlarni o`chirishdan oldin qo`shimcha tasdiqlash talab qilinadi.
+
+                                                                        22
+23. Offline ishlash talablari
+
+Quyidagi funksiyalar internetsiz to`liq ishlashi kerak:
+
+        · kirim kiritish;
+        · chiqim kiritish;
+        · taqsimlash;
+        · goal yaratish;
+        · goal'ga mablag` qo`shish;
+        · ipoteka to`lovini kiritish;
+        · limitlarni hisoblash;
+        · hisobotlarni ko`rish;
+        · backup eksport qilish;
+        · backup import qilish.
+Internet MVP uchun majburiy talab emas.
+
+24. Ishlash tezligi talablari
+
+        · Ilova odatiy qurilmada 2 soniyadan kam vaqtda ochilishi kerak.
+        · Chiqim kiritish oynasi 300 millisekund ichida ochilishi kerak.
+        · Tranzaksiya saqlash foydalanuvchiga darhol bajarilgandek ko`rinishi kerak.
+        · Dashboard ma'lumotlari ilova ochilganda kechikishsiz ko`rsatilishi kerak.
+        · Oylik hisobot 10 000 tagacha tranzaksiya mavjud bo`lganda 2 soniyadan kam vaqtda ochilishi
+
+          kerak.
+        · Limitlar va balanslar har bir operatsiyadan keyin avtomatik yangilanishi kerak.
+
+25. Ma'lumotlar yaxlitligi talablari
+
+        · Har bir tranzaksiya bitta hisobga bog`lanishi kerak.
+        · Chiqim hisob balansini kamaytirishi kerak.
+        · Kirim hisob balansini oshirishi kerak.
+        · Hisoblar orasidagi o`tkazma umumiy moliyaviy balansni o`zgartirmasligi kerak.
+        · Goal'ga o`tkazilgan mablag` alohida rezerv sifatida hisoblanishi kerak.
+        · Ipoteka asosiy qarziga to`lov qarz qoldig`ini kamaytirishi kerak.
+        · Foiz to`lovi qarz qoldig`ini kamaytirmasligi kerak.
+        · Tranzaksiya tahrirlanganda barcha bog`liq hisobotlar qayta hisoblanishi kerak.
+        · O`chirilgan operatsiya balans va hisobotlardan chiqarilishi kerak.
+        · O`tmish davrdagi tranzaksiya o`zgartirilsa, tegishli tarixiy hisobotlar yangilanishi kerak.
+
+                                                                        23
+26. Xato holatlari
+
+Ilova quyidagi holatlarni boshqarishi kerak:
+
+        · noto`g`ri yoki manfiy summa;
+        · target summadan ortiq goal contribution;
+        · hisobda mablag` yetarli emasligi;
+        · kirimdan ko`p mablag` taqsimlanishi;
+        · buzilgan backup fayli;
+        · mos kelmaydigan backup versiyasi;
+        · muvaffaqiyatsiz baza migratsiyasi;
+        · noto`g`ri ipoteka ma'lumotlari;
+        · foiz stavkasi yoki muddat kiritilmagan holat;
+        · hisoblash uchun ma'lumot yetishmasligi.
+
+Xato xabarlari texnik terminlarsiz va keyingi amalni tushuntirgan holda ko`rsatilishi kerak.
+
+27. MVP'dan tashqari funksiyalar
+
+Quyidagilar MVP tarkibiga kirmaydi:
+
+        · bank bilan avtomatik integratsiya;
+        · SMS orqali tranzaksiya aniqlash;
+        · server yoki cloud backend;
+        · bir nechta foydalanuvchi;
+        · oilaviy umumiy budjet;
+        · web versiya;
+        · real vaqt sinxronizatsiyasi;
+        · bankdan ipoteka jadvalini avtomatik olish;
+        · AI asosidagi murakkab moliyaviy maslahat;
+        · investitsiya portfeli;
+        · valyuta kurslarini avtomatik yangilash;
+        · soliq hisoboti;
+        · kredit olish tavsiyalari.
+
+28. MVP qabul qilish mezonlari
+
+Mahsulot MVP sifatida tayyor deb hisoblanishi uchun:
+
+      1. Foydalanuvchi hisob yaratishi va boshlang`ich balans kiritishi kerak.
+      2. Kirim 10 soniyadan kam vaqt ichida qo`shilishi kerak.
+      3. Chiqim 3­5 soniya ichida qo`shilishi kerak.
+      4. Kirim bir nechta yo`nalishga taqsimlanishi kerak.
+      5. Taqsimlanmagan mablag` dashboard'da ko`rsatilishi kerak.
+      6. Kunlik xavfsiz limit avtomatik hisoblanishi kerak.
+      7. Har bir chiqimdan keyin limit qayta hisoblanishi kerak.
+
+                                                                        24
+      8. Kategoriya bo`yicha oylik budjet belgilash mumkin bo`lishi kerak.
+      9. Foydalanuvchi dinamik goal yaratishi kerak.
+     10. Goal uchun mablag` jamg`arish va progress'ni ko`rish mumkin bo`lishi kerak.
+     11. Ipoteka joriy ma'lumotlarini kiritish mumkin bo`lishi kerak.
+     12. Ipoteka to`lovlari tarixini yuritish mumkin bo`lishi kerak.
+     13. Ipotekaning taxminiy yopilish sanasi ko`rsatilishi kerak.
+     14. Qo`shimcha to`lov ssenariysi hisoblanishi kerak.
+     15. Kunlik, haftalik va oylik hisobotlar mavjud bo`lishi kerak.
+     16. Barcha ma'lumotlar lokal SQLite bazada saqlanishi kerak.
+     17. Ilova internetsiz ishlashi kerak.
+     18. Barcha ma'lumotlarni backup faylga eksport qilish mumkin bo`lishi kerak.
+     19. Backup fayldan ma'lumotlarni to`liq tiklash mumkin bo`lishi kerak.
+     20. Ilova versiyasi yangilanganda eski ma'lumotlar saqlanib qolishi kerak.
+     21. Ma'lumotlar migratsiyasi muvaffaqiyatsiz bo`lsa, eski ma'lumotlar yo`qolmasligi kerak.
+     22. Ilova iOS va Android qurilmalarida bir xil asosiy funksiyalarni taqdim qilishi kerak.
+
+29. Mahsulot muvaffaqiyat ko`rsatkichlari
+
+MVP shaxsiy foydalanishda quyidagi natijalarga erishishi kerak:
+
+        · chiqimlarning kamida 90 foizi sodir bo`lgan kuni kiritilishi;
+        · chiqim kiritishning o`rtacha vaqti 5 soniyadan kam bo`lishi;
+        · har bir kirimning kamida 90 foizi taqsimlanishi;
+        · har oy yakuniy moliyaviy hisobot ko`rilishi;
+        · kategoriya limitidan chiqish holatlari aniq ko`rsatilishi;
+        · taqsimlanmagan mablag` miqdori kamayib borishi;
+        · ipoteka asosiy qarziga qo`shimcha to`lovlar alohida kuzatilishi;
+        · goal progress'i muntazam yangilanib borishi;
+        · ilova yangilanishlari davomida ma'lumot yo`qotish holati bo`lmasligi;
+        · backup eksport va tiklash jarayoni muvaffaqiyatli ishlashi.
+
+30. Asosiy mahsulot natijasi
+
+Mahsulot foydalanuvchiga har qanday vaqtda quyidagi holatni aniq ko`rsatishi kerak:
+
+   Menda qancha pul bor?
+   Shundan qanchasi majburiy to`lovlar uchun?
+   Qanchasi goal'lar uchun rezerv qilingan?
+   Bugun qancha xavfsiz sarflashim mumkin?
+   Bu oy qayerga ko`p pul sarfladim?
+   Ipoteka qoldig`im qancha?
+   Hozirgi sur'atda ipoteka qachon yopiladi?
+   Qo`shimcha to`lov qilsam qancha vaqt va foiz tejayman?
+
+                                                                        25
+
