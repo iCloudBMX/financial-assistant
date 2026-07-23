@@ -121,6 +121,42 @@ void main() {
     await tmp.delete(recursive: true);
   });
 
+  test('commit swaps a pre-existing live DB with the backup and cleans up the snapshot',
+      () async {
+    final tmp = await Directory.systemTemp.createTemp('bk');
+    // Source DB with 2 accounts -> a backup file (distinguishable from target).
+    final srcPath = '${tmp.path}/src.db';
+    final src = AppDatabase(NativeDatabase(File(srcPath)));
+    await _seedOneAccount(src);
+    await _seedOneAccount(src);
+    final backup = '${tmp.path}/out.fabackup';
+    await BackupService(src, srcPath).exportTo(backup);
+    await src.close();
+
+    // Target DB is materialized on disk with its own (different) data.
+    final targetPath = '${tmp.path}/target.db';
+    final target = AppDatabase(NativeDatabase(File(targetPath)));
+    await _seedOneAccount(target); // 1 account, so the file exists on disk
+    final n0 = (await target.customSelect('SELECT count(*) AS n FROM accounts_table')
+            .getSingle())
+        .read<int>('n');
+    expect(n0, 1);
+    final service = BackupService(target, targetPath);
+    final preview = (await service.validate(backup, '${tmp.path}/work')).valueOrNull!;
+
+    final r = await service.commit(preview);
+    expect(r.isOk, isTrue);
+    expect(await File('$targetPath.importbak').exists(), isFalse); // snapshot cleaned up
+
+    final reopened = AppDatabase(NativeDatabase(File(targetPath)));
+    final n = (await reopened.customSelect('SELECT count(*) AS n FROM accounts_table')
+            .getSingle())
+        .read<int>('n');
+    expect(n, 2); // target now holds the backup's data, not its own
+    await reopened.close();
+    await tmp.delete(recursive: true);
+  });
+
   test('commit leaves the original data intact when the swap fails', () async {
     final tmp = await Directory.systemTemp.createTemp('bk');
     final targetPath = '${tmp.path}/target.db';

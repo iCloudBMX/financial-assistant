@@ -102,9 +102,10 @@ class BackupService {
       return Err(StorageFailure(e.toString()));
     }
     try {
+      // Guards against a mid-write swap failure (disk full, permission glitch);
+      // File.copy fails atomically on source errors, so a partial dbPath here
+      // means the copy never started writing the destination.
       await File(preview.validatedTempPath).copy(dbPath); // swap in migrated backup
-      if (await File(snapshot).exists()) await File(snapshot).delete();
-      return const Ok(null);
     } catch (e) {
       try {
         if (await File(snapshot).exists()) {
@@ -115,6 +116,14 @@ class BackupService {
       }
       return Err(StorageFailure(e.toString()));
     }
+    // Swap succeeded: the restore is done regardless of what happens below.
+    try {
+      if (await File(snapshot).exists()) await File(snapshot).delete();
+    } catch (_) {
+      // best-effort cleanup; an orphaned .importbak is harmless clutter, not
+      // a reason to report failure or roll back a successful restore.
+    }
+    return const Ok(null);
   }
 
   Future<Map<String, int>> _counts(AppDatabase d) async {
