@@ -5,10 +5,10 @@ import '../allocation/allocation_plan_screen.dart';
 import '../goals/goals_screen.dart';
 import '../home/home_screen.dart';
 import '../onboarding/onboarding_screen.dart';
+import '../reports/reports_screen.dart';
 import '../settings/settings_screen.dart';
 import '../transactions/transactions_screen.dart';
 import 'app_shell.dart';
-import 'placeholder_tab.dart';
 
 abstract final class RouteNames {
   const RouteNames._();
@@ -113,7 +113,7 @@ GoRouter buildRouter({required bool onboardingComplete}) => GoRouter(
               path: RoutePaths.reports,
               builder: (_, _) => const KeyedSubtree(
                 key: PageStorageKey('reports-tab'),
-                child: PlaceholderTab(title: 'Tahlil'),
+                child: ReportsScreen(),
               ),
             ),
           ],
