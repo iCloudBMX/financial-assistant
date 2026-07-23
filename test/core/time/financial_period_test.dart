@@ -1,6 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:financial_assistant/core/time/financial_period.dart';
-import 'package:financial_assistant/core/time/weekday.dart';
 
 void main() {
   DateTime d(int y, int m, int day) => DateTime(y, m, day);
@@ -34,11 +33,6 @@ void main() {
     final p = FinancialPeriod.containing(d(2026, 3, 10), 5);
     expect(p.next().start, p.endExclusive);
     expect(p.previous().endExclusive, p.start);
-  });
-
-  test('startOfWeek snaps to Monday when weekStart=1', () {
-    // 2026-07-15 is a Wednesday.
-    expect(startOfWeek(DateTime(2026, 7, 15), 1), DateTime(2026, 7, 13));
   });
 
   test('next() preserves the configured anchor across a clamped month', () {

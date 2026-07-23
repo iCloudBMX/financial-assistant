@@ -16,6 +16,3 @@ String userMessageFor(Failure failure) => switch (failure) {
       BackupIncompatibleFailure() =>
         'Bu zaxira nusxasi ilovaning ushbu versiyasi bilan mos emas.',
     };
-
-/// Backwards-compatible name for existing presentation call sites.
-String userMessage(Failure failure) => userMessageFor(failure);

@@ -25,7 +25,7 @@ Future<void> main() async {
         body: Center(
           child: Padding(
             padding: const EdgeInsets.all(24),
-            child: Text(userMessage(failure), textAlign: TextAlign.center),
+            child: Text(userMessageFor(failure), textAlign: TextAlign.center),
           ),
         ),
       ),
