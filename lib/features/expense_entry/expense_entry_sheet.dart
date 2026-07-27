@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/l10n/formatters.dart';
 import '../../core/money/currency.dart';
 import '../../core/money/money.dart';
 import '../../core/result/failure_messages.dart';
@@ -7,9 +8,8 @@ import '../../core/theme/velora_tokens.dart';
 import '../../data/categories/category_model.dart';
 import '../../providers/app_providers.dart';
 import '../../ui/components/app_snackbar.dart';
-import '../../ui/components/account_card_picker.dart';
+import '../../ui/components/account_chip_row.dart';
 import '../../ui/components/category_picker.dart';
-import '../../ui/components/entry_details_section.dart';
 import '../../ui/components/velora_button.dart';
 import '../../ui/components/velora_money_field.dart';
 import '../../ui/components/velora_sheet.dart';
@@ -76,7 +76,6 @@ class _ExpenseEntrySheetBodyState
   int? _accountId;
   DateTime _occurredAt = DateTime.now();
   bool _planned = true;
-  bool _detailsOpen = false;
   bool _saving = false;
 
   @override
@@ -147,6 +146,7 @@ class _ExpenseEntrySheetBodyState
 
     return VeloraSheetScaffold(
       title: 'Chiqim',
+      titleTrailing: _DatePill(occurredAt: _occurredAt, onTap: _pickDate),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -159,10 +159,19 @@ class _ExpenseEntrySheetBodyState
             onChanged: (m) => setState(() => _amount = m),
           ),
           const SizedBox(height: VeloraSpacing.lg),
-          const _SheetSectionLabel('Qaysi hisobdan?'),
+          const _SheetSectionLabel('Kategoriya'),
+          const SizedBox(height: VeloraSpacing.sm),
+          CategoryPicker(
+            categories: widget.categories,
+            quickIds: widget.quickIds,
+            selectedId: _categoryId,
+            onSelected: (id) => setState(() => _categoryId = id),
+          ),
+          const SizedBox(height: VeloraSpacing.lg),
+          const _SheetSectionLabel('Hisob'),
           const SizedBox(height: VeloraSpacing.sm),
           accountsAsync.when(
-            data: (list) => AccountCardPicker(
+            data: (list) => AccountChipRow(
               accounts: [for (final a in list) a.account],
               availableBalances: {
                 for (final a in list) a.account.id: a.balance,
@@ -170,35 +179,33 @@ class _ExpenseEntrySheetBodyState
               selectedId: _accountId,
               onSelected: (id) => setState(() => _accountId = id),
             ),
-            loading: () => const SizedBox(height: 116),
+            loading: () => const SizedBox(height: 64),
             error: (_, _) => const SizedBox.shrink(),
           ),
           const SizedBox(height: VeloraSpacing.lg),
-          const _SheetSectionLabel('Tez kategoriyalar'),
-          CategoryPicker(
-            categories: widget.categories,
-            quickIds: widget.quickIds,
-            selectedId: _categoryId,
-            onSelected: (id) => setState(() => _categoryId = id),
+          const _SheetSectionLabel('Izoh'),
+          const SizedBox(height: VeloraSpacing.sm),
+          TextField(
+            key: const Key('expense-note-field'),
+            controller: _noteCtrl,
+            decoration: const InputDecoration(
+              hintText: 'Ixtiyoriy',
+              border: OutlineInputBorder(),
+            ),
           ),
           const SizedBox(height: VeloraSpacing.sm),
-          EntryDetailsSection(
-            open: _detailsOpen,
-            onToggle: () => setState(() => _detailsOpen = !_detailsOpen),
-            occurredAt: _occurredAt,
-            onPickDate: _pickDate,
-            noteController: _noteCtrl,
-            noteFieldKey: const Key('expense-note-field'),
-            extraChildren: [
-              const SizedBox(height: VeloraSpacing.sm),
-              SwitchListTile(
-                key: const Key('expense-planned-switch'),
-                contentPadding: EdgeInsets.zero,
-                value: _planned,
-                onChanged: (v) => setState(() => _planned = v),
-                title: const Text('Rejalashtirilgan xarajat'),
-              ),
-            ],
+          SwitchListTile(
+            key: const Key('expense-planned-switch'),
+            contentPadding: EdgeInsets.zero,
+            dense: true,
+            value: _planned,
+            onChanged: (v) => setState(() => _planned = v),
+            title: Text(
+              'Rejalashtirilgan xarajat',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: VeloraColors.muted,
+                  ),
+            ),
           ),
         ],
       ),
@@ -250,6 +257,35 @@ class _SheetSectionLabel extends StatelessWidget {
               letterSpacing: 0.6,
             ),
       );
+}
+
+/// The small date control in the sheet's title row. Shows "Bugun" for today
+/// (the common case — usually left untouched) or the picked date, and opens the
+/// date picker on tap. Keeps date-choosing available without a dedicated
+/// section (Velora design §6.3 — the frequent path stays uncluttered).
+class _DatePill extends StatelessWidget {
+  const _DatePill({required this.occurredAt, required this.onTap});
+
+  final DateTime occurredAt;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final now = DateTime.now();
+    final isToday = occurredAt.year == now.year &&
+        occurredAt.month == now.month &&
+        occurredAt.day == now.day;
+    return TextButton.icon(
+      key: const Key('expense-date-pill'),
+      onPressed: onTap,
+      icon: const Icon(Icons.event_outlined, size: 16),
+      label: Text(isToday ? 'Bugun' : formatDate(occurredAt, 'd-MMM')),
+      style: TextButton.styleFrom(
+        foregroundColor: VeloraColors.plum,
+        visualDensity: VisualDensity.compact,
+      ),
+    );
+  }
 }
 
 /// Recolors its subtree's primary to Velora coral so the pinned save CTA is the

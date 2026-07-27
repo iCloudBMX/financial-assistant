@@ -4,8 +4,9 @@ import '../../core/theme/velora_tokens.dart';
 import '../../data/categories/category_model.dart';
 import 'category_icons.dart';
 
-/// A controlled hybrid category selector: four fast choices plus a searchable
-/// full list. Selection is always reported to [onSelected].
+/// A controlled hybrid category selector: the most-used choices as wrapped
+/// chips (nothing hidden off-screen) plus a searchable full list behind the
+/// "Barchasi" chip. Selection is always reported to [onSelected].
 class CategoryPicker extends StatelessWidget {
   const CategoryPicker({
     super.key,
@@ -27,53 +28,23 @@ class CategoryPicker extends StatelessWidget {
         .toList(growable: false);
     final quickCategories = _resolveQuickCategories(activeCategories, quickIds);
 
-    return Padding(
-      padding: const EdgeInsets.all(VeloraSpacing.lg),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final itemWidth = (constraints.maxWidth - VeloraSpacing.sm) / 2;
-              return Wrap(
-                spacing: VeloraSpacing.sm,
-                runSpacing: VeloraSpacing.sm,
-                children: [
-                  for (final category in quickCategories)
-                    SizedBox(
-                      width: itemWidth,
-                      child: _CategoryOption(
-                        optionKey: const Key('quick-category'),
-                        semanticsKey: Key(
-                          'quick-category-option-${category.id}',
-                        ),
-                        category: category,
-                        selected: category.id == selectedId,
-                        onTap: () => onSelected(category.id),
-                      ),
-                    ),
-                ],
-              );
-            },
+    return Wrap(
+      spacing: VeloraSpacing.sm,
+      runSpacing: VeloraSpacing.sm,
+      children: [
+        for (final category in quickCategories)
+          _CategoryChip(
+            semanticsKey: Key('quick-category-option-${category.id}'),
+            category: category,
+            selected: category.id == selectedId,
+            onTap: () => onSelected(category.id),
           ),
-          const SizedBox(height: VeloraSpacing.md),
-          OutlinedButton.icon(
-            key: const Key('category-picker-open'),
-            style: OutlinedButton.styleFrom(
-              minimumSize: const Size.fromHeight(48),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(VeloraRadii.control),
-              ),
-            ),
-            onPressed: activeCategories.isEmpty
-                ? null
-                : () => _openCategorySheet(context, activeCategories),
-            icon: const Icon(Icons.search),
-            label: const Text('Kategoriya tanlash'),
-          ),
-        ],
-      ),
+        _AllCategoriesChip(
+          onTap: activeCategories.isEmpty
+              ? null
+              : () => _openCategorySheet(context, activeCategories),
+        ),
+      ],
     );
   }
 
@@ -111,25 +82,25 @@ List<Category> _resolveQuickCategories(
   for (final id in quickIds) {
     final category = byId[id];
     if (category != null && seen.add(id)) resolved.add(category);
-    if (resolved.length == 4) return resolved;
+    if (resolved.length == 6) return resolved;
   }
   for (final category in activeCategories) {
     if (seen.add(category.id)) resolved.add(category);
-    if (resolved.length == 4) break;
+    if (resolved.length == 6) break;
   }
   return resolved;
 }
 
-class _CategoryOption extends StatelessWidget {
-  const _CategoryOption({
-    required this.optionKey,
+/// One selectable category as a compact chip (icon + name) that sizes to its
+/// content so several fit per wrapped row.
+class _CategoryChip extends StatelessWidget {
+  const _CategoryChip({
     required this.semanticsKey,
     required this.category,
     required this.selected,
     required this.onTap,
   });
 
-  final Key optionKey;
   final Key semanticsKey;
   final Category category;
   final bool selected;
@@ -147,8 +118,8 @@ class _CategoryOption extends StatelessWidget {
       onTap: onTap,
       child: ExcludeSemantics(
         child: ConstrainedBox(
-          key: optionKey,
-          constraints: const BoxConstraints(minHeight: 64),
+          key: const Key('quick-category'),
+          constraints: const BoxConstraints(minHeight: 48),
           child: Material(
             color: selected
                 ? theme.colorScheme.primaryContainer
@@ -171,24 +142,71 @@ class _CategoryOption extends StatelessWidget {
                   vertical: VeloraSpacing.sm,
                 ),
                 child: Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(
                       categoryIcon(category.icon),
+                      size: 18,
                       color: selected
                           ? theme.colorScheme.primary
                           : theme.colorScheme.onSurfaceVariant,
                     ),
-                    const SizedBox(width: VeloraSpacing.sm),
-                    Expanded(
+                    const SizedBox(width: VeloraSpacing.xs),
+                    // Ellipsize rather than overflow when a long name meets a
+                    // narrow row (e.g. large text scale on a small screen).
+                    Flexible(
                       child: Text(
                         category.name,
-                        maxLines: 3,
+                        maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],
                 ),
               ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The trailing chip that opens the full, searchable category sheet.
+class _AllCategoriesChip extends StatelessWidget {
+  const _AllCategoriesChip({required this.onTap});
+
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final borderRadius = BorderRadius.circular(VeloraRadii.control);
+    return ConstrainedBox(
+      key: const Key('category-picker-open'),
+      constraints: const BoxConstraints(minHeight: 48),
+      child: Material(
+        color: theme.colorScheme.surfaceContainerLow,
+        shape: RoundedRectangleBorder(
+          borderRadius: borderRadius,
+          side: BorderSide(color: theme.colorScheme.outlineVariant),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: borderRadius,
+          child: const Padding(
+            padding: EdgeInsets.symmetric(
+              horizontal: VeloraSpacing.md,
+              vertical: VeloraSpacing.sm,
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.search, size: 18),
+                SizedBox(width: VeloraSpacing.xs),
+                Text('Barchasi'),
+              ],
             ),
           ),
         ),

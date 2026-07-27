@@ -8,11 +8,16 @@ class VeloraSheetScaffold extends StatelessWidget {
     required this.title,
     required this.body,
     required this.primaryAction,
+    this.titleTrailing,
   });
 
   final String title;
   final Widget body;
   final Widget primaryAction;
+
+  /// Optional compact control shown at the trailing edge of the title row
+  /// (e.g. the expense sheet's date pill). Null keeps the plain title.
+  final Widget? titleTrailing;
 
   @override
   Widget build(BuildContext context) {
@@ -43,7 +48,17 @@ class VeloraSheetScaffold extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text(title, style: Theme.of(context).textTheme.headlineSmall),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          title,
+                          style: Theme.of(context).textTheme.headlineSmall,
+                        ),
+                      ),
+                      ?titleTrailing,
+                    ],
+                  ),
                   const SizedBox(height: VeloraSpacing.lg),
                   Expanded(child: SingleChildScrollView(child: body)),
                   const SizedBox(height: VeloraSpacing.lg),

@@ -9,16 +9,16 @@ import 'package:financial_assistant/data/db/app_database.dart';
 import 'package:financial_assistant/providers/app_providers.dart';
 import 'package:financial_assistant/features/expense_entry/expense_entry_sheet.dart';
 import 'package:financial_assistant/features/transactions/transactions_controller.dart';
-import 'package:financial_assistant/ui/components/account_card_picker.dart';
+import 'package:financial_assistant/ui/components/account_chip_row.dart';
 import 'package:financial_assistant/ui/components/velora_money_field.dart';
 
 void main() {
   const uzs = CurrencyRegistry.uzs;
 
   Future<ProviderContainer> pumpSheet(WidgetTester tester) async {
-    // Tall surface so the whole sheet (amount, account picker, category
-    // picker, and the collapsed Batafsil toggle) fits without needing to
-    // scroll to hit-test controls near the bottom.
+    // Tall surface so the whole sheet (amount, category chips, account chips,
+    // note, and planned toggle) fits without needing to scroll to hit-test
+    // controls near the bottom.
     tester.view.physicalSize = const Size(400, 1400);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
@@ -57,7 +57,7 @@ void main() {
   }
 
   testWidgets(
-      'shows a formatted autofocus amount field, an account picker, four quick categories, and a Batafsil toggle',
+      'shows a formatted autofocus amount field, an account chip row, quick category chips, and an always-visible note',
       (tester) async {
     await pumpSheet(tester);
 
@@ -66,9 +66,12 @@ void main() {
     );
     expect(moneyField.autofocus, isTrue);
 
-    expect(find.byType(AccountCardPicker), findsOneWidget);
-    expect(find.byKey(const Key('quick-category')), findsNWidgets(4));
-    expect(find.text('Batafsil'), findsOneWidget);
+    expect(find.byType(AccountChipRow), findsOneWidget);
+    // 13 seeded categories back-fill the chip row, capped at 6.
+    expect(find.byKey(const Key('quick-category')), findsNWidgets(6));
+    // Note is visible immediately — no collapsed "Batafsil" step.
+    expect(find.byKey(const Key('expense-note-field')), findsOneWidget);
+    expect(find.text('Batafsil'), findsNothing);
   });
 
   testWidgets('preselects the last-used active account', (tester) async {
@@ -113,8 +116,7 @@ void main() {
     await tester.tap(find.text('open'));
     await tester.pumpAndSettle();
 
-    final picker =
-        tester.widget<AccountCardPicker>(find.byType(AccountCardPicker));
+    final picker = tester.widget<AccountChipRow>(find.byType(AccountChipRow));
     expect(picker.selectedId, cardId);
   });
 
@@ -138,16 +140,13 @@ void main() {
     expect(find.byKey(const Key('category-sheet')), findsNothing);
   });
 
-  testWidgets('Batafsil is collapsed by default and reveals the note field when opened',
+  testWidgets('the note field and planned toggle are visible without any Batafsil step',
       (tester) async {
     await pumpSheet(tester);
 
-    expect(find.byKey(const Key('expense-note-field')), findsNothing);
-
-    await tester.tap(find.text('Batafsil'));
-    await tester.pumpAndSettle();
-
     expect(find.byKey(const Key('expense-note-field')), findsOneWidget);
+    expect(find.byKey(const Key('expense-planned-switch')), findsOneWidget);
+    expect(find.text('Batafsil'), findsNothing);
   });
 
   testWidgets('saving offers Bekor qilish, and tapping it undoes the save',

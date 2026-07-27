@@ -53,7 +53,9 @@ void main() {
     ),
   ];
 
-  testWidgets('shows four quick items then a searchable sheet', (tester) async {
+  testWidgets('shows the most-used quick chips then a searchable sheet', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       _testApp(
         CategoryPicker(
@@ -65,9 +67,10 @@ void main() {
       ),
     );
 
-    expect(find.byKey(const Key('quick-category')), findsNWidgets(4));
+    // Five active categories back-fill the chip row (cap is 6).
+    expect(find.byKey(const Key('quick-category')), findsNWidgets(5));
 
-    await tester.tap(find.text('Kategoriya tanlash'));
+    await tester.tap(find.byKey(const Key('category-picker-open')));
     await tester.pumpAndSettle();
 
     expect(find.byType(SearchBar), findsOneWidget);
@@ -144,7 +147,7 @@ void main() {
       ),
     );
 
-    expect(find.byKey(const Key('quick-category')), findsNWidgets(4));
+    expect(find.byKey(const Key('quick-category')), findsNWidgets(5));
     expect(find.text('Eski kategoriya'), findsNothing);
     expect(find.text('Oziq-ovqat'), findsOneWidget);
     expect(find.text('Transport'), findsOneWidget);
@@ -164,7 +167,7 @@ void main() {
       ),
     );
 
-    await tester.tap(find.text('Kategoriya tanlash'));
+    await tester.tap(find.byKey(const Key('category-picker-open')));
     await tester.pumpAndSettle();
 
     expect(find.text('Majburiy'), findsOneWidget);
@@ -194,7 +197,7 @@ void main() {
       ),
     );
 
-    await tester.tap(find.text('Kategoriya tanlash'));
+    await tester.tap(find.byKey(const Key('category-picker-open')));
     await tester.pumpAndSettle();
     await tester.enterText(
       find.descendant(
@@ -237,7 +240,7 @@ void main() {
       ),
     );
 
-    await tester.tap(find.text('Kategoriya tanlash'));
+    await tester.tap(find.byKey(const Key('category-picker-open')));
     await tester.pumpAndSettle();
     final category = find.byKey(const Key('category-option-2'));
     final node = tester.getSemantics(category);
@@ -276,7 +279,7 @@ void main() {
       greaterThanOrEqualTo(48),
     );
 
-    await tester.tap(find.text('Kategoriya tanlash'));
+    await tester.tap(find.byKey(const Key('category-picker-open')));
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
     expect(find.byType(SearchBar), findsOneWidget);
